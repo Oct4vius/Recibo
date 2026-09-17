@@ -1,10 +1,7 @@
 import { assertEquals } from 'jsr:@std/assert@1';
 import type { RawEmail } from '../types.ts';
 import { transactionsTable } from './transactions-table.ts';
-
-function fixture(name: string): RawEmail {
-  return JSON.parse(Deno.readTextFileSync(new URL(`./fixtures/${name}.json`, import.meta.url)));
-}
+import { loadFixture } from '../test-helpers.ts';
 
 function synthetic(rows: string[]): RawEmail {
   return {
@@ -26,12 +23,12 @@ function synthetic(rows: string[]): RawEmail {
 }
 
 Deno.test('bhd/transactions-table — matches only its subject', () => {
-  assertEquals(transactionsTable.matches(fixture('card-purchase-approved')), true);
-  assertEquals(transactionsTable.matches({ ...fixture('card-purchase-approved'), subject: 'Estado de cuenta' }), false);
+  assertEquals(transactionsTable.matches(loadFixture('bhd', 'card-purchase-approved')), true);
+  assertEquals(transactionsTable.matches({ ...loadFixture('bhd', 'card-purchase-approved'), subject: 'Estado de cuenta' }), false);
 });
 
 Deno.test('bhd/transactions-table — approved purchase (real fixture)', () => {
-  assertEquals(transactionsTable.parse(fixture('card-purchase-approved')), [{
+  assertEquals(transactionsTable.parse(loadFixture('bhd', 'card-purchase-approved')), [{
     bankCode: 'bhd',
     type: 'card_purchase',
     amount: 275.72,
@@ -45,7 +42,7 @@ Deno.test('bhd/transactions-table — approved purchase (real fixture)', () => {
 });
 
 Deno.test('bhd/transactions-table — reversed purchase has null merchant (real fixture)', () => {
-  assertEquals(transactionsTable.parse(fixture('card-purchase-reversed')), [{
+  assertEquals(transactionsTable.parse(loadFixture('bhd', 'card-purchase-reversed')), [{
     bankCode: 'bhd',
     type: 'card_reversal',
     amount: 434.22,
@@ -60,8 +57,8 @@ Deno.test('bhd/transactions-table — reversed purchase has null merchant (real 
 
 Deno.test('regression — approved purchase in the same minute as a reversal keeps its own amount', () => {
   // Real case: Aprobada $438.42 y Reversada $434.22 a las 9:31 pm. No son la misma transacción.
-  const approved = transactionsTable.parse(fixture('card-purchase-approved-near-reversal'));
-  const reversed = transactionsTable.parse(fixture('card-purchase-reversed'));
+  const approved = transactionsTable.parse(loadFixture('bhd', 'card-purchase-approved-near-reversal'));
+  const reversed = transactionsTable.parse(loadFixture('bhd', 'card-purchase-reversed'));
   assertEquals(approved[0].amount, 438.42);
   assertEquals(approved[0].type, 'card_purchase');
   assertEquals(approved[0].merchant, 'UBER*RIDES');

@@ -1,10 +1,7 @@
 import { assertEquals } from 'jsr:@std/assert@1';
 import type { ParsedTransaction, RawEmail } from '../types.ts';
 import { transfer } from './transfer.ts';
-
-function fixture(name: string): RawEmail {
-  return JSON.parse(Deno.readTextFileSync(new URL(`./fixtures/${name}.json`, import.meta.url)));
-}
+import { loadFixture } from '../test-helpers.ts';
 
 function synthetic(overrides: Partial<Record<'monto' | 'beneficiario' | 'confirmacion' | 'fecha' | 'destino', string>> = {}): RawEmail {
   const v = {
@@ -50,12 +47,12 @@ const EXPECTED: ParsedTransaction = {
 };
 
 Deno.test('bhd/transfer — matches only its subject', () => {
-  assertEquals(transfer.matches(fixture('transfer-out')), true);
-  assertEquals(transfer.matches({ ...fixture('transfer-out'), subject: 'BHD Notificación de Transacciones' }), false);
+  assertEquals(transfer.matches(loadFixture('bhd', 'transfer-out')), true);
+  assertEquals(transfer.matches({ ...loadFixture('bhd', 'transfer-out'), subject: 'BHD Notificación de Transacciones' }), false);
 });
 
 Deno.test('bhd/transfer — real fixture', () => {
-  assertEquals(transfer.parse(fixture('transfer-out')), [EXPECTED]);
+  assertEquals(transfer.parse(loadFixture('bhd', 'transfer-out')), [EXPECTED]);
 });
 
 Deno.test('bhd/transfer — synthetic mirrors the real fixture', () => {

@@ -12,5 +12,5 @@
     "types": ["node"]
   },
   "include": ["scripts", "tests", "supabase/functions/_shared/parsers"],
-  "exclude": ["node_modules", "**/*.test.ts"]
+  "exclude": ["node_modules", "**/*.test.ts", "**/test-helpers.ts"]
 }
