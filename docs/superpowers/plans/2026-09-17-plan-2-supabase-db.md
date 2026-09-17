@@ -265,6 +265,61 @@ git commit -m "feat(db): enable pg_cron, pg_net, vault; add enums mirroring pars
 **Interfaces:**
 - Consumes: `currency_code`, `set_updated_at()` (Task 2).
 - Produces: `public.profiles(user_id, timezone, primary_currency, usd_rate, created_at, updated_at)`; trigger `on_auth_user_created` que inserta el perfil. Las RPC de Task 8 leen `timezone` y `usd_rate`.
+- Produces (Step 0): migración `lock_down_anon` que revoca todo privilegio de `anon` sobre `public` (tablas, secuencias, funciones) y sus default privileges, más `supabase/tests/lock_down_anon.test.sql`.
+
+**Hallazgo en ejecución que motiva el Step 0.** Supabase concede por defecto
+`select/insert/update/delete` a `anon` sobre toda tabla nueva de `public`
+(default privileges del rol `postgres`). Con RLS activo eso no expone datos,
+pero `anon` no recibe `42501`: la consulta devuelve cero filas. El alcance dice
+que la app siempre opera autenticada y CLAUDE.md que `anon` no debe ver nada:
+se revoca explícitamente (defensa en profundidad) en vez de debilitar el test.
+
+- [ ] **Step 0a: Test de bloqueo de `anon`**
+
+`supabase/tests/lock_down_anon.test.sql`:
+```sql
+begin;
+select plan(3);
+
+-- Se evalúa después de TODAS las migraciones: ninguna tabla/vista de public puede tener grants para anon.
+select is(
+  (select count(*) from information_schema.role_table_grants where grantee = 'anon' and table_schema = 'public'),
+  0::bigint,
+  'anon has no table or view grants in public'
+);
+select ok(
+  (select count(*) from information_schema.role_table_grants where grantee = 'authenticated' and table_schema = 'public') > 0,
+  'authenticated keeps its grants (RLS is what restricts rows)'
+);
+select is(has_table_privilege('anon', 'public.profiles', 'select'), false, 'anon cannot even attempt to read profiles');
+
+select * from finish();
+rollback;
+```
+
+- [ ] **Step 0b: Migración `lock_down_anon` (debe ordenarse ANTES de `profiles`)**
+
+Run: `bunx supabase migration new lock_down_anon`. Si el archivo de `profiles`
+ya existe con un timestamp anterior, renombrarlo a un timestamp posterior al de
+`lock_down_anon` (p. ej. `mv supabase/migrations/<old>_profiles.sql supabase/migrations/<ts+1>_profiles.sql`).
+Contenido de `lock_down_anon`:
+```sql
+-- La app siempre opera autenticada. anon no debe ver ni ejecutar nada en public.
+-- Supabase concede por defecto privilegios a anon sobre tablas nuevas; los quitamos
+-- para lo existente y para lo futuro (default privileges del rol que corre migraciones).
+revoke all on all tables in schema public from anon;
+revoke all on all sequences in schema public from anon;
+revoke all on all functions in schema public from anon;
+
+alter default privileges for role postgres in schema public revoke all on tables from anon;
+alter default privileges for role postgres in schema public revoke all on sequences from anon;
+alter default privileges for role postgres in schema public revoke all on functions from anon;
+```
+Run: `bun run check:db`
+Expected: `lock_down_anon.test.sql` 3/3 `ok` y `profiles.test.sql` pasa completo,
+incluido `anon cannot read profiles` con `42501`. Si `alter default privileges
+for role postgres` falla por permisos en local, reportar el error exacto y
+detenerse (DONE_WITH_CONCERNS): el controller decide el rol correcto.
 
 - [ ] **Step 1: Escribir el test que falla**
 
