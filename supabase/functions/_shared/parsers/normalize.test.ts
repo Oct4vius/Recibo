@@ -103,3 +103,11 @@ Deno.test('cleanMerchant', () => {
   assertEquals(cleanMerchant('   '), null);
   assertEquals(cleanMerchant(''), null);
 });
+
+Deno.test('htmlToText — block elements inside a cell do not break the row (continuation lines merge)', () => {
+  const html = '<table>'
+    + '<tr><td><p>Monto:</p></td><td>RD$ 3,500.00</td></tr>'
+    + '<tr><td><p>Descripción:</p></td><td></td></tr>'
+    + '</table>';
+  assertEquals(htmlToText(html), 'Monto: | RD$ 3,500.00\nDescripción:');
+});

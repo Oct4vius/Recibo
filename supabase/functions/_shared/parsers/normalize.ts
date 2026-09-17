@@ -28,6 +28,7 @@ const BLOCK_END = /<br\s*\/?>|<\/(?:tr|p|div|li|h[1-6]|table|thead|tbody|ul|ol)\
  * - Celdas (td/th) separadas por " | ". Celdas vacías intermedias se conservan;
  *   las celdas vacías AL FINAL de la fila se descartan (todos los pipes finales se quitan).
  * - Sin líneas vacías, sin espacios dobles.
+ * - Una línea que empieza con "|" se fusiona con la fila anterior (bloques dentro de una celda).
  */
 export function htmlToText(html: string): string {
   const withMarkers = html
@@ -38,10 +39,25 @@ export function htmlToText(html: string): string {
 
   const decoded = decodeEntities(withMarkers).replace(/[\s\u00a0]+/g, ' ');
 
-  return decoded
+  const lines = decoded
     .split(ROW_BREAK)
-    .map((line) => line.trim().replace(/(\s*\|)+\s*$/, '').trim())
-    .filter((line) => line.length > 0)
+    .map((line) => line.trim())
+    .filter((line) => line.length > 0);
+
+  // Una línea que empieza con "|" es una celda que siguió a un bloque cerrado
+  // dentro de la celda anterior: pertenece a la misma fila.
+  const rows: string[] = [];
+  for (const line of lines) {
+    if (line.startsWith('|') && rows.length > 0) {
+      rows[rows.length - 1] += ` ${line}`;
+    } else {
+      rows.push(line);
+    }
+  }
+
+  return rows
+    .map((row) => row.replace(/(\s*\|)+\s*$/, '').trim())
+    .filter((row) => row.length > 0)
     .join('\n');
 }
 
