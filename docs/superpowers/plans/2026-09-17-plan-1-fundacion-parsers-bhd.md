@@ -914,6 +914,81 @@ git commit -m "feat(parsers): add BHD transactions-table template (purchase, rev
 **Interfaces:**
 - Consumes: `Template`, `RawEmail`, `ParsedTransaction` de `../types.ts`; `parseAmount`, `parseLocalDate`, `cleanMerchant` de `../normalize.ts`.
 - Produces: `export const transfer: Template` con `id = 'bhd/transfer'`.
+- Modifica (Step 0): `htmlToText` en `../normalize.ts` y su test, y regenera `bhd/fixtures/transfer-out.json`.
+
+**Hallazgo de la Task 4 que motiva el Step 0.** El HTML real de la transferencia
+BHD envuelve la etiqueta de cada celda en un elemento de bloque, así que
+`htmlToText` parte la fila en dos líneas: `Monto:` y luego `| RD$ 3,500.00`.
+Una línea que empieza con `|` es siempre la continuación de la fila anterior.
+Se corrige en el normalizador (una sola fuente) y no en `kv()`.
+
+- [ ] **Step 0a: Agregar el test que falla en `normalize.test.ts`**
+
+Añadir al final de `supabase/functions/_shared/parsers/normalize.test.ts`:
+```ts
+Deno.test('htmlToText — block elements inside a cell do not break the row (continuation lines merge)', () => {
+  const html = '<table>'
+    + '<tr><td><p>Monto:</p></td><td>RD$ 3,500.00</td></tr>'
+    + '<tr><td><p>Descripción:</p></td><td></td></tr>'
+    + '</table>';
+  assertEquals(htmlToText(html), 'Monto: | RD$ 3,500.00\nDescripción:');
+});
+```
+Run: `deno test --allow-read supabase/functions/_shared/parsers/normalize.test.ts`
+Expected: 14 passed, 1 failed (la salida actual es `Monto:\n| RD$ 3,500.00\nDescripción:`).
+
+- [ ] **Step 0b: Fusionar líneas de continuación en `htmlToText`**
+
+En `supabase/functions/_shared/parsers/normalize.ts`, reemplazar el `return` final
+de `htmlToText` por:
+```ts
+  const lines = decoded
+    .split(ROW_BREAK)
+    .map((line) => line.trim())
+    .filter((line) => line.length > 0);
+
+  // Una línea que empieza con "|" es una celda que siguió a un bloque cerrado
+  // dentro de la celda anterior: pertenece a la misma fila.
+  const rows: string[] = [];
+  for (const line of lines) {
+    if (line.startsWith('|') && rows.length > 0) {
+      rows[rows.length - 1] += ` ${line}`;
+    } else {
+      rows.push(line);
+    }
+  }
+
+  return rows
+    .map((row) => row.replace(/(\s*\|)+\s*$/, '').trim())
+    .filter((row) => row.length > 0)
+    .join('\n');
+```
+Y en el comentario de cabecera de `htmlToText` añadir la línea:
+` * - Una línea que empieza con "|" se fusiona con la fila anterior (bloques dentro de una celda).`
+
+Run: `deno test --allow-read supabase/functions/_shared/parsers/normalize.test.ts`
+Expected: `ok | 15 passed | 0 failed`.
+
+- [ ] **Step 0c: Regenerar fixtures y commitear**
+
+Run:
+```bash
+bun run fixtures:build
+grep -c '"text"' supabase/functions/_shared/parsers/bhd/fixtures/transfer-out.json
+bun run check && bun run lint
+```
+Expected: `transfer-out.json` cambia y su `text` contiene ahora, en una sola
+línea cada uno, `Monto: | RD$ 3,500.00`, `Beneficiario: | GOMEZ PEÑA, MARIA`,
+`Número de confirmación: | M12-0000-1111-2222-3`,
+`Fecha y hora de la transacción: | 16/09/2026 - 9:53 AM`,
+`Producto destino: | DO82BCBH000000000XXXXXXX0077` y `Descripción:` sin valor.
+Las otras tres fixtures no cambian (`git status` solo muestra `transfer-out.json`,
+`normalize.ts` y `normalize.test.ts`). Todo en verde.
+
+```bash
+git add supabase/functions/_shared/parsers/normalize.ts supabase/functions/_shared/parsers/normalize.test.ts supabase/functions/_shared/parsers/bhd/fixtures/transfer-out.json
+git commit -m "fix(parsers): merge cell continuation lines in htmlToText" -m "Co-Authored-By: Claude Fable 5.1 <noreply@anthropic.com>"
+```
 
 - [ ] **Step 1: Escribir los tests que fallan**
 
