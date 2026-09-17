@@ -77,7 +77,6 @@ Deno.test('contract — every registered bank and template honors the interface'
     for (const template of bank.templates) {
       assertEquals(template.id.startsWith(`${bank.code}/`), true, `${template.id} must be prefixed with ${bank.code}/`);
       assertEquals(template.parse(EMPTY), [], `${template.id} must return [] on empty input, never throw`);
-      for (const tx of template.parse({ ...EMPTY, subject: 'x' })) assertEquals(tx.bankCode, bank.code);
     }
   }
 
@@ -85,4 +84,45 @@ Deno.test('contract — every registered bank and template honors the interface'
     assertEquals(candidate.status, 'candidate');
     assertEquals(codes.includes(candidate.code), false, `${candidate.code} cannot be both bank and candidate`);
   }
+});
+
+Deno.test('contract — every registered template has at least one real fixture that parses to a non-empty list', () => {
+  for (const bank of banks) {
+    const fixturesDir = new URL(`./${bank.code}/fixtures/`, import.meta.url);
+    const fixtureNames = [...Deno.readDirSync(fixturesDir)]
+      .filter((entry) => entry.isFile && entry.name.endsWith('.json'))
+      .map((entry) => entry.name);
+    assertNotEquals(fixtureNames.length, 0, `${bank.code} needs at least one fixture in <bank>/fixtures/`);
+
+    const emails = fixtureNames.map((name) => JSON.parse(Deno.readTextFileSync(new URL(name, fixturesDir))) as RawEmail);
+
+    for (const template of bank.templates) {
+      const parsedByFixture = emails.map((email) => template.parse(email));
+      const nonEmpty = parsedByFixture.find((txs) => txs.length > 0);
+      assertNotEquals(nonEmpty, undefined, `${template.id} has no fixture in <bank>/fixtures/ that parses to a non-empty list`);
+      for (const tx of nonEmpty ?? []) assertEquals(tx.bankCode, bank.code);
+    }
+  }
+});
+
+Deno.test('contract — parser source files never use Deno APIs, node: imports, fetch or Date.now', () => {
+  const FORBIDDEN = /\bDeno\.|from ['"]node:|\bfetch\(|Date\.now\(/;
+  const offenders: string[] = [];
+
+  function walk(dirUrl: URL, relPath: string): void {
+    for (const entry of Deno.readDirSync(dirUrl)) {
+      const entryRel = relPath ? `${relPath}/${entry.name}` : entry.name;
+      if (entry.isDirectory) {
+        walk(new URL(`${entry.name}/`, dirUrl), entryRel);
+        continue;
+      }
+      if (!entry.name.endsWith('.ts')) continue;
+      if (entry.name.endsWith('.test.ts') || entry.name === 'test-helpers.ts') continue;
+      const content = Deno.readTextFileSync(new URL(entry.name, dirUrl));
+      if (FORBIDDEN.test(content)) offenders.push(entryRel);
+    }
+  }
+
+  walk(new URL('./', import.meta.url), '');
+  assertEquals(offenders, [], `parser source files must stay pure: ${offenders.join(', ')}`);
 });
