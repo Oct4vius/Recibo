@@ -13,7 +13,7 @@ export function senderDomain(from: string): string | null {
   const address = from.match(/<([^>]+)>/)?.[1] ?? from;
   const at = address.lastIndexOf('@');
   if (at === -1) return null;
-  const domain = address.slice(at + 1).trim().toLowerCase().replace(/[>\s]+$/, '');
+  const domain = address.slice(at + 1).trim().toLowerCase();
   return domain.length > 0 ? domain : null;
 }
 

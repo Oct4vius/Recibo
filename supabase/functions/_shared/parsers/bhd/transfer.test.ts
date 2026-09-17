@@ -86,3 +86,11 @@ Deno.test('bhd/transfer — destination without trailing digits → no counterpa
   const [tx] = transfer.parse(synthetic({ destino: 'CUENTA EXTERNA' }));
   assertEquals('counterpartyLast4' in tx, false);
 });
+
+Deno.test('bhd/transfer — label with value on the next line is never guessed as the amount → []', () => {
+  const withNextLineValue = {
+    ...synthetic(),
+    text: synthetic().text.replace(/^Monto:.*$/m, 'Monto:\nRD$ 9,999.00'),
+  };
+  assertEquals(transfer.parse(withNextLineValue), []);
+});

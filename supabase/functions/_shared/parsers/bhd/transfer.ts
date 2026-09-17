@@ -16,7 +16,8 @@ const LABELS = {
  * Valor de una fila clave-valor. Tolera dos formas que produce htmlToText:
  *   "Monto: | RD$ 3,500.00"   → "RD$ 3,500.00"
  *   "Monto:"  (valor vacío)   → ""
- *   "Monto:" seguido del valor en la línea siguiente (tabla anidada) → esa línea
+ * Real HTML, tras la fusión de líneas de continuación de htmlToText, nunca deja
+ * el valor en la línea siguiente: no se adivina ahí.
  */
 function kv(lines: string[], label: RegExp): string | null {
   const index = lines.findIndex((line) => label.test(line));
@@ -24,11 +25,7 @@ function kv(lines: string[], label: RegExp): string | null {
   const line = lines[index];
   const pipe = line.indexOf('|');
   if (pipe !== -1) return line.slice(pipe + 1).trim();
-  const inline = line.replace(label, '').trim();
-  if (inline.length > 0) return inline;
-  const next = lines[index + 1] ?? '';
-  const nextIsLabel = Object.values(LABELS).some((re) => re.test(next)) || /^[^|]+:$/.test(next);
-  return nextIsLabel ? '' : next.trim();
+  return line.replace(label, '').trim();
 }
 
 export const transfer: Template = {
@@ -46,7 +43,7 @@ export const transfer: Template = {
     if (!money || !money.currency || !occurredAt) return [];
 
     const merchant = cleanMerchant(kv(lines, LABELS.beneficiary) ?? '');
-    const reference = (kv(lines, LABELS.reference) ?? '').trim();
+    const reference = kv(lines, LABELS.reference) ?? '';
     const counterpartyLast4 = (kv(lines, LABELS.destination) ?? '').match(/(\d{4})\s*$/)?.[1];
 
     return [{
