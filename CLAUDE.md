@@ -27,7 +27,7 @@ bun run typecheck                  # tsc --noEmit (scripts, tests y código fuen
 bun run test                       # Vitest (tests/unit)
 bun run test:deno                  # deno test --allow-read supabase/functions/
 bun run lint                       # deno lint (Plan 4 agrega ESLint de Expo)
-bun run check                      # typecheck + test + test:deno — obligatorio antes de done
+bun run check                      # typecheck + test + test:deno + lint — obligatorio antes de done
 bun run fixtures:build             # fixtures-raw/**/*.eml → parsers/<bank>/fixtures/*.json
 # Desde Plan 2: supabase start | supabase db reset | supabase functions serve
 # Desde Plan 4: bunx expo start
