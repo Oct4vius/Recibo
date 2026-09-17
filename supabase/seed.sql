@@ -1,0 +1,3 @@
+-- Datos SOLO para desarrollo local. Las categorías por defecto y todo lo que
+-- deba existir en producción van en migraciones, no aquí.
+-- Plan 3 agrega aquí los secretos de Vault para el cron local (project_url, etc.).

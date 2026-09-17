@@ -8,11 +8,19 @@
     "test:deno": "deno test --allow-read supabase/functions/",
     "lint": "deno lint supabase/functions/",
     "check": "bun run typecheck && bun run test && bun run test:deno && bun run lint",
-    "fixtures:build": "bun scripts/build-fixtures.ts"
+    "fixtures:build": "bun scripts/build-fixtures.ts",
+    "db:start": "supabase start",
+    "db:stop": "supabase stop",
+    "db:status": "supabase status",
+    "db:reset": "supabase db reset",
+    "db:test": "supabase test db",
+    "db:types": "supabase gen types --lang typescript --local --schema public > supabase/functions/_shared/database.types.ts",
+    "check:db": "bun run db:reset && bun run db:test"
   },
   "devDependencies": {
     "@types/node": "^26.6.1",
     "postal-mime": "^3.0.0",
+    "supabase": "^2.117.0",
     "typescript": "^7.0.2",
     "vitest": "^5.0.1"
   }
