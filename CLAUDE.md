@@ -166,7 +166,7 @@ Mapeo `Estado + Tipo`:
 - `Reversada` + `Compra` → `card_reversal`, **comercio vacío** (`merchant: null`).
 - `Aprobada` + `Retiro` → `atm_withdrawal`. **Reportado por el usuario, sin
   fixture aún**: no codificar hasta tener el `.eml`.
-- Cualquier otro valor → `parse()` devuelve `null` → `unparsed_emails`.
+- Cualquier otro valor → `parse()` devuelve `[]` → `unparsed_emails`.
 
 **2. `bhd/transfer`** — asunto `Transacciones entre productos BHD y a otros Bancos`.
 Tabla clave-valor: `Producto origen`, `Producto destino` (cuentas enmascaradas
@@ -210,7 +210,7 @@ normalizado) con el script `bun run fixtures:build`. Nunca editar una fixture
 derivada a mano.
 
 El registro en `parsers/index.ts` resuelve `from → banco → parse()`. Si el
-banco es conocido y `parse()` devuelve `null`, `sync-mail` inserta en
+banco es conocido y `parse()` devuelve `[]`, `sync-mail` inserta en
 `unparsed_emails` (subject + primeros 500 chars). **Nunca adivinar un monto ni
 inventar un parser sin correo real.**
 
@@ -235,7 +235,7 @@ inventar un parser sin correo real.**
    o `US$ 12.00`; usar `parseAmount()` de `_shared/parsers/normalize.ts`, no
    regex ad hoc.
 4. Si el banco es nuevo: agregar `senderDomains` y registrarlo en `parsers/index.ts`.
-5. Correr `deno test supabase/functions/_shared/parsers/`.
+5. Correr `bun run test:deno`.
 6. Si el banco cambió su plantilla: **agregar** fixture nueva, no editar la vieja.
    Las dos deben seguir pasando.
 
@@ -292,7 +292,7 @@ Se aplican en app, Edge Functions y SQL. Así se traducen a este proyecto:
   proveedores de correo: `mail/gmail.ts` y `mail/graph.ts` se registran, no se
   ramifican.
 - **L — todo parser y todo proveedor es intercambiable.** Cumplen el mismo
-  contrato (`parse(RawEmail): ParsedTransaction | null`,
+  contrato (`parse(RawEmail): ParsedTransaction[]`,
   `MailProvider.fetchNew(cursor): Page<RawEmail>`) y el orquestador no sabe
   cuál tiene enfrente. Un test genérico recorre todos los parsers registrados
   y valida el contrato.
@@ -339,7 +339,7 @@ SQL nace con tests. Las pantallas no se testean en v1.
   Los mocks no cazan bugs de schema.
 - **Regresión**: cada bug fix trae un test que **falla sin el fix**, nombrado
   `describe("regression #<issue> — <qué>")`.
-- **Antes de done**: `bun run typecheck && bun run lint && bun run test && deno test supabase/functions/`.
+- **Antes de done**: `bun run typecheck && bun run lint && bun run test && bun run test:deno`.
 
 ### Definition of Done
 - El cambio trae **sus** tests en el mismo PR — nunca "los agrego después".
