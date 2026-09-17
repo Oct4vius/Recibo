@@ -21,4 +21,30 @@ describe('emlToRawEmail', () => {
     const email = await emlToRawEmail(new Uint8Array(bytes));
     expect(email.text).toContain('16/09/2026 09:31 pm | RD | $434.22 | | Reversada | Compra');
   });
+
+  it('throws when the .eml has no Message-ID header instead of silently writing an empty string', async () => {
+    const raw = [
+      'From: Alertas@bhd.com.do',
+      'Subject: BHD Notificación de Transacciones',
+      'Date: Wed, 16 Sep 2026 22:43:15 -0400',
+      'Content-Type: text/html; charset=utf-8',
+      '',
+      '<p>x</p>',
+      '',
+    ].join('\r\n');
+    await expect(emlToRawEmail(new TextEncoder().encode(raw))).rejects.toThrow(/Message-ID/);
+  });
+
+  it('throws when the .eml has no Date header instead of silently writing an empty string', async () => {
+    const raw = [
+      'From: Alertas@bhd.com.do',
+      'Subject: BHD Notificación de Transacciones',
+      'Message-ID: <no-date@bhd.com.do>',
+      'Content-Type: text/html; charset=utf-8',
+      '',
+      '<p>x</p>',
+      '',
+    ].join('\r\n');
+    await expect(emlToRawEmail(new TextEncoder().encode(raw))).rejects.toThrow(/Date/);
+  });
 });

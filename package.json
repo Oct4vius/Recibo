@@ -7,7 +7,7 @@
     "test": "vitest run --passWithNoTests",
     "test:deno": "deno test --allow-read supabase/functions/",
     "lint": "deno lint supabase/functions/",
-    "check": "bun run typecheck && bun run test && bun run test:deno",
+    "check": "bun run typecheck && bun run test && bun run test:deno && bun run lint",
     "fixtures:build": "bun scripts/build-fixtures.ts"
   },
   "devDependencies": {
