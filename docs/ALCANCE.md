@@ -34,6 +34,7 @@ el plan gratuito de Supabase.
 | Gestor de paquetes | Bun | npm, yarn |
 | Estilos | NativeWind (Tailwind para RN) | StyleSheet nativo |
 | Datos remotos en la app | TanStack Query + cliente Supabase | Redux, MobX |
+| Acceso a la base de datos | Sin ORM: migraciones SQL con la CLI de Supabase, `supabase-js` en app y Edge Functions, tipos con `supabase gen types` | Prisma (no corre bien en Deno, ignora RLS, no expresa políticas ni pg_cron), Drizzle |
 | Push | Expo Push Service (gratis) | FCM/APNs directo |
 
 ## 3. Funcionalidades v1
