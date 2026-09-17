@@ -23,14 +23,14 @@ parezca fácil.
 ## Comandos
 ```bash
 bun install
-bunx expo start                    # dev server (Expo Go o dev client)
-bun run typecheck                  # tsc --noEmit
-bun run lint
-bun run test                       # Vitest (app)
-supabase start                     # stack local (Docker)
-supabase db reset                  # aplica migrations + seed.sql
-supabase functions serve           # Edge Functions locales
-deno test supabase/functions/      # tests de functions y parsers
+bun run typecheck                  # tsc --noEmit (scripts, tests y código fuente de parsers)
+bun run test                       # Vitest (tests/unit)
+bun run test:deno                  # deno test --allow-read supabase/functions/
+bun run lint                       # deno lint (Plan 4 agrega ESLint de Expo)
+bun run check                      # typecheck + test + test:deno — obligatorio antes de done
+bun run fixtures:build             # fixtures-raw/**/*.eml → parsers/<bank>/fixtures/*.json
+# Desde Plan 2: supabase start | supabase db reset | supabase functions serve
+# Desde Plan 4: bunx expo start
 ```
 
 ## Estructura clave
