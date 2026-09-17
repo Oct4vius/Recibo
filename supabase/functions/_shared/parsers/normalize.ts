@@ -20,7 +20,7 @@ export function decodeEntities(s: string): string {
 
 /** Separador temporal de filas; \s no lo matchea, así que sobrevive al colapso de espacios. */
 const ROW_BREAK = '\u0000';
-const BLOCK_END = /<br\s*\/?>|<\/(?:tr|p|div|li|h[1-6]|table|thead|tbody|ul|ol)\s*>/gi;
+const BLOCK_END = /<br\b[^>]*>|<\/(?:tr|p|div|li|h[1-6]|table|thead|tbody|ul|ol)\s*>/gi;
 
 /**
  * HTML del banco → texto estable para los parsers.
@@ -32,6 +32,7 @@ const BLOCK_END = /<br\s*\/?>|<\/(?:tr|p|div|li|h[1-6]|table|thead|tbody|ul|ol)\
  */
 export function htmlToText(html: string): string {
   const withMarkers = html
+    .replace(/<!--[\s\S]*?-->/g, '')
     .replace(/<(script|style)\b[^>]*>[\s\S]*?<\/\1\s*>/gi, '')
     .replace(/<\/t[dh]\s*>/gi, ' | ')
     .replace(BLOCK_END, ROW_BREAK)
@@ -100,6 +101,9 @@ export function parseLocalDate(raw: string): string | null {
   const minute = Number(m[5]);
   const isPm = m[6].toLowerCase() === 'p';
   if (month < 1 || month > 12 || day < 1 || day > 31 || hour12 < 1 || hour12 > 12 || minute > 59) return null;
+  const utc = Date.UTC(year, month - 1, day);
+  const check = new Date(utc);
+  if (check.getUTCFullYear() !== year || check.getUTCMonth() !== month - 1 || check.getUTCDate() !== day) return null;
   const hour24 = (hour12 % 12) + (isPm ? 12 : 0);
   const pad = (n: number) => String(n).padStart(2, '0');
   return `${year}-${pad(month)}-${pad(day)}T${pad(hour24)}:${pad(minute)}:00-04:00`;

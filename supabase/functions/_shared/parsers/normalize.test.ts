@@ -97,11 +97,26 @@ Deno.test('parseLocalDate — rejects invalid', () => {
   assertEquals(parseLocalDate('sin fecha'), null);
 });
 
+Deno.test('parseLocalDate — rejects impossible calendar dates', () => {
+  assertEquals(parseLocalDate('31/02/2026 10:42 pm'), null);
+  assertEquals(parseLocalDate('29/02/2028 10:42 pm'), '2028-02-29T22:42:00-04:00');
+  assertEquals(parseLocalDate('31/04/2026 1:00 AM'), null);
+});
+
 Deno.test('cleanMerchant', () => {
   assertEquals(cleanMerchant('  UBER*RIDES  '), 'UBER*RIDES');
   assertEquals(cleanMerchant('GOMEZ   PEÑA,  MARIA'), 'GOMEZ PEÑA, MARIA');
   assertEquals(cleanMerchant('   '), null);
   assertEquals(cleanMerchant(''), null);
+});
+
+Deno.test('htmlToText — <br> with attributes is treated as a block end', () => {
+  assertEquals(htmlToText('<p>a<br class="x">b</p>'), 'a\nb');
+});
+
+Deno.test('htmlToText — HTML comments are stripped (Outlook conditional comments)', () => {
+  assertEquals(htmlToText('<!--[if mso]>HIDDEN<![endif]--><p>x</p>'), 'x');
+  assertEquals(htmlToText('<!-- a > b --><p>x</p>'), 'x');
 });
 
 Deno.test('htmlToText — block elements inside a cell do not break the row (continuation lines merge)', () => {
