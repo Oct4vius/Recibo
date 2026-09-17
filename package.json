@@ -1,0 +1,19 @@
+{
+  "name": "gastos-app",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run --passWithNoTests",
+    "test:deno": "deno test --allow-read supabase/functions/",
+    "lint": "deno lint supabase/functions/",
+    "check": "bun run typecheck && bun run test && bun run test:deno",
+    "fixtures:build": "bun scripts/build-fixtures.ts"
+  },
+  "devDependencies": {
+    "@types/node": "^26.6.1",
+    "postal-mime": "^3.0.0",
+    "typescript": "^7.0.2",
+    "vitest": "^5.0.1"
+  }
+}
