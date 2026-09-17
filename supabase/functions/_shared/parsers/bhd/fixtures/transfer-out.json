@@ -1,0 +1,7 @@
+{
+  "messageId": "<459222790.33970112.1789566801197@utility-notify-component-nept-v1-8485d4cc96-q9rwp>",
+  "from": "Alertas@bhd.com.do",
+  "subject": "Transacciones entre productos BHD y a otros Bancos",
+  "text": "Estimado(a): JUAN PEREZ\nA continuación la información relacionada a tu transacción:\nProducto origen:\n| DO09BCBH000000000XXXXXXX0099\nProducto destino:\n| DO82BCBH000000000XXXXXXX0077\nDescripción:\nMonto:\n| RD$ 3,500.00\nBeneficiario:\n| GOMEZ PEÑA, MARIA\nNúmero de confirmación:\n| M12-0000-1111-2222-3\nFecha y hora de la transacción:\n| 16/09/2026 - 9:53 AM\nTipo de transacción:\n| Transacciones entre productos BHD y a otros Bancos\nNota: Este correo electrónico es generado de manera automática por el sistema, por favor no responder a este mensaje. En caso de no reconocer esta transacción, favor llamar al 809-243-5282.\nCordialmente,\nBanco BHD",
+  "receivedAt": "2026-09-16T13:53:21.000Z"
+}
