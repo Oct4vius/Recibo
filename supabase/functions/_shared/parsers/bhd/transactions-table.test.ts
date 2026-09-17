@@ -104,6 +104,28 @@ Deno.test('bhd/transactions-table — no header row → []', () => {
   assertEquals(transactionsTable.parse({ ...synthetic([]), text: 'Correo sin tabla' }), []);
 });
 
+Deno.test('bhd/transactions-table — malformed row after a valid row → [] (all or nothing)', () => {
+  const email = synthetic([
+    '16/09/2026 10:42 pm | RD | $275.72 | UBER*RIDES | Aprobada | Compra',
+    '16/09/2026 10:50 pm | RD | $50.00 | FARMACIA',
+    'SAN JUDAS | Aprobada | Compra',
+  ]);
+  assertEquals(transactionsTable.parse(email), []);
+});
+
+Deno.test('bhd/transactions-table — row with 7 cells after a valid row → []', () => {
+  const email = synthetic([
+    '16/09/2026 10:42 pm | RD | $275.72 | UBER*RIDES | Aprobada | Compra',
+    '16/09/2026 10:50 pm | RD | $50.00 | FARMACIA | X | Aprobada | Compra',
+  ]);
+  assertEquals(transactionsTable.parse(email), []);
+});
+
+Deno.test('bhd/transactions-table — amount currency prefix conflicting with Moneda column → [] (never guess)', () => {
+  const email = synthetic(['16/09/2026 10:42 pm | RD | US$ 12.00 | X | Aprobada | Compra']);
+  assertEquals(transactionsTable.parse(email), []);
+});
+
 Deno.test('bhd/transactions-table — missing card header still parses, without cardLast4', () => {
   const email = synthetic(['16/09/2026 10:42 pm | RD | $275.72 | UBER*RIDES | Aprobada | Compra']);
   email.text = email.text.replace(/# 1234/g, '');

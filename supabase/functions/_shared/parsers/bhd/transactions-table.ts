@@ -23,6 +23,7 @@ function parseRow(cells: string[], rowIndex: number, cardLast4: string | undefin
   const currency = currencyFromCode(currencyRaw);
   const money = parseAmount(amountRaw);
   if (!type || !occurredAt || !currency || !money) return null;
+  if (money.currency && money.currency !== currency) return null; // Moneda column vs amount prefix disagree: never guess
 
   return {
     bankCode: 'bhd',
@@ -54,7 +55,8 @@ export const transactionsTable: Template = {
     const transactions: ParsedTransaction[] = [];
     for (const line of lines.slice(headerIndex + 1)) {
       const cells = splitCells(line);
-      if (cells.length !== COLUMNS) break; // fin de la tabla
+      if (cells.length === 1) break; // línea sin pipe: fin de la tabla (ej. párrafo de marketing)
+      if (cells.length !== COLUMNS) return []; // fila con pipes pero forma inválida: todo o nada
       const tx = parseRow(cells, transactions.length, cardLast4);
       if (!tx) return []; // todo o nada
       transactions.push(tx);
