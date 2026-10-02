@@ -1,5 +1,5 @@
 begin;
-select plan(24);
+select plan(25);
 
 select has_table('public', 'budgets', 'budgets exists');
 select has_table('public', 'budget_alerts', 'budget_alerts exists');
@@ -70,6 +70,10 @@ select throws_ok(
 select throws_ok(
   $$insert into public.budgets (user_id, period, limit_amount) values ('22222222-2222-2222-2222-222222222222', 'month', 100)$$,
   '42501', null, 'user cannot create a budget for another user'
+);
+select throws_ok(
+  $$insert into public.budgets (user_id, period, limit_amount, currency) values ('11111111-1111-1111-1111-111111111111', 'week', 100, 'USD')$$,
+  '23514', null, 'budgets are in DOP only'
 );
 select throws_ok(
   $$insert into public.budgets (user_id, period, limit_amount) values ('11111111-1111-1111-1111-111111111111', 'week', 0)$$,

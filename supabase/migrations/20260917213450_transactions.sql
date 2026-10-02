@@ -1,8 +1,9 @@
 create table public.transactions (
   id uuid primary key default gen_random_uuid(),
   user_id uuid not null references auth.users (id) on delete cascade,
-  -- null para gastos manuales
-  linked_account_id uuid references public.linked_accounts (id) on delete set null,
+  -- null para gastos manuales. NO ACTION (no SET NULL): una cuenta con transacciones de correo no se borra
+  -- (se revoca); borrar al usuario sí funciona porque las cascadas de user_id terminan en la misma sentencia.
+  linked_account_id uuid references public.linked_accounts (id) on delete no action,
   bank_code public.bank_code,
   type public.tx_type not null,
   -- Siempre positivo; el signo lo da type (card_reversal resta)
@@ -28,16 +29,18 @@ create table public.transactions (
 
   constraint transactions_source_shape check (
     (source = 'email' and message_id is not null and linked_account_id is not null and bank_code is not null)
-    or (source = 'manual' and message_id is null)
+    or (source = 'manual' and message_id is null and linked_account_id is null)
   ),
   constraint transactions_ignored_reason_shape check (
     (is_ignored = false and ignored_reason is null) or (is_ignored = true and ignored_reason is not null)
   )
 );
 
-create unique index transactions_account_message_key
-  on public.transactions (linked_account_id, message_id)
-  where message_id is not null;
+-- UNIQUE plano (no índice parcial): ON CONFLICT (linked_account_id, message_id) y supabase-js
+-- upsert({ onConflict, ignoreDuplicates }) lo infieren. Los NULL son distintos entre sí, así que los
+-- gastos manuales (linked_account_id y message_id null) nunca chocan.
+alter table public.transactions
+  add constraint transactions_account_message_key unique (linked_account_id, message_id);
 
 create index transactions_user_occurred_idx on public.transactions (user_id, occurred_at desc);
 create index transactions_user_active_idx on public.transactions (user_id, occurred_at desc) where is_ignored = false;

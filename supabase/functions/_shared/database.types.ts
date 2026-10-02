@@ -157,6 +157,7 @@ export type Database = {
           category_id: string
           created_at: string
           id: string
+          match_field: string
           pattern: string
           priority: number
           user_id: string
@@ -165,6 +166,7 @@ export type Database = {
           category_id: string
           created_at?: string
           id?: string
+          match_field?: string
           pattern: string
           priority?: number
           user_id: string
@@ -173,6 +175,7 @@ export type Database = {
           category_id?: string
           created_at?: string
           id?: string
+          match_field?: string
           pattern?: string
           priority?: number
           user_id?: string

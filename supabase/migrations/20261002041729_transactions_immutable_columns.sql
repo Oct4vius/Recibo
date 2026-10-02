@@ -23,3 +23,5 @@ $$;
 create trigger transactions_forbid_identity_change
   before update on public.transactions
   for each row execute function public.transactions_forbid_identity_change();
+
+revoke execute on function public.transactions_forbid_identity_change() from public, anon, authenticated;

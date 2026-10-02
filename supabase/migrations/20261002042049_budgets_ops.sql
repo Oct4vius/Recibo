@@ -4,7 +4,8 @@ create table public.budgets (
   user_id uuid not null references auth.users (id) on delete cascade,
   period public.budget_period not null,
   limit_amount numeric(14,2) not null check (limit_amount > 0),
-  currency public.currency_code not null default 'DOP',
+  -- Presupuestos solo en DOP: las RPC devuelven totales consolidados en DOP
+  currency public.currency_code not null default 'DOP' check (currency = 'DOP'),
   thresholds integer[] not null default array[80, 100],
   is_active boolean not null default true,
   created_at timestamptz not null default now(),
@@ -29,6 +30,7 @@ create table public.budget_alerts (
   unique (budget_id, period_start, threshold)
 );
 alter table public.budget_alerts enable row level security;
+revoke insert, update, delete, truncate on public.budget_alerts from authenticated;
 create policy budget_alerts_select_own on public.budget_alerts for select to authenticated using ((select auth.uid()) = user_id);
 
 -- Tokens de Expo Push por dispositivo
@@ -60,6 +62,7 @@ create table public.sync_logs (
 );
 create index sync_logs_account_started_idx on public.sync_logs (linked_account_id, started_at desc);
 alter table public.sync_logs enable row level security;
+revoke insert, update, delete, truncate on public.sync_logs from authenticated;
 create policy sync_logs_select_own on public.sync_logs for select to authenticated using ((select auth.uid()) = user_id);
 
 -- Correos de bancos conocidos/candidatos sin plantilla: la muestra para escribir el parser
@@ -81,5 +84,5 @@ create policy unparsed_emails_select_own on public.unparsed_emails for select to
 create policy unparsed_emails_update_own on public.unparsed_emails for update to authenticated using ((select auth.uid()) = user_id) with check ((select auth.uid()) = user_id);
 
 -- El usuario solo puede marcar `resolved`; el resto de columnas es inmutable para él.
-revoke update on public.unparsed_emails from authenticated;
+revoke insert, update, delete, truncate on public.unparsed_emails from authenticated;
 grant update (resolved) on public.unparsed_emails to authenticated;

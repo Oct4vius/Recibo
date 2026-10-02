@@ -22,6 +22,7 @@ create trigger linked_accounts_set_updated_at
   for each row execute function public.set_updated_at();
 
 alter table public.linked_accounts enable row level security;
+revoke insert, update, delete, truncate on public.linked_accounts from authenticated;
 
 -- El usuario solo lee. Vincular/desvincular pasa por Edge Functions (service role).
 create policy linked_accounts_select_own on public.linked_accounts

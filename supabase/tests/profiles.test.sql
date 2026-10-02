@@ -1,5 +1,5 @@
 begin;
-select plan(12);
+select plan(13);
 
 select has_table('public', 'profiles', 'profiles exists');
 select col_type_is('public', 'profiles', 'usd_rate', 'numeric(10,4)', 'usd_rate is numeric(10,4)');
@@ -14,6 +14,13 @@ select results_eq(
   $$select timezone, primary_currency::text, usd_rate from public.profiles where user_id = '11111111-1111-1111-1111-111111111111'$$,
   $$values ('America/Santo_Domingo'::text, 'DOP'::text, 60.0000::numeric)$$,
   'profile auto-created with defaults'
+);
+
+-- Backfill: todo usuario existente tiene perfil (la migración inserta los que faltaban)
+select is(
+  (select count(*) from auth.users u left join public.profiles p on p.user_id = u.id where p.user_id is null),
+  0::bigint,
+  'every auth.users row has a profile'
 );
 
 -- anon: sin acceso

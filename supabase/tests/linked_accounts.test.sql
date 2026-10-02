@@ -23,7 +23,7 @@ select throws_ok(
   $$insert into public.linked_accounts (user_id, provider, email) values ('11111111-1111-1111-1111-111111111111', 'gmail', 'x@gmail.com')$$,
   '42501', null, 'user cannot insert accounts (Edge Function does)'
 );
-select is_empty($$update public.linked_accounts set status = 'revoked' returning id$$, 'user cannot update accounts');
+select throws_ok($$update public.linked_accounts set status = 'revoked'$$, '42501', null, 'user cannot update accounts (no UPDATE privilege)');
 
 set local request.jwt.claim.sub = '22222222-2222-2222-2222-222222222222';
 select is_empty($$select * from public.linked_accounts$$, 'other sees nothing');

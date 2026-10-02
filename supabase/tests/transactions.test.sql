@@ -1,5 +1,5 @@
 begin;
-select plan(17);
+select plan(22);
 
 select has_table('public', 'transactions', 'transactions exists');
 select col_type_is('public', 'transactions', 'amount', 'numeric(14,2)', 'amount is numeric(14,2)');
@@ -19,6 +19,18 @@ select throws_ok(
   $$insert into public.transactions (user_id, linked_account_id, bank_code, type, amount, currency, occurred_at, source, message_id)
     values ('11111111-1111-1111-1111-111111111111', 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', 'bhd', 'card_purchase', 1, 'DOP', now(), 'email', '<m1@bhd.com.do>#0')$$,
   '23505', null, 'same message_id per account is rejected (idempotency key)'
+);
+-- Plan 3 inserta con ON CONFLICT (linked_account_id, message_id) DO NOTHING (supabase-js upsert + ignoreDuplicates)
+select lives_ok(
+  $$insert into public.transactions (user_id, linked_account_id, bank_code, type, amount, currency, occurred_at, source, message_id)
+    values ('11111111-1111-1111-1111-111111111111', 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', 'bhd', 'card_purchase', 1, 'DOP', now(), 'email', '<m1@bhd.com.do>#0')
+    on conflict (linked_account_id, message_id) do nothing$$,
+  'ON CONFLICT (linked_account_id, message_id) DO NOTHING is accepted as an arbiter'
+);
+select is(
+  (select count(*) from public.transactions where linked_account_id = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa' and message_id = '<m1@bhd.com.do>#0'),
+  1::bigint,
+  'the retried insert left exactly one row and did not alter the original'
 );
 select throws_ok(
   $$insert into public.transactions (user_id, type, amount, currency, occurred_at, source)
@@ -76,6 +88,23 @@ select results_eq(
 
 set local request.jwt.claim.sub = '22222222-2222-2222-2222-222222222222';
 select is_empty($$select * from public.transactions$$, 'other sees nothing');
+select throws_ok(
+  $$insert into public.transactions (user_id, linked_account_id, type, amount, currency, occurred_at, source)
+    values ('22222222-2222-2222-2222-222222222222', 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', 'card_purchase', 5, 'DOP', now(), 'manual')$$,
+  '23514', null, 'a manual transaction cannot reference any linked account (no FK probing of other users accounts)'
+);
+
+-- Borrar un usuario con cuenta vinculada y transacciones de correo funciona (cascadas completas; FK no action)
+reset role;
+select lives_ok(
+  $$delete from auth.users where id = '11111111-1111-1111-1111-111111111111'$$,
+  'deleting a user that owns a linked account with email transactions succeeds'
+);
+select is(
+  (select count(*) from public.transactions where linked_account_id = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa'),
+  0::bigint,
+  'the deleted user transactions are gone with the user'
+);
 
 select * from finish();
 rollback;

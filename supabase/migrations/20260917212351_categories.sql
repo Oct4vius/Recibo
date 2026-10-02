@@ -38,9 +38,12 @@ create table public.merchant_rules (
   user_id uuid not null references auth.users (id) on delete cascade,
   -- Substring case-insensitive sobre merchant/beneficiario; el sync la aplica en orden de priority asc
   pattern text not null check (length(trim(pattern)) between 1 and 80),
+  -- Sobre qué se aplica pattern: merchant/beneficiario (substring) o los últimos 4 de la cuenta destino (exacto)
+  match_field text not null default 'merchant' check (match_field in ('merchant', 'counterparty_last4')),
   category_id uuid not null references public.categories (id) on delete cascade,
   priority integer not null default 100,
-  created_at timestamptz not null default now()
+  created_at timestamptz not null default now(),
+  constraint merchant_rules_counterparty_pattern check (match_field <> 'counterparty_last4' or pattern ~ '^[0-9]{4}$')
 );
 
 create index merchant_rules_user_priority_idx on public.merchant_rules (user_id, priority);

@@ -137,5 +137,7 @@ begin
 end;
 $$;
 
-revoke execute on function public.get_spending_summary(public.budget_period, date) from anon;
-revoke execute on function public.get_history(text, date, date) from anon;
+revoke execute on function public.get_spending_summary(public.budget_period, date) from public, anon;
+revoke execute on function public.get_history(text, date, date) from public, anon;
+grant execute on function public.get_spending_summary(public.budget_period, date) to authenticated;
+grant execute on function public.get_history(text, date, date) to authenticated;
