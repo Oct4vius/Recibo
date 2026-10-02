@@ -79,3 +79,7 @@ create table public.unparsed_emails (
 alter table public.unparsed_emails enable row level security;
 create policy unparsed_emails_select_own on public.unparsed_emails for select to authenticated using ((select auth.uid()) = user_id);
 create policy unparsed_emails_update_own on public.unparsed_emails for update to authenticated using ((select auth.uid()) = user_id) with check ((select auth.uid()) = user_id);
+
+-- El usuario solo puede marcar `resolved`; el resto de columnas es inmutable para él.
+revoke update on public.unparsed_emails from authenticated;
+grant update (resolved) on public.unparsed_emails to authenticated;
