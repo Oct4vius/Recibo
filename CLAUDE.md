@@ -29,7 +29,12 @@ bun run test:deno                  # deno test --allow-read supabase/functions/
 bun run lint                       # deno lint (Plan 4 agrega ESLint de Expo)
 bun run check                      # typecheck + test + test:deno + lint — obligatorio antes de done
 bun run fixtures:build             # fixtures-raw/**/*.eml → parsers/<bank>/fixtures/*.json
-# Desde Plan 2: supabase start | supabase db reset | supabase functions serve
+bun run db:start                   # stack local (Docker Desktop debe estar corriendo)
+bun run db:reset                   # aplica migraciones + seed.sql en local
+bun run db:test                    # pgTAP (supabase/tests/*.test.sql)
+bun run check:db                   # db:reset + db:test — obligatorio si tocaste supabase/migrations
+bun run db:types                   # regenera supabase/functions/_shared/database.types.ts
+# Desde Plan 3: supabase functions serve
 # Desde Plan 4: bunx expo start
 ```
 
@@ -45,12 +50,15 @@ src/
     hooks.ts
   components/              # UI genérica (Button, Card, Amount, ...)
   lib/                     # supabase.ts, queryClient.ts, env.ts, money.ts, dates.ts
-  types/                   # tipos compartidos; database.ts generado por `supabase gen types`
+  types/                   # tipos compartidos; database.ts re-exporta _shared/database.types.ts (Plan 4)
 supabase/
   migrations/              # SQL versionado, una migración por cambio
-  seed.sql                 # categorías por defecto
+  seed.sql                 # solo datos de desarrollo local (las categorías van en migraciones)
+  tests/                   # pgTAP, un archivo por migración
+  config.toml
   functions/
     _shared/
+      database.types.ts    # generado por db:types; NO editar a mano
       parsers/             # types.ts, normalize.ts, index.ts (registro), candidates.ts,
                            #   <bank>/index.ts + <bank>/<template>.ts + <bank>/fixtures/*.json
       mail/                # gmail.ts, graph.ts (fetch de correos, refresh de tokens)
@@ -197,6 +205,8 @@ Por eso:
    `card_last4`, `currency` y **monto exacto**, dentro de las 72 h previas.
 2. Si existe: ambas quedan `is_ignored = true`; la compra con
    `ignored_reason = 'reversed'` y `reversed_by = <id reversa>`. Gasto neto cero.
+   El emparejamiento se apoya en `reversed_by`, no en `ignored_reason`: el
+   usuario puede asignarse `ignored_reason` a mano.
 3. Si **no** existe: la reversa se guarda con `is_ignored = true`,
    `ignored_reason = 'unmatched_reversal'`. **No se resta del total** (la compra
    original pudo no llegar por correo; restarla subestimaría el gasto). Aparece
@@ -244,10 +254,14 @@ inventar un parser sin correo real.**
   `Authorization: Bearer <service_role>`. Rechazar cualquier otro caller.
 - Por cuenta: refresh token → fetch incremental con cursor
   (`linked_accounts.sync_cursor`: Gmail `historyId`, Outlook `@odata.deltaLink`)
-  → parse → `upsert` en `transactions` con `onConflict: 'linked_account_id,message_id'`.
+  → parse → insert en `transactions` con
+  `on conflict (linked_account_id, message_id) where message_id is not null do nothing`.
+  El índice único es **parcial**, así que el insert debe repetir el predicado
+  (sin él Postgres lanza 42P10). `supabase-js` `upsert` no puede expresarlo:
+  Plan 3 inserta vía RPC/SQL.
 - **Idempotente siempre.** Reintentar una corrida no puede duplicar ni alterar
-  transacciones editadas por el usuario: el upsert solo escribe si la fila no
-  existe (`ignoreDuplicates: true`).
+  transacciones editadas por el usuario: el insert solo escribe si la fila no
+  existe (`do nothing`).
 - La única dedup en v1 es por `message_id`. **No** implementar dedup
   autorización/liquidación hasta que una fixture real lo demuestre necesario.
 - Cada corrida escribe una fila en `sync_logs` (`fetched`, `parsed`, `unparsed`,
@@ -266,10 +280,23 @@ inventar un parser sin correo real.**
 - **PostgREST recorta a 1000 filas** silenciosamente. Listados de
   `transactions` siempre paginados con `.range()` + `count: 'exact'`.
   Nunca asumir que `.select('*')` devuelve todo.
-- Tipos generados: `bunx supabase gen types typescript --local > src/types/database.ts`
-  después de cada migración. No escribir tipos de tablas a mano.
-- Categorías por defecto: `categories.user_id IS NULL`, seed en `seed.sql`, no
-  editables por el usuario (puede crear las suyas).
+- Tipos generados: `bun run db:types` después de cada migración →
+  `supabase/functions/_shared/database.types.ts` (única fuente; la app lo
+  re-exporta). El test `parsers/db-enums.test.ts` falla en compilación si los
+  enums divergen de `types.ts`. No escribir tipos de tablas a mano.
+- Categorías por defecto: `categories.user_id IS NULL`, sembradas por
+  **migración** (existen en prod), no por `seed.sql`. No editables por el
+  usuario (puede crear las suyas).
+- Qué cuenta como gasto se define UNA vez en la vista
+  `public.spending_transactions`; las RPC la usan. No repetir el filtro en la app.
+- La conversión USD→DOP para totales vive en `spending_transactions.amount_dop`
+  (una sola fórmula); las RPC suman esa columna.
+- `transactions`: las columnas de identidad (`user_id`, `source`, `message_id`,
+  `linked_account_id`, `bank_code`, `template_id`) son inmutables; un trigger
+  `before update` lanza 42501 (migración `transactions_immutable_columns`). Los
+  correos importados nunca se borran (solo se borran las manuales).
+- `unparsed_emails`: el usuario solo puede actualizar `resolved` (privilegio por
+  columna); el resto lo escribe `sync-mail` con service role.
 - `categories.counts_as_spending boolean default true`. La categoría por defecto
   **"Transferencias propias"** tiene `false`: una `transfer_out` a una cuenta
   propia se asigna ahí vía `merchant_rules` (por beneficiario o

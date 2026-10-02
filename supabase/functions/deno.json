@@ -1,1 +1,3 @@
-{}
+{
+  "lint": { "exclude": ["_shared/database.types.ts"] }
+}
