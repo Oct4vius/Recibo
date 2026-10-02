@@ -1,5 +1,5 @@
 begin;
-select plan(15);
+select plan(17);
 
 select has_table('public', 'transactions', 'transactions exists');
 select col_type_is('public', 'transactions', 'amount', 'numeric(14,2)', 'amount is numeric(14,2)');
@@ -54,6 +54,15 @@ select results_eq(
   $$update public.transactions set is_ignored = true, ignored_reason = 'user' where message_id = '<m1@bhd.com.do>#0' returning is_ignored$$,
   $$values (true)$$,
   'owner ignores an email transaction'
+);
+select throws_ok(
+  $$update public.transactions set source = 'manual', message_id = null where message_id = '<m1@bhd.com.do>#0'$$,
+  '42501', null, 'owner cannot turn an email transaction into a manual one (identity columns are immutable)'
+);
+select is(
+  (select source::text from public.transactions where message_id = '<m1@bhd.com.do>#0'),
+  'email',
+  'email transaction keeps source = email after the rejected update'
 );
 select is_empty(
   $$delete from public.transactions where message_id = '<m1@bhd.com.do>#0' returning id$$,
