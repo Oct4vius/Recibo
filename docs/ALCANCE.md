@@ -64,7 +64,8 @@ el plan gratuito de Supabase.
   2. Pedir solo correos nuevos de remitentes bancarios conocidos, usando el
      cursor guardado (Gmail: `historyId`; Outlook: delta link).
   3. Pasar cada correo por el parser del banco correspondiente.
-  4. `upsert` de la transacción con `message_id` como clave única. Idempotente:
+  4. `upsert` de la transacción con `(linked_account_id, message_id)` como clave única
+     (`UNIQUE` plano). Idempotente:
      reintentar nunca duplica.
   5. Correos de banco conocido sin plantilla que matchee → tabla
      `unparsed_emails` (asunto + fragmento) para escribir la plantilla después.
@@ -187,7 +188,7 @@ supabase/
     link-account/
     sync-mail/
     send-push/
-  seed.sql
+  seed.sql              # solo datos de desarrollo local; las categorías por defecto salen de una migración
 tests/
   unit/                 # Vitest (app)
 docs/

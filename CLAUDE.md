@@ -201,16 +201,23 @@ Caso real: compra `Aprobada $438.42` y `Reversada $434.22` en el mismo minuto,
 misma tarjeta. **Los montos no coinciden** (fixtures
 `card-purchase-approved-near-reversal.eml` y `card-purchase-reversed.eml`).
 Por eso:
-1. Buscar `card_purchase` no reversada del mismo usuario, `bank_code`,
+La tabla impone `transactions_ignored_reason_shape`: `is_ignored = false` ⇒
+`ignored_reason is null`, e `is_ignored = true` ⇒ `ignored_reason is not null`
+(enum `ignored_reason`: `user`, `reversed`, `unmatched_reversal`). Siempre se
+cambian juntos.
+1. Buscar `card_purchase` **con `is_ignored = false`** (una compra que el usuario
+   ya ignoró, o ya reversada, no es candidata) del mismo usuario, `bank_code`,
    `card_last4`, `currency` y **monto exacto**, dentro de las 72 h previas.
-2. Si existe: ambas quedan `is_ignored = true`; la compra con
-   `ignored_reason = 'reversed'` y `reversed_by = <id reversa>`. Gasto neto cero.
-   El emparejamiento se apoya en `reversed_by`, no en `ignored_reason`: el
-   usuario puede asignarse `ignored_reason` a mano.
+2. Si existe: la reversa se inserta con `is_ignored = true`,
+   `ignored_reason = 'reversed'` y `reversed_by = null`; la compra pasa a
+   `is_ignored = true`, `ignored_reason = 'reversed'` y
+   `reversed_by = <id de la reversa>`. Gasto neto cero. El emparejamiento se
+   apoya en `reversed_by`, no en `ignored_reason`: el usuario puede asignarse
+   `ignored_reason` a mano.
 3. Si **no** existe: la reversa se guarda con `is_ignored = true`,
-   `ignored_reason = 'unmatched_reversal'`. **No se resta del total** (la compra
-   original pudo no llegar por correo; restarla subestimaría el gasto). Aparece
-   en el filtro "Revisar" y el usuario decide.
+   `ignored_reason = 'unmatched_reversal'` y `reversed_by = null`. **No se resta
+   del total** (la compra original pudo no llegar por correo; restarla
+   subestimaría el gasto). Aparece en el filtro "Revisar" y el usuario decide.
 4. Nunca emparejar por monto aproximado. Test de regresión obligatorio: el par
    de fixtures de arriba **no** debe emparejarse.
 
@@ -254,14 +261,12 @@ inventar un parser sin correo real.**
   `Authorization: Bearer <service_role>`. Rechazar cualquier otro caller.
 - Por cuenta: refresh token → fetch incremental con cursor
   (`linked_accounts.sync_cursor`: Gmail `historyId`, Outlook `@odata.deltaLink`)
-  → parse → insert en `transactions` con
-  `on conflict (linked_account_id, message_id) where message_id is not null do nothing`.
-  El índice único es **parcial**, así que el insert debe repetir el predicado
-  (sin él Postgres lanza 42P10). `supabase-js` `upsert` no puede expresarlo:
-  Plan 3 inserta vía RPC/SQL.
+  → parse → `upsert` en `transactions` con `onConflict: 'linked_account_id,message_id'`.
+  La clave es un `UNIQUE` plano (`transactions_account_message_key`), no un índice
+  parcial: `supabase-js` lo infiere y los gastos manuales (NULL/NULL) nunca chocan.
 - **Idempotente siempre.** Reintentar una corrida no puede duplicar ni alterar
-  transacciones editadas por el usuario: el insert solo escribe si la fila no
-  existe (`do nothing`).
+  transacciones editadas por el usuario: el upsert usa `ignoreDuplicates: true`
+  y solo escribe si la fila no existe.
 - La única dedup en v1 es por `message_id`. **No** implementar dedup
   autorización/liquidación hasta que una fixture real lo demuestre necesario.
 - Cada corrida escribe una fila en `sync_logs` (`fetched`, `parsed`, `unparsed`,
@@ -299,8 +304,10 @@ inventar un parser sin correo real.**
   columna); el resto lo escribe `sync-mail` con service role.
 - `categories.counts_as_spending boolean default true`. La categoría por defecto
   **"Transferencias propias"** tiene `false`: una `transfer_out` a una cuenta
-  propia se asigna ahí vía `merchant_rules` (por beneficiario o
-  `counterparty_last4`) y **no suma** a totales ni presupuesto, pero sigue
+  propia se asigna ahí vía `merchant_rules`: `match_field = 'merchant'` (default;
+  `pattern` es un substring del comercio/beneficiario) o
+  `match_field = 'counterparty_last4'` (`pattern` = exactamente 4 dígitos, validado
+  por CHECK). **No suma** a totales ni presupuesto, pero sigue
   visible. Todas las RPC de agregados filtran `counts_as_spending = true` y
   `is_ignored = false`. Esta es la única forma de excluir un gasto además de
   ignorarlo.
@@ -366,7 +373,9 @@ SQL nace con tests. Las pantallas no se testean en v1.
   Los mocks no cazan bugs de schema.
 - **Regresión**: cada bug fix trae un test que **falla sin el fix**, nombrado
   `describe("regression #<issue> — <qué>")`.
-- **Antes de done**: `bun run typecheck && bun run lint && bun run test && bun run test:deno`.
+- **Antes de done**: `bun run check` (typecheck + test + test:deno + lint) y, si el
+  cambio toca `supabase/migrations/` o `supabase/tests/`, también `bun run check:db`
+  (reset local + pgTAP; necesita Docker).
 
 ### Definition of Done
 - El cambio trae **sus** tests en el mismo PR — nunca "los agrego después".
@@ -376,7 +385,8 @@ SQL nace con tests. Las pantallas no se testean en v1.
 - Nueva tabla → migración + RLS + tipos regenerados.
 - Nuevo parser/plantilla → fixture + test + registrado.
 - Sin secretos ni tokens en `app/`, `src/` ni logs.
-- Typecheck, lint y tests en verde.
+- Typecheck, lint y tests en verde; `bun run check:db` en verde si cambió
+  `supabase/migrations/` o `supabase/tests/`.
 
 ## Restricciones conocidas (no "arreglar")
 - **Google OAuth**: app publicada "En producción" **sin verificar** (pantalla de
