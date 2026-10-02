@@ -1,4 +1,6 @@
--- Qué cuenta como gasto (una sola definición, reutilizada por ambas RPC)
+-- Qué cuenta como gasto y su conversión a DOP (una sola definición, reutilizada por ambas RPC).
+-- amount_dop convierte con la tasa del perfil; una moneda nueva queda en NULL hasta que se
+-- agregue su rama explícita (no se convierte en silencio a la tasa de USD).
 create or replace view public.spending_transactions
 with (security_invoker = true)
 as
@@ -6,8 +8,13 @@ select
   t.user_id,
   t.amount,
   t.currency,
+  case t.currency
+    when 'DOP' then t.amount
+    when 'USD' then round(t.amount * p.usd_rate, 2)
+  end as amount_dop,
   t.occurred_at
 from public.transactions t
+join public.profiles p on p.user_id = t.user_id
 left join public.categories c on c.id = t.category_id
 where t.is_ignored = false
   and t.type in ('card_purchase', 'atm_withdrawal', 'transfer_out')
@@ -32,7 +39,6 @@ as $$
 declare
   v_uid uuid := auth.uid();
   v_tz text;
-  v_rate numeric;
   v_ref date;
   v_unit interval;
   v_start date;
@@ -43,9 +49,8 @@ begin
     raise exception 'not authenticated' using errcode = '42501';
   end if;
 
-  select p.timezone, p.usd_rate into v_tz, v_rate from public.profiles p where p.user_id = v_uid;
+  select p.timezone into v_tz from public.profiles p where p.user_id = v_uid;
   v_tz := coalesce(v_tz, 'America/Santo_Domingo');
-  v_rate := coalesce(v_rate, 60);
   v_ref := coalesce(p_ref_date, (now() at time zone v_tz)::date);
   v_unit := case p_period when 'week' then interval '1 week' else interval '1 month' end;
   v_start := date_trunc(p_period::text, v_ref::timestamp)::date;
@@ -57,7 +62,7 @@ begin
     select
       s.currency,
       s.amount,
-      case s.currency when 'DOP' then s.amount else round(s.amount * v_rate, 2) end as dop,
+      s.amount_dop as dop,
       (s.occurred_at at time zone v_tz)::date as d
     from public.spending_transactions s
     where s.user_id = v_uid
@@ -90,7 +95,6 @@ as $$
 declare
   v_uid uuid := auth.uid();
   v_tz text;
-  v_rate numeric;
   v_step interval;
 begin
   if v_uid is null then
@@ -100,9 +104,8 @@ begin
     raise exception 'granularity must be week, month or year' using errcode = '22023';
   end if;
 
-  select p.timezone, p.usd_rate into v_tz, v_rate from public.profiles p where p.user_id = v_uid;
+  select p.timezone into v_tz from public.profiles p where p.user_id = v_uid;
   v_tz := coalesce(v_tz, 'America/Santo_Domingo');
-  v_rate := coalesce(v_rate, 60);
   v_step := case p_granularity when 'week' then interval '1 week' when 'month' then interval '1 month' else interval '1 year' end;
 
   return query
@@ -117,7 +120,7 @@ begin
   spend as (
     select
       date_trunc(p_granularity, (s.occurred_at at time zone v_tz))::date as b,
-      case s.currency when 'DOP' then s.amount else round(s.amount * v_rate, 2) end as dop
+      s.amount_dop as dop
     from public.spending_transactions s
     where s.user_id = v_uid
       and (s.occurred_at at time zone v_tz)::date >= date_trunc(p_granularity, p_from::timestamp)::date
