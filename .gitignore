@@ -20,3 +20,7 @@ supabase/.branches/
 
 # deno
 .deno/
+
+# correos bancarios reales: solo locales (las fixtures JSON derivadas sí se versionan)
+fixtures-raw/
+*.eml

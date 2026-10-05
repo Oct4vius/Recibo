@@ -67,7 +67,7 @@ supabase/
     sync-mail/             # invocada por pg_cron; lee correos, parsea, upsert, alertas
     send-push/             # envía a Expo Push Service
 tests/unit/                # Vitest para src/ (espeja la ruta)
-fixtures-raw/<bank>/       # .eml reales anonimizados, fuente de las fixtures de parsers
+fixtures-raw/<bank>/       # .eml reales anonimizados, SOLO locales (gitignored); fuente de las fixtures
 docs/
 ```
 
@@ -221,10 +221,13 @@ cambian juntos.
 4. Nunca emparejar por monto aproximado. Test de regresión obligatorio: el par
    de fixtures de arriba **no** debe emparejarse.
 
-`fixtures-raw/` guarda los `.eml` reales anonimizados tal como llegan. Las
-fixtures de test en `parsers/<bank>/fixtures/` se derivan de ahí (texto plano
-normalizado) con el script `bun run fixtures:build`. Nunca editar una fixture
-derivada a mano.
+`fixtures-raw/` guarda los `.eml` reales anonimizados tal como llegan y **no se
+versiona** (`.gitignore`; el repo es público y los headers traen rutas, IPs e ids
+reales). Vive solo en la máquina del desarrollador. Las fixtures de test en
+`parsers/<bank>/fixtures/` se derivan de ahí (texto plano normalizado) con el
+script `bun run fixtures:build` y **sí** se versionan: son la fuente de los tests
+en un clon limpio. Los tests que leen `.eml` directamente usan
+`it.skipIf(!existsSync(...))`. Nunca editar una fixture derivada a mano.
 
 El registro en `parsers/index.ts` resuelve `from → banco → parse()`. Si el
 banco es conocido y `parse()` devuelve `[]`, `sync-mail` inserta en
