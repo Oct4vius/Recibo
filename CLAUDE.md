@@ -93,8 +93,11 @@ token) viven **solo** en Edge Functions vía `Deno.env.get(...)` y en
   con service role. Si una PR guarda un token en `linked_accounts` en claro, en
   SecureStore o en logs → rechazar.
 - **Registro cerrado.** Signup deshabilitado en Supabase Auth; los usuarios se
-  invitan desde el dashboard. La app **no** tiene pantalla de registro ni llama
-  a `signUp()`. Si aparece, es un bug.
+  crean desde el dashboard ("Create new user" + Auto Confirm). La app **no** tiene
+  pantalla de registro ni llama a `signUp()`. Si aparece, es un bug. No hay SMTP
+  propio (no hay dominio): sin invitaciones ni recuperación de contraseña por
+  correo; la contraseña se cambia en la app con sesión abierta (`updateUser`) o
+  la restablece el admin. El registro abierto se descartó el 2026-10-05 por eso.
 - **RLS en todas las tablas** con policy `user_id = auth.uid()`. Nueva tabla
   sin RLS = migración incompleta.
 - La app usa **anon key**; las Edge Functions usan **service role**. Jamás al revés.
