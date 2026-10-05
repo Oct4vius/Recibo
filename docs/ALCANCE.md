@@ -26,7 +26,7 @@ el plan gratuito de Supabase.
 | Plataforma móvil | Expo (managed) + Expo Router, TypeScript. **Android primero**; iOS diferido | React Native bare CLI |
 | Distribución | APK/AAB por EAS Build, instalado a mano. Sin tiendas | Play Store, TestFlight |
 | Proveedores de correo | Gmail y Outlook/Hotmail vía OAuth 2.0 (solo lectura). Outlook es el correo del autor | IMAP genérico |
-| Registro | Abierto desde la app, con confirmación por código de 6 dígitos enviado por correo (SMTP propio gratuito). Decidido 2026-10-05 | Registro cerrado por invitación (descartado: el autor no quiere mantener una lista de usuarios); registro sin confirmación |
+| Registro | Cerrado: cuentas creadas desde el dashboard de Supabase ("Create new user" + Auto Confirm, contraseña temporal) | Registro público con confirmación por correo (probado y descartado el 2026-10-05: exige SMTP propio con dominio, y no hay dominio) |
 | Dónde se leen los correos | Backend en Supabase: pg_cron → Edge Function cada 15 min | Lectura en el celular al abrir; webhooks en tiempo real |
 | Parseo de correos | Solo reglas (regex por banco y plantilla) | LLM total o de respaldo |
 | Bancos v1 | **BHD** con parser (único correo verificado). Banreservas, Popular y APAP quedan como *candidatos*: sus correos se capturan crudos hasta tener una muestra real | Escribir parsers a ciegas |
@@ -40,14 +40,15 @@ el plan gratuito de Supabase.
 ## 3. Funcionalidades v1
 
 ### 3.1 Autenticación
-- Login y recuperación de contraseña con Supabase Auth.
-- **Registro abierto con confirmación.** Pantalla de registro (email +
-  contraseña); Supabase envía un código de 6 dígitos que el usuario escribe en
-  la app para confirmar. La recuperación de contraseña usa también un código.
-  Sin deep links ni página web. Requiere SMTP propio (el integrado de Supabase
-  solo entrega a miembros del equipo del proyecto).
-- Riesgos aceptados: cuentas creadas por bots (mitigable con CAPTCHA si aparece)
-  y el tope de 100 usuarios de la app de Google sin verificar.
+- Login con Supabase Auth y cambio de contraseña dentro de la app con la sesión
+  abierta (`updateUser`, no necesita correo).
+- **Sin registro público.** El signup queda deshabilitado en Supabase Auth; los
+  usuarios se crean desde el dashboard con contraseña temporal y Auto Confirm.
+  La app no tiene pantalla de registro.
+- **Sin correos de Auth.** Sin SMTP propio, Supabase solo entrega correos a los
+  miembros del equipo del proyecto: no hay invitaciones ni recuperación de
+  contraseña por correo. Si alguien olvida su contraseña, el administrador la
+  restablece desde el dashboard.
 - Sesión persistida en `expo-secure-store`.
 
 ### 3.2 Vinculación de cuentas de correo
@@ -244,7 +245,7 @@ en `CLAUDE.md`.
 
 - **iOS.** Nadie del grupo tiene iPhone. Expo lo permite después sin cambios de
   código, pero exige Apple Developer (99 USD/año) y builds en la nube.
-- Publicación en tiendas.
+- Registro público y publicación en tiendas.
 - Deduplicación autorización + liquidación (ver 3.3).
 - Tests de pantallas y componentes.
 - IMAP o cualquier proveedor distinto de Gmail/Outlook.
