@@ -26,7 +26,7 @@ el plan gratuito de Supabase.
 | Plataforma móvil | Expo (managed) + Expo Router, TypeScript. **Android primero**; iOS diferido | React Native bare CLI |
 | Distribución | APK/AAB por EAS Build, instalado a mano. Sin tiendas | Play Store, TestFlight |
 | Proveedores de correo | Gmail y Outlook/Hotmail vía OAuth 2.0 (solo lectura). Outlook es el correo del autor | IMAP genérico |
-| Registro | Cerrado: cuentas creadas por invitación desde el dashboard de Supabase | Registro público |
+| Registro | Abierto desde la app, con confirmación por código de 6 dígitos enviado por correo (SMTP propio gratuito). Decidido 2026-10-05 | Registro cerrado por invitación (descartado: el autor no quiere mantener una lista de usuarios); registro sin confirmación |
 | Dónde se leen los correos | Backend en Supabase: pg_cron → Edge Function cada 15 min | Lectura en el celular al abrir; webhooks en tiempo real |
 | Parseo de correos | Solo reglas (regex por banco y plantilla) | LLM total o de respaldo |
 | Bancos v1 | **BHD** con parser (único correo verificado). Banreservas, Popular y APAP quedan como *candidatos*: sus correos se capturan crudos hasta tener una muestra real | Escribir parsers a ciegas |
@@ -41,9 +41,13 @@ el plan gratuito de Supabase.
 
 ### 3.1 Autenticación
 - Login y recuperación de contraseña con Supabase Auth.
-- **Sin registro público.** El signup queda deshabilitado en Supabase Auth; los
-  usuarios se invitan por correo desde el dashboard. La app no tiene pantalla
-  de registro.
+- **Registro abierto con confirmación.** Pantalla de registro (email +
+  contraseña); Supabase envía un código de 6 dígitos que el usuario escribe en
+  la app para confirmar. La recuperación de contraseña usa también un código.
+  Sin deep links ni página web. Requiere SMTP propio (el integrado de Supabase
+  solo entrega a miembros del equipo del proyecto).
+- Riesgos aceptados: cuentas creadas por bots (mitigable con CAPTCHA si aparece)
+  y el tope de 100 usuarios de la app de Google sin verificar.
 - Sesión persistida en `expo-secure-store`.
 
 ### 3.2 Vinculación de cuentas de correo
@@ -240,7 +244,7 @@ en `CLAUDE.md`.
 
 - **iOS.** Nadie del grupo tiene iPhone. Expo lo permite después sin cambios de
   código, pero exige Apple Developer (99 USD/año) y builds en la nube.
-- Registro público y publicación en tiendas.
+- Publicación en tiendas.
 - Deduplicación autorización + liquidación (ver 3.3).
 - Tests de pantallas y componentes.
 - IMAP o cualquier proveedor distinto de Gmail/Outlook.

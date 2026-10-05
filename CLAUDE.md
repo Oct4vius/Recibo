@@ -1,6 +1,7 @@
 # Gastos App — Tracker de consumo bancario por correo
 
-App móvil privada (Android; iOS diferido) para tres usuarios. Vincula cuentas
+App móvil (Android; iOS diferido) fuera de tiendas, con registro abierto y
+confirmación por correo; pensada para un grupo pequeño. Vincula cuentas
 Gmail/Outlook, detecta correos de consumo de bancos dominicanos (BHD,
 Banreservas, Popular, APAP) y lleva el gasto semanal/mensual con presupuesto,
 categorías e historial. Alcance completo y decisiones en
@@ -18,6 +19,7 @@ parezca fácil.
 - **Push**: `expo-notifications` + Expo Push Service (gratis)
 - **OAuth correo**: `expo-auth-session` (PKCE) → Edge Function intercambia el código
 - **Idioma**: UI en español, código/variables/commits en inglés
+- **Correo de Auth**: SMTP propio en plan gratuito (confirmación y recuperación por código)
 - **Costo**: todo dentro del plan gratuito de Supabase y Expo. No agregar servicios pagos sin discutirlo.
 
 ## Comandos
@@ -92,9 +94,15 @@ token) viven **solo** en Edge Functions vía `Deno.env.get(...)` y en
   guarda en Supabase Vault (`vault.create_secret`) y solo lo lee `sync-mail`
   con service role. Si una PR guarda un token en `linked_accounts` en claro, en
   SecureStore o en logs → rechazar.
-- **Registro cerrado.** Signup deshabilitado en Supabase Auth; los usuarios se
-  invitan desde el dashboard. La app **no** tiene pantalla de registro ni llama
-  a `signUp()`. Si aparece, es un bug.
+- **Registro abierto con confirmación por correo** (decidido 2026-10-05). Signup
+  habilitado en Supabase Auth con "Confirm email" activo. La app tiene pantalla
+  de registro (`signUp()`) y confirma con el **código de 6 dígitos** del correo
+  (`verifyOtp({ type: 'email' })`), sin deep links ni página web; la
+  recuperación de contraseña usa el mismo mecanismo (`type: 'recovery'`).
+  Requiere SMTP propio: el SMTP integrado de Supabase solo entrega al equipo del
+  proyecto. Anonymous sign-ins siempre apagados. **Nunca** desactivar la
+  confirmación de correo para "destrabar" el registro. El aislamiento entre
+  usuarios lo garantiza RLS, no el registro.
 - **RLS en todas las tablas** con policy `user_id = auth.uid()`. Nueva tabla
   sin RLS = migración incompleta.
 - La app usa **anon key**; las Edge Functions usan **service role**. Jamás al revés.
@@ -397,8 +405,8 @@ SQL nace con tests. Las pantallas no se testean en v1.
   a los 7 días. No intentar pasar verificación de Google para v1.
 - **Supabase free** pausa proyectos tras 7 días sin actividad. Si pasa, la app
   muestra estado "backend pausado" en cuentas vinculadas; no reintentar en loop.
-- **Fuera de alcance v1** (no implementar aunque parezca fácil): iOS, registro
-  público, dedup autorización/liquidación, tests de UI, IMAP, parseo con LLM,
+- **Fuera de alcance v1** (no implementar aunque parezca fácil): iOS,
+  dedup autorización/liquidación, tests de UI, IMAP, parseo con LLM,
   ingresos, versión web, tasa de cambio automática, multi-idioma.
 - **No bloquear v2**: presupuesto compartido en pareja. `budgets` y
   `transactions` se relacionan por `user_id`; una futura `budget_members` debe
