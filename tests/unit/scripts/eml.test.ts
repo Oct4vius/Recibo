@@ -1,9 +1,13 @@
+import { existsSync } from 'node:fs';
 import { readFile } from 'node:fs/promises';
 import { describe, expect, it } from 'vitest';
 import { emlToRawEmail } from '../../../scripts/lib/eml.ts';
 
+// fixtures-raw/ no se versiona (correos reales): estos casos solo corren donde existen los .eml.
+const hasRawFixtures = existsSync('fixtures-raw/bhd/card-purchase-approved.eml');
+
 describe('emlToRawEmail', () => {
-  it('decodes a real BHD .eml into a normalized RawEmail', async () => {
+  it.skipIf(!hasRawFixtures)('decodes a real BHD .eml into a normalized RawEmail', async () => {
     const bytes = await readFile('fixtures-raw/bhd/card-purchase-approved.eml');
     const email = await emlToRawEmail(new Uint8Array(bytes));
 
@@ -16,7 +20,7 @@ describe('emlToRawEmail', () => {
     expect(email.text).toContain('16/09/2026 10:42 pm | RD | $275.72 | UBER*RIDES | Aprobada | Compra');
   });
 
-  it('keeps the empty merchant cell of a reversed purchase', async () => {
+  it.skipIf(!hasRawFixtures)('keeps the empty merchant cell of a reversed purchase', async () => {
     const bytes = await readFile('fixtures-raw/bhd/card-purchase-reversed.eml');
     const email = await emlToRawEmail(new Uint8Array(bytes));
     expect(email.text).toContain('16/09/2026 09:31 pm | RD | $434.22 | | Reversada | Compra');

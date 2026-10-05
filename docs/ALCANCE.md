@@ -124,7 +124,8 @@ el plan gratuito de Supabase.
   Fecha en formato `dd/mm/yyyy hh:mm am|pm` hora local (sin zona horaria en el
   cuerpo; el header `Date` sí trae UTC). Monto `$275.72` con la moneda en
   columna aparte (`RD`). Cubre el caso `Aprobada + Compra`.
-- **Fixtures reales de BHD en `fixtures-raw/bhd/`:**
+- **Fixtures reales de BHD en `fixtures-raw/bhd/`** (solo locales, fuera de git;
+  en el repo viven sus derivadas JSON en `parsers/bhd/fixtures/`):
   `card-purchase-approved.eml` (Aprobada + Compra),
   `card-purchase-reversed.eml` (Reversada + Compra, comercio vacío),
   `card-purchase-approved-near-reversal.eml` (Aprobada $438.42 en el mismo
