@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react';
-import { Modal, Pressable, View } from 'react-native';
+import { KeyboardAvoidingView, Modal, Pressable, ScrollView, View } from 'react-native';
 import Animated from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { enteringFor, useMotionPreference } from '@/theme/motion';
@@ -19,7 +19,7 @@ export function SlamSheet({ visible, onClose, title, children }: Props) {
   const insets = useSafeAreaInsets();
   return (
     <Modal visible={visible} transparent animationType="none" onRequestClose={onClose} statusBarTranslucent>
-      <View style={{ flex: 1, justifyContent: 'flex-end' }}>
+      <KeyboardAvoidingView behavior="padding" style={{ flex: 1, justifyContent: 'flex-end' }}>
         <Pressable
           accessibilityRole="button"
           accessibilityLabel="Cerrar"
@@ -33,6 +33,7 @@ export function SlamSheet({ visible, onClose, title, children }: Props) {
               backgroundColor: colors.panel,
               borderTopWidth: 4,
               borderTopColor: colors.blood,
+              maxHeight: '90%',
               paddingHorizontal: 20,
               paddingTop: 24,
               paddingBottom: 24 + insets.bottom,
@@ -41,10 +42,10 @@ export function SlamSheet({ visible, onClose, title, children }: Props) {
             <View style={{ marginBottom: 20 }}>
               <RansomText text={title} size="md" />
             </View>
-            {children}
+            <ScrollView keyboardShouldPersistTaps="handled">{children}</ScrollView>
           </Animated.View>
         ) : null}
-      </View>
+      </KeyboardAvoidingView>
     </Modal>
   );
 }

@@ -35,6 +35,11 @@ export function slamIn(values: EntryAnimationsValues) {
 
 export const fadeInReduced = FadeIn.duration(durations.reducedFade);
 
+/** Fundido de entrada para movimiento cotidiano (fondos): `screen` normal, 120 ms si se redujeron animaciones. */
+export function fadeInFor(reduced: boolean) {
+  return FadeIn.duration(reduced ? durations.reducedFade : durations.screen);
+}
+
 /** Animación de entrada según la preferencia de movimiento. */
 export function enteringFor(reduced: boolean) {
   return reduced ? fadeInReduced : slamIn;

@@ -3,7 +3,7 @@ import { ScrollView, View } from 'react-native';
 import Animated from 'react-native-reanimated';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { BACKDROPS } from '@/theme/backdrops';
-import { enteringFor, useMotionPreference } from '@/theme/motion';
+import { fadeInFor, useMotionPreference } from '@/theme/motion';
 import { colors } from '@/theme/tokens';
 import { RansomText } from './RansomText';
 
@@ -21,18 +21,12 @@ export function Screen({ title, backdrop, children }: Props) {
   return (
     <SafeAreaView edges={['top']} style={{ flex: 1, backgroundColor: colors.void }}>
       <Animated.View
-        entering={enteringFor(reduced)}
+        entering={fadeInFor(reduced)}
         pointerEvents="none"
-        style={{
-          position: 'absolute',
-          top: shape.top,
-          right: shape.right,
-          width: shape.width,
-          height: shape.height,
-          backgroundColor: colors.blood,
-          transform: [{ rotate: `${shape.rotate}deg` }],
-        }}
-      />
+        style={{ position: 'absolute', top: shape.top, right: shape.right, width: shape.width, height: shape.height }}
+      >
+        <View style={{ flex: 1, backgroundColor: colors.blood, transform: [{ rotate: `${shape.rotate}deg` }] }} />
+      </Animated.View>
       <ScrollView contentContainerStyle={{ padding: 16, paddingBottom: 32 }}>
         <View style={{ marginTop: 12, marginBottom: 24 }}>
           <RansomText text={title} animate />
