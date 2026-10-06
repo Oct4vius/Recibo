@@ -1,9 +1,13 @@
 export type Point = readonly [number, number];
 
+/** Desplazamiento horizontal del borde inclinado en una caja `width × height` (máximo la mitad del ancho). */
+export function slantOffset(width: number, height: number, skewDeg: number): number {
+  return Math.min(Math.abs(Math.tan((skewDeg * Math.PI) / 180) * height), width / 2);
+}
+
 /** Paralelogramo inclinado `skewDeg` grados dentro de una caja `width × height`. */
 export function slantedRect(width: number, height: number, skewDeg: number): Point[] {
-  const raw = Math.abs(Math.tan((skewDeg * Math.PI) / 180) * height);
-  const offset = Math.min(raw, width / 2);
+  const offset = slantOffset(width, height, skewDeg);
   if (offset === 0) return [[0, 0], [width, 0], [width, height], [0, height]];
   return skewDeg < 0
     ? [[offset, 0], [width, 0], [width - offset, height], [0, height]]

@@ -1,8 +1,24 @@
 import { describe, expect, it } from 'vitest';
-import { jaggedRect, slantedRect, toSvgPoints } from '@/theme/shapes';
+import { jaggedRect, slantedRect, slantOffset, toSvgPoints } from '@/theme/shapes';
 
 const inside = (w: number, h: number) => ([x, y]: readonly [number, number]) =>
   x >= 0 && x <= w && y >= 0 && y <= h;
+
+describe('slantOffset', () => {
+  it('is the horizontal run of the slant over the box height', () => {
+    expect(slantOffset(200, 100, -8)).toBeCloseTo(100 * Math.tan((8 * Math.PI) / 180), 5);
+  });
+  it('is the same for opposite angles and 0 when the skew is 0', () => {
+    expect(slantOffset(200, 100, 8)).toBeCloseTo(slantOffset(200, 100, -8), 5);
+    expect(slantOffset(200, 100, 0)).toBe(0);
+  });
+  it('clamps to half the width', () => {
+    expect(slantOffset(10, 100, -60)).toBe(5);
+  });
+  it('matches the offset used by slantedRect', () => {
+    expect(slantedRect(200, 100, -8)[0][0]).toBeCloseTo(slantOffset(200, 100, -8), 5);
+  });
+});
 
 describe('slantedRect', () => {
   it('returns a 4-point parallelogram inside the box', () => {

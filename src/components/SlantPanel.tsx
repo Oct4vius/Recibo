@@ -1,7 +1,7 @@
 import { useState, type ReactNode } from 'react';
 import { StyleSheet, View, type LayoutChangeEvent, type StyleProp, type ViewStyle } from 'react-native';
 import Svg, { Polygon } from 'react-native-svg';
-import { jaggedRect, slantedRect, toSvgPoints } from '@/theme/shapes';
+import { jaggedRect, slantedRect, slantOffset, toSvgPoints } from '@/theme/shapes';
 import { angles, colors, type ColorToken } from '@/theme/tokens';
 
 interface Props {
@@ -26,8 +26,10 @@ export function SlantPanel({ children, color = 'panel', skew = angles.row, jagge
     size.width > 0
       ? toSvgPoints(jagged ? jaggedRect(size.width, size.height, 14, 8) : slantedRect(size.width, size.height, skew))
       : '';
+  // El contenido se queda dentro del borde inclinado: padding horizontal extra igual al desplazamiento.
+  const horizontal = jagged ? padding : padding + slantOffset(size.width, size.height, skew);
   return (
-    <View onLayout={onLayout} style={[{ padding }, style]}>
+    <View onLayout={onLayout} style={[{ paddingVertical: padding, paddingHorizontal: horizontal }, style]}>
       {size.width > 0 && (
         <Svg width={size.width} height={size.height} style={StyleSheet.absoluteFill} pointerEvents="none">
           <Polygon points={points} fill={colors[color]} />
