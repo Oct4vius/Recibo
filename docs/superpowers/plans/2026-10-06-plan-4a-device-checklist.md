@@ -9,6 +9,7 @@ y escanear el QR con Expo Go.
 - [ ] Contraseña incorrecta → "Correo o contraseña incorrectos." en amarillo.
 - [ ] Modo avión → "Sin conexión. Revisa tu internet y vuelve a intentarlo."
 - [ ] Credenciales correctas → entra a Inicio.
+- [ ] Escribe correo y contraseña y toca «Entrar» una sola vez con el teclado abierto: entra al primer toque.
 - [ ] Cerrar Expo Go y volver a abrir → sigue con la sesión iniciada.
 
 ## Pestañas
@@ -19,8 +20,8 @@ y escanear el QR con Expo Go.
 - [ ] Ajustes muestra el correo y "Cerrar sesión" vuelve al login.
 
 ## Galería (Ajustes → Abrir galería)
-- [ ] Los montos son rectos y las cifras no "bailan" al cambiar (ancho fijo; `tabular-nums` funciona
-      en Barlow Condensed en Android).
+- [ ] Los montos son rectos y las cifras no "bailan" al cambiar (los números de los montos no se mueven de
+      lugar al cambiar: cada cifra ocupa el mismo ancho).
 - [ ] La barra de presupuesto pasa por 45 %, 85 % (borde amarillo), 100 % y 123 % (extremo roto).
 - [ ] Tocar una tira la vuelve blanca con texto negro.
 - [ ] Los títulos largos en nota de rescate se parten entre palabras, nunca a mitad de palabra.
@@ -32,7 +33,8 @@ y escanear el QR con Expo Go.
       cierra.
 
 ## Accesibilidad
-- [ ] Activar Ajustes de Android → Accesibilidad → "Quitar animaciones": todo pasa a fundidos, sin rebotes.
+- [ ] Activar Ajustes de Android → Accesibilidad → "Quitar animaciones" (en algunos Android:
+      «Eliminar animaciones»): los movimientos se vuelven instantáneos o un fundido corto, sin rebotes.
 - [ ] Con TalkBack, los títulos se leen como palabra completa y los montos como "4,275.72 pesos".
 - [ ] Con TalkBack, una fila de lista que no se puede tocar NO se anuncia como "deshabilitado".
 

@@ -46,7 +46,7 @@ Pins por compatibilidad (no "actualizar" a ciegas): TypeScript `~6.0` (typescrip
 ```
 app/                       # Expo Router: solo routing + layout, sin lógica
   dev/gallery.tsx          # galería de componentes, solo __DEV__
-  (auth)/                  # login, register, reset
+  (auth)/                  # login (registro cerrado: sin register ni reset)
   (tabs)/                  # home, transactions, history, budget, settings
 src/
   features/<dominio>/      # auth, accounts, transactions, budgets, history, categories
