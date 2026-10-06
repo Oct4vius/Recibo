@@ -31,6 +31,7 @@ export default function GalleryScreen() {
   const [card, setCard] = useState<'blood' | 'signal' | null>(null);
   const [field, setField] = useState('');
   const [amount, setAmount] = useState('');
+  const [jagged, setJagged] = useState(false);
   return (
     <Screen title="GALERÍA" backdrop={2}>
       <SkewButton label="Volver" variant="ghost" onPress={() => router.back()} />
@@ -62,14 +63,18 @@ export default function GalleryScreen() {
         />
       ))}
 
-      <Section name="Paneles" />
-      <SlantPanel color="blood">
-        <Text style={{ fontFamily: fonts.bodyStrong, fontSize: typeScale.body, color: colors.paper }}>Panel inclinado</Text>
+      <Section name="Paneles (usa el botón para alternar el estilo)" />
+      <SlantPanel key={jagged ? 'jagged' : 'slanted'} color="blood" jagged={jagged}>
+        <Text style={{ fontFamily: fonts.bodyStrong, fontSize: typeScale.body, color: colors.paper }}>
+          {jagged ? 'Panel dentado' : 'Panel inclinado'}
+        </Text>
       </SlantPanel>
       <View style={{ height: 12 }} />
-      <SlantPanel jagged>
-        <Text style={{ fontFamily: fonts.bodyStrong, fontSize: typeScale.body, color: colors.paper }}>Panel dentado</Text>
-      </SlantPanel>
+      <SkewButton
+        label={jagged ? 'Ver inclinado' : 'Ver dentado'}
+        variant="ghost"
+        onPress={() => setJagged((j) => !j)}
+      />
 
       <Section name="Campo de texto" />
       <TextField label="Comercio" value={field} onChangeText={setField} />

@@ -24,6 +24,8 @@ y escanear el QR con Expo Go.
       lugar al cambiar: cada cifra ocupa el mismo ancho).
 - [ ] La barra de presupuesto pasa por 45 %, 85 % (borde amarillo), 100 % y 123 % (extremo roto).
 - [ ] Tocar una tira la vuelve blanca con texto negro.
+- [ ] En "Paneles", el botón alterna el mismo panel rojo entre inclinado (lados en diagonal) y dentado
+      (borde inferior en zigzag).
 - [ ] Los títulos largos en nota de rescate se parten entre palabras, nunca a mitad de palabra.
 - [ ] "Agregar gasto" abre el panel en diagonal; tocar fuera lo cierra.
 - [ ] Dentro de "Agregar gasto", tocar el campo de monto muestra el teclado sin taparlo.
