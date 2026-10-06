@@ -13,7 +13,7 @@ import { useSession } from '@/features/auth/hooks';
 import { queryClient } from '@/lib/queryClient';
 import { colors } from '@/theme/tokens';
 
-SplashScreen.preventAutoHideAsync();
+SplashScreen.preventAutoHideAsync().catch(() => undefined);
 
 export default function RootLayout() {
   const [fontsLoaded, fontError] = useFonts({ Anton_400Regular, Barlow_400Regular, Barlow_500Medium, BarlowCondensed_500Medium });

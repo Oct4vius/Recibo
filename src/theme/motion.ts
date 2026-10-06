@@ -7,12 +7,19 @@ import {
 } from 'react-native-reanimated';
 import { durations, springs } from './motion-tokens';
 
-/** `reduced` es true si Android tiene activado "reducir animaciones". */
+/**
+ * `reduced` es true si Android tiene activado "reducir animaciones". Reanimated 4 ya respeta ese ajuste del
+ * sistema (ReduceMotion.System) y vuelve instantáneas las animaciones; `reduced` solo nos deja usar un
+ * fundido corto donde Reanimated aplicaría su valor por defecto.
+ */
 export function useMotionPreference(): { reduced: boolean } {
   return { reduced: useReducedMotion() };
 }
 
-/** Anima hacia `target` con el token pedido, o con un fundido corto si el usuario redujo animaciones. */
+/**
+ * Anima hacia `target` con el token pedido, o con un fundido corto si el usuario redujo animaciones.
+ * (Con ese ajuste Reanimated ya haría el cambio instantáneo; el fundido corto es nuestra rama explícita.)
+ */
 export function animateTo(target: number, kind: 'snap' | 'slam', reduced: boolean) {
   'worklet';
   return reduced ? withTiming(target, { duration: durations.reducedFade }) : withSpring(target, springs[kind]);

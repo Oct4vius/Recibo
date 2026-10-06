@@ -30,6 +30,7 @@ export default function GalleryScreen() {
   const [sheet, setSheet] = useState(false);
   const [card, setCard] = useState<'blood' | 'signal' | null>(null);
   const [field, setField] = useState('');
+  const [amount, setAmount] = useState('');
   return (
     <Screen title="GALERÍA" backdrop={2}>
       <SkewButton label="Volver" variant="ghost" onPress={() => router.back()} />
@@ -44,7 +45,7 @@ export default function GalleryScreen() {
       <Amount value={12} currency="USD" />
       <Amount value={-434.22} currency="DOP" tone="ash" />
 
-      <Section name="Barra de presupuesto (toca para cambiar)" />
+      <Section name="Barra de presupuesto (usa el botón para cambiar el estado)" />
       <JaggedProgress spent={SPENT_STEPS[step]} limit={6000} currency="DOP" />
       <View style={{ height: 12 }} />
       <SkewButton label="Siguiente estado" variant="ghost" onPress={() => setStep((s) => (s + 1) % SPENT_STEPS.length)} />
@@ -96,7 +97,7 @@ export default function GalleryScreen() {
       ) : null}
 
       <SlamSheet visible={sheet} onClose={() => setSheet(false)} title="NUEVO GASTO">
-        <TextField label="Monto" value="" onChangeText={() => undefined} keyboardType="decimal-pad" />
+        <TextField label="Monto" value={amount} onChangeText={setAmount} keyboardType="decimal-pad" />
         <SkewButton label="Guardar" onPress={() => setSheet(false)} />
       </SlamSheet>
     </Screen>

@@ -1,11 +1,15 @@
 import type { BottomTabBarProps } from 'expo-router/tabs';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Pressable, View } from 'react-native';
 import Animated, { useAnimatedStyle, useSharedValue } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { tapFeedback } from '@/lib/haptics';
 import { animateTo, useMotionPreference } from '@/theme/motion';
 import { angles, colors, MIN_TOUCH } from '@/theme/tokens';
+
+const ROW_PADDING_TOP = 6;
+const HIGHLIGHT_HEIGHT = 40;
+const HIGHLIGHT_TOP = ROW_PADDING_TOP + (MIN_TOUCH - HIGHLIGHT_HEIGHT) / 2;
 
 /** Barra de pestañas: un bloque rojo inclinado salta a la pestaña elegida con `snap`. */
 export function SlamTabBar({ state, descriptors, navigation }: BottomTabBarProps) {
@@ -14,7 +18,15 @@ export function SlamTabBar({ state, descriptors, navigation }: BottomTabBarProps
   const [width, setWidth] = useState(0);
   const slot = width / state.routes.length;
   const x = useSharedValue(0);
+  const placed = useRef(false);
   useEffect(() => {
+    if (slot === 0) return;
+    if (!placed.current) {
+      // Primera medición: colocar el bloque sin animar para que no cruce la barra desde 0.
+      placed.current = true;
+      x.value = state.index * slot;
+      return;
+    }
     x.value = animateTo(state.index * slot, 'snap', reduced);
   }, [x, state.index, slot, reduced]);
   const highlight = useAnimatedStyle(() => ({
@@ -29,15 +41,15 @@ export function SlamTabBar({ state, descriptors, navigation }: BottomTabBarProps
         backgroundColor: colors.void,
         borderTopWidth: 3,
         borderTopColor: colors.blood,
-        paddingTop: 6,
-        paddingBottom: 6 + insets.bottom,
+        paddingTop: ROW_PADDING_TOP,
+        paddingBottom: ROW_PADDING_TOP + insets.bottom,
       }}
     >
       {width > 0 ? (
         <Animated.View
           pointerEvents="none"
           style={[
-            { position: 'absolute', top: 8, left: slot * 0.15, width: slot * 0.7, height: 40, backgroundColor: colors.blood },
+            { position: 'absolute', top: HIGHLIGHT_TOP, left: slot * 0.15, width: slot * 0.7, height: HIGHLIGHT_HEIGHT, backgroundColor: colors.blood },
             highlight,
           ]}
         />

@@ -26,10 +26,11 @@ export function JaggedProgress({ spent, limit, currency }: Props) {
   useEffect(() => {
     fill.value = animateTo(state.fill, 'snap', reduced);
   }, [fill, state.fill, reduced]);
-  const fillStyle = useAnimatedStyle(() => ({ width: fill.value * width }));
+  const fillStyle = useAnimatedStyle(() => ({ width: Math.max(0, fill.value * width) }));
   const label = `${state.percent}% de ${formatMoney(limit, currency)}`;
   return (
     <View
+      accessible
       accessibilityRole="progressbar"
       accessibilityLabel={`Presupuesto: ${label}`}
       accessibilityValue={{ min: 0, max: 100, now: Math.min(state.percent, 100) }}
@@ -53,6 +54,7 @@ export function JaggedProgress({ spent, limit, currency }: Props) {
         </Svg>
       ) : null}
       <Text
+        importantForAccessibility="no-hide-descendants"
         style={{
           position: 'absolute',
           left: 10,

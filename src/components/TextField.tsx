@@ -16,7 +16,10 @@ export function TextField({ label, value, onChangeText, secureTextEntry, keyboar
   const [focused, setFocused] = useState(false);
   return (
     <View style={{ marginBottom: 16 }}>
-      <Text style={{ fontFamily: fonts.bodyStrong, fontSize: typeScale.caption, color: colors.ash, marginBottom: 6 }}>
+      <Text
+        importantForAccessibility="no"
+        style={{ fontFamily: fonts.bodyStrong, fontSize: typeScale.caption, color: colors.ash, marginBottom: 6 }}
+      >
         {label}
       </Text>
       <TextInput
@@ -30,7 +33,6 @@ export function TextField({ label, value, onChangeText, secureTextEntry, keyboar
         autoCorrect={false}
         onFocus={() => setFocused(true)}
         onBlur={() => setFocused(false)}
-        placeholderTextColor={colors.ash}
         selectionColor={colors.blood}
         style={{
           minHeight: MIN_TOUCH,
