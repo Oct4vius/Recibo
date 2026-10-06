@@ -1,0 +1,9 @@
+{
+  "void": "#000000",
+  "panel": "#161616",
+  "blood": "#E1141E",
+  "paper": "#FFFFFF",
+  "ash": "#9A9A9A",
+  "signal": "#FFD60A",
+  "scrim": "rgba(0, 0, 0, 0.75)"
+}

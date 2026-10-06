@@ -18,11 +18,44 @@
   "workspace": {
     "packageJson": {
       "dependencies": [
+        "npm:@expo-google-fonts/anton@~0.4.2",
+        "npm:@expo-google-fonts/barlow-condensed@~0.4.1",
+        "npm:@expo-google-fonts/barlow@~0.4.1",
+        "npm:@expo/vector-icons@^15.0.2",
+        "npm:@react-native-async-storage/async-storage@2.2.0",
+        "npm:@supabase/supabase-js@^2.117.2",
+        "npm:@tanstack/react-query@^5.104.1",
+        "npm:@types/aes-js@^3.1.4",
         "npm:@types/node@^26.6.1",
+        "npm:@types/react@^19.3.0",
+        "npm:aes-js@^3.1.2",
+        "npm:eslint-config-expo@~57.0.2",
+        "npm:eslint@^9.39.5",
+        "npm:expo-constants@~57.0.20",
+        "npm:expo-font@~57.0.4",
+        "npm:expo-haptics@~57.0.3",
+        "npm:expo-linking@~57.0.11",
+        "npm:expo-router@~57.0.24",
+        "npm:expo-secure-store@~57.0.4",
+        "npm:expo-splash-screen@~57.0.9",
+        "npm:expo-status-bar@~57.0.1",
+        "npm:expo@^57.0.26",
+        "npm:nativewind@^4.2.7",
         "npm:postal-mime@3",
+        "npm:react-native-get-random-values@2",
+        "npm:react-native-reanimated@4.5.1",
+        "npm:react-native-safe-area-context@5.7",
+        "npm:react-native-screens@4.26",
+        "npm:react-native-svg@15.15.4",
+        "npm:react-native-url-polyfill@4",
+        "npm:react-native-worklets@0.10.1",
+        "npm:react-native@0.86.3",
+        "npm:react@19.2.3",
         "npm:supabase@^2.117.0",
-        "npm:typescript@^7.0.2",
-        "npm:vitest@^5.0.1"
+        "npm:tailwindcss@^3.4.17",
+        "npm:typescript@6.0",
+        "npm:vitest@^5.0.1",
+        "npm:zod@4"
       ]
     }
   }

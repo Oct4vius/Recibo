@@ -1,16 +1,24 @@
 {
+  "extends": "expo/tsconfig.base",
   "compilerOptions": {
-    "target": "ES2022",
-    "module": "ESNext",
-    "moduleResolution": "bundler",
     "strict": true,
     "noEmit": true,
     "allowImportingTsExtensions": true,
     "resolveJsonModule": true,
     "esModuleInterop": true,
     "skipLibCheck": true,
-    "types": ["node"]
+    "types": ["node", "expo/types"],
+    "paths": { "@/*": ["./src/*"] }
   },
-  "include": ["scripts", "tests", "supabase/functions/_shared/parsers"],
+  "include": [
+    "app",
+    "src",
+    "scripts",
+    "tests",
+    "supabase/functions/_shared/parsers",
+    "nativewind-env.d.ts",
+    "expo-env.d.ts",
+    ".expo/types/**/*.ts"
+  ],
   "exclude": ["node_modules", "**/*.test.ts", "**/test-helpers.ts"]
 }

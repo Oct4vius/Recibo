@@ -24,3 +24,9 @@ supabase/.branches/
 # correos bancarios reales: solo locales (las fixtures JSON derivadas sí se versionan)
 fixtures-raw/
 *.eml
+
+# expo
+expo-env.d.ts
+.expo-export-check/
+/android
+/ios
