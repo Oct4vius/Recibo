@@ -33,8 +33,10 @@ y escanear el QR con Expo Go.
       cierra.
 
 ## Accesibilidad
-- [ ] Activar Ajustes de Android → Accesibilidad → "Quitar animaciones" (en algunos Android:
-      «Eliminar animaciones»): los movimientos se vuelven instantáneos o un fundido corto, sin rebotes.
+- [ ] En los **Ajustes del teléfono** (no de la app; la app no tiene este interruptor, respeta el del
+      sistema): Accesibilidad → "Quitar animaciones" o «Eliminar animaciones» (Samsung: Accesibilidad →
+      Mejoras de visibilidad; Pixel: Accesibilidad → Color y movimiento). Volver a la app y cambiar de
+      pestaña: los movimientos se vuelven instantáneos o un fundido corto, sin rebotes.
 - [ ] Con TalkBack, los títulos se leen como palabra completa y los montos como "4,275.72 pesos".
 - [ ] Con TalkBack, una fila de lista que no se puede tocar NO se anuncia como "deshabilitado".
 
