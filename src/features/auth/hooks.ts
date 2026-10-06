@@ -6,7 +6,10 @@ import { supabase } from '@/lib/supabase';
 export function useSession(): { session: Session | null; loading: boolean } {
   const [state, setState] = useState<{ session: Session | null; loading: boolean }>({ session: null, loading: true });
   useEffect(() => {
-    supabase.auth.getSession().then(({ data }) => setState({ session: data.session, loading: false }));
+    supabase.auth
+      .getSession()
+      .then(({ data }) => setState({ session: data.session, loading: false }))
+      .catch(() => setState({ session: null, loading: false }));
     const { data } = supabase.auth.onAuthStateChange((_event, session) => setState({ session, loading: false }));
     return () => data.subscription.unsubscribe();
   }, []);

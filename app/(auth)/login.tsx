@@ -9,7 +9,7 @@ export default function LoginScreen() {
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: colors.void }}>
       <KeyboardAvoidingView behavior="height" style={{ flex: 1 }}>
-        <ScrollView contentContainerStyle={{ flexGrow: 1, justifyContent: 'center', padding: 24 }}>
+        <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={{ flexGrow: 1, justifyContent: 'center', padding: 24 }}>
           <SlantPanel color="blood" skew={angles.backdrop} padding={28} style={{ marginBottom: 40 }}>
             <View style={{ alignItems: 'flex-start' }}>
               <RansomText text="RECIBO" animate />

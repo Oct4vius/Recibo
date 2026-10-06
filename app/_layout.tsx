@@ -16,9 +16,9 @@ import { colors } from '@/theme/tokens';
 SplashScreen.preventAutoHideAsync();
 
 export default function RootLayout() {
-  const [fontsLoaded] = useFonts({ Anton_400Regular, Barlow_400Regular, Barlow_500Medium, BarlowCondensed_500Medium });
+  const [fontsLoaded, fontError] = useFonts({ Anton_400Regular, Barlow_400Regular, Barlow_500Medium, BarlowCondensed_500Medium });
   const { session, loading } = useSession();
-  const ready = fontsLoaded && !loading;
+  const ready = (fontsLoaded || fontError !== null) && !loading;
   useEffect(() => {
     if (ready) SplashScreen.hideAsync();
   }, [ready]);
