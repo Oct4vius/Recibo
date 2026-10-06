@@ -22,3 +22,12 @@ describe('progressState', () => {
     expect(() => progressState(10, 0)).toThrow('limit must be greater than 0');
   });
 });
+
+describe('regression — progressState percent floating point', () => {
+  it('does not lose a point to float error in ratio * 100', () => {
+    expect(progressState(29, 100).percent).toBe(29);
+    expect(progressState(57, 100).percent).toBe(57);
+    expect(progressState(58, 100).percent).toBe(58);
+    expect(progressState(9.1, 10).percent).toBe(91);
+  });
+});

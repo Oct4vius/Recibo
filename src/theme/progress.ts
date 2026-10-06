@@ -11,7 +11,14 @@ export interface ProgressState {
 /** Estado de la barra de presupuesto. Umbrales: 80 % (aviso) y 100 % (pasado). */
 export function progressState(spent: number, limit: number): ProgressState {
   if (limit <= 0) throw new Error('limit must be greater than 0');
-  const ratio = Math.max(spent, 0) / limit;
-  const tone: ProgressTone = ratio >= 1 ? 'over' : ratio >= 0.8 ? 'warning' : 'normal';
-  return { fill: Math.min(ratio, 1), percent: Math.floor(ratio * 100), tone };
+  // Los montos son numeric(14,2): se compara en centavos enteros para evitar errores de coma flotante.
+  const spentCents = Math.round(Math.max(spent, 0) * 100);
+  const limitCents = Math.round(limit * 100);
+  const tone: ProgressTone =
+    spentCents >= limitCents ? 'over' : spentCents * 100 >= limitCents * 80 ? 'warning' : 'normal';
+  return {
+    fill: Math.min(spentCents / limitCents, 1),
+    percent: Math.floor((spentCents * 100) / limitCents),
+    tone,
+  };
 }
