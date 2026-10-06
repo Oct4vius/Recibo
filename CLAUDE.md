@@ -23,10 +23,10 @@ parezca fácil.
 ## Comandos
 ```bash
 bun install
-bun run typecheck                  # tsc --noEmit (scripts, tests y código fuente de parsers)
+bun run typecheck                  # tsc --noEmit (app, src, scripts, tests y código fuente de parsers)
 bun run test                       # Vitest (tests/unit)
 bun run test:deno                  # deno test --allow-read supabase/functions/
-bun run lint                       # deno lint (Plan 4 agrega ESLint de Expo)
+bun run lint                       # deno lint (supabase/functions) + expo lint (app)
 bun run check                      # typecheck + test + test:deno + lint — obligatorio antes de done
 bun run fixtures:build             # fixtures-raw/**/*.eml → parsers/<bank>/fixtures/*.json
 bun run db:start                   # stack local (Docker Desktop debe estar corriendo)
@@ -35,12 +35,17 @@ bun run db:test                    # pgTAP (supabase/tests/*.test.sql)
 bun run check:db                   # db:reset + db:test — obligatorio si tocaste supabase/migrations
 bun run db:types                   # regenera supabase/functions/_shared/database.types.ts
 # Desde Plan 3: supabase functions serve
-# Desde Plan 4: bunx expo start
+bun run start                      # Expo (abrir con Expo Go en Android); requiere .env.local con EXPO_PUBLIC_*
+bun run verify:bundle              # empaqueta Android sin dispositivo (verificación de Metro/Babel/NativeWind)
 ```
+Pins por compatibilidad (no "actualizar" a ciegas): TypeScript `~6.0` (typescript-eslint, que usa
+`eslint-config-expo`, aún no soporta TS 7) y ESLint `^9` (`eslint-plugin-react` falla con ESLint 10).
+`tsconfig.json` usa `"types": ["node", "expo/types"]`: todo `@types/*` nuevo debe agregarse ahí.
 
 ## Estructura clave
 ```
 app/                       # Expo Router: solo routing + layout, sin lógica
+  dev/gallery.tsx          # galería de componentes, solo __DEV__
   (auth)/                  # login, register, reset
   (tabs)/                  # home, transactions, history, budget, settings
 src/
@@ -50,6 +55,8 @@ src/
     hooks.ts
   components/              # UI genérica (Button, Card, Amount, ...)
   lib/                     # supabase.ts, queryClient.ts, env.ts, money.ts, dates.ts
+  theme/                   # tokens.ts + colors.json (paleta única), motion*, ransom, shapes, progress, backdrops
+                           #   (progress.ts calcula el % de presupuesto en centavos enteros)
   types/                   # tipos compartidos; database.ts re-exporta _shared/database.types.ts (Plan 4)
 supabase/
   migrations/              # SQL versionado, una migración por cambio
@@ -363,6 +370,15 @@ Se aplican en app, Edge Functions y SQL. Así se traducen a este proyecto:
   conserva su moneda.
 - Textos de UI en español, sin i18n. Sin `console.log` en código de producción.
 - Componentes funcionales, hooks, sin clases. Un componente por archivo.
+- Estilo visual: spec `docs/superpowers/specs/2026-10-06-plan-4-ui-design.md`. Colores solo desde
+  `src/theme` (ningún hex fuera de `colors.json`); los montos siempre con `Amount`/`formatMoney`,
+  nunca inclinados; el rojo nunca en texto de menos de 18 px; toda animación pasa por
+  `src/theme/motion.ts` y respeta "reducir animaciones".
+- Entradas animadas: las formas de fondo entran con fundido (`fadeInFor`); títulos, paneles y
+  tarjetas con `slam` (`enteringFor`). Si un elemento necesita animación de entrada **y** una
+  rotación/transform estática, la rotación va en un `View` interior (el `entering` de Reanimated
+  reemplaza el transform).
+- Componentes nuevos se revisan primero en la galería (`/dev/gallery`).
 
 ## Testing — política
 Estricto donde duele, ligero donde no. La lógica de dinero, fechas, parsers y
