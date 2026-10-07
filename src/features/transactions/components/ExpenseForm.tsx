@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Keyboard, Text, View } from 'react-native';
 import { AmountKeypad } from '@/components/AmountKeypad';
 import { FieldLabel } from '@/components/FieldLabel';
@@ -8,7 +8,7 @@ import { TextField } from '@/components/TextField';
 import { useProfile, useTimeZone } from '@/features/profile/hooks';
 import { formatDayLabel, toLocalDate } from '@/lib/dates';
 import { colors, fonts, typeScale } from '@/theme/tokens';
-import type { Currency } from '@/types/database';
+import { CURRENCIES } from '@/types/database';
 import { pressKey, type AmountKey } from '../amount-input';
 import { canSave, draftFromItem, draftToChanges, draftToNewExpense, emptyDraft, type ExpenseDraft } from '../expense-draft';
 import { CURRENCY_LABELS } from '../filters';
@@ -19,8 +19,6 @@ import { AmountDisplay } from './AmountDisplay';
 import { CategoryPicker } from './CategoryPicker';
 import { ExpenseActions } from './ExpenseActions';
 import { ExpenseDateChips } from './ExpenseDateChips';
-
-const CURRENCIES: readonly Currency[] = ['DOP', 'USD'];
 
 interface Props {
   /** Sin `item` crea un gasto manual; con `item` lo edita. */
@@ -43,6 +41,12 @@ export function ExpenseForm({ item, onDone }: Props) {
   // La moneda y la fecha de un movimiento importado por correo son datos del banco: no se editan.
   const bankData = item !== undefined && item.source !== 'manual';
   const ready = canSave(draft);
+
+  // El botón Atrás de Android oculta el teclado sin quitar el foco del campo: sin esto el teclado propio no vuelve.
+  useEffect(() => {
+    const subscription = Keyboard.addListener('keyboardDidHide', () => setTypingMerchant(false));
+    return () => subscription.remove();
+  }, []);
 
   const change = <K extends keyof ExpenseDraft>(key: K, value: ExpenseDraft[K]) => {
     setDraft((current) => ({ ...current, [key]: value }));

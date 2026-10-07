@@ -4,14 +4,12 @@ import { OptionSheet, type Option } from '@/components/OptionSheet';
 import { SkewChip } from '@/components/SkewChip';
 import { useCategories } from '@/features/categories/hooks';
 import { colors, fonts, typeScale } from '@/theme/tokens';
-import type { BankCode, Currency } from '@/types/database';
+import { BANK_CODES, CURRENCIES, type BankCode, type Currency } from '@/types/database';
 import { BANK_LABELS, countLabel, CURRENCY_LABELS, PERIOD_LABELS, type Period, type TransactionFilters } from '../filters';
 
 const PERIODS: readonly Period[] = ['week', 'month', 'all'];
-const CURRENCIES: readonly Currency[] = ['DOP', 'USD'];
-const BANKS: readonly BankCode[] = ['bhd', 'banreservas', 'popular', 'apap'];
 const CURRENCY_OPTIONS: readonly Option<Currency>[] = CURRENCIES.map((value) => ({ value, label: CURRENCY_LABELS[value] }));
-const BANK_OPTIONS: readonly Option<BankCode>[] = BANKS.map((value) => ({ value, label: BANK_LABELS[value] }));
+const BANK_OPTIONS: readonly Option<BankCode>[] = BANK_CODES.map((value) => ({ value, label: BANK_LABELS[value] }));
 
 type SheetName = 'category' | 'currency' | 'bank';
 

@@ -29,7 +29,9 @@ export function LoginForm() {
         secureTextEntry
         autoComplete="password"
         returnKeyType="go"
-        onSubmitEditing={() => login.mutate()}
+        onSubmitEditing={() => {
+          if (!login.isPending) login.mutate();
+        }}
       />
       {error ? (
         <Text

@@ -1,4 +1,5 @@
 import { addDays, monthStart, nextMonthStart, toLocalDate, weekStart, zonedInstant } from '@/lib/dates';
+import { currencySymbol } from '@/lib/money';
 import type { BankCode, Currency } from '@/types/database';
 import { NO_TRANSACTIONS } from './messages';
 
@@ -17,7 +18,7 @@ export const DEFAULT_FILTERS: TransactionFilters = { period: 'month', categoryId
 
 export const PERIOD_LABELS: Record<Period, string> = { week: 'Esta semana', month: 'Este mes', all: 'Todo' };
 export const BANK_LABELS: Record<BankCode, string> = { bhd: 'BHD', banreservas: 'Banreservas', popular: 'Popular', apap: 'APAP' };
-export const CURRENCY_LABELS: Record<Currency, string> = { DOP: 'RD$', USD: 'US$' };
+export const CURRENCY_LABELS: Record<Currency, string> = { DOP: currencySymbol('DOP'), USD: currencySymbol('USD') };
 
 export interface DateRange {
   from: string | null;

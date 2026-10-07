@@ -39,7 +39,7 @@ export function TransactionsScreen() {
     list.refetch().finally(() => setPulling(false));
   };
   const loadMore = () => {
-    if (list.hasNextPage && !list.isFetchingNextPage) list.fetchNextPage();
+    if (list.hasNextPage && !list.isFetching) list.fetchNextPage();
   };
 
   const messageStyle = { fontFamily: fonts.body, fontSize: typeScale.body, color: colors.ash, marginTop: 12 };
