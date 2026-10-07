@@ -1,5 +1,5 @@
-import { Screen } from '@/components/Screen';
+import { TransactionsScreen } from '@/features/transactions/components/TransactionsScreen';
 
-export default function TransactionsScreen() {
-  return <Screen title="MOVIMIENTOS" backdrop={1} />;
+export default function TransactionsTab() {
+  return <TransactionsScreen />;
 }

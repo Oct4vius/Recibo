@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { DEFAULT_FILTERS, periodRange } from '@/features/transactions/filters';
+import { countLabel, DEFAULT_FILTERS, emptyMessage, periodRange } from '@/features/transactions/filters';
 
 const SD = 'America/Santo_Domingo';
 
@@ -25,5 +25,28 @@ describe('periodRange', () => {
   });
   it('defaults to this month with no other filter', () => {
     expect(DEFAULT_FILTERS).toEqual({ period: 'month', categoryId: null, currency: null, bankCode: null, review: false });
+  });
+});
+
+describe('countLabel', () => {
+  it('pluralizes and groups thousands', () => {
+    expect(countLabel(0)).toBe('0 movimientos');
+    expect(countLabel(1)).toBe('1 movimiento');
+    expect(countLabel(38)).toBe('38 movimientos');
+    expect(countLabel(1234)).toBe('1,234 movimientos');
+  });
+});
+
+describe('emptyMessage', () => {
+  it('invites to add the first expense when nothing limits the list', () => {
+    expect(emptyMessage({ ...DEFAULT_FILTERS, period: 'all' })).toBe('Todavía no hay movimientos. Agrega tu primer gasto con +');
+  });
+  it('names the period when only the period limits the list', () => {
+    expect(emptyMessage(DEFAULT_FILTERS)).toBe('No hay movimientos este mes. Agrega uno con +');
+    expect(emptyMessage({ ...DEFAULT_FILTERS, period: 'week' })).toBe('No hay movimientos esta semana. Agrega uno con +');
+  });
+  it('points at the filters when any other filter is on', () => {
+    expect(emptyMessage({ ...DEFAULT_FILTERS, review: true })).toBe('No hay movimientos con estos filtros.');
+    expect(emptyMessage({ ...DEFAULT_FILTERS, period: 'all', currency: 'USD' })).toBe('No hay movimientos con estos filtros.');
   });
 });
