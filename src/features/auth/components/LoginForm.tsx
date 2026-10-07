@@ -14,8 +14,23 @@ export function LoginForm() {
   const error = login.data ?? null;
   return (
     <View>
-      <TextField label="Correo" value={email} onChangeText={setEmail} keyboardType="email-address" autoComplete="email" />
-      <TextField label="Contraseña" value={password} onChangeText={setPassword} secureTextEntry autoComplete="password" />
+      <TextField
+        label="Correo"
+        value={email}
+        onChangeText={setEmail}
+        keyboardType="email-address"
+        autoComplete="email"
+        returnKeyType="next"
+      />
+      <TextField
+        label="Contraseña"
+        value={password}
+        onChangeText={setPassword}
+        secureTextEntry
+        autoComplete="password"
+        returnKeyType="go"
+        onSubmitEditing={() => login.mutate()}
+      />
       {error ? (
         <Text
           accessibilityLiveRegion="polite"

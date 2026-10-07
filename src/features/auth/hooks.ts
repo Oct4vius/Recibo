@@ -1,17 +1,16 @@
-import type { Session } from '@supabase/supabase-js';
-import { useEffect, useState } from 'react';
-import { supabase } from '@/lib/supabase';
+import { useContext } from 'react';
+import { SessionContext, type SessionState } from './session-context';
 
-/** Sesión actual de Supabase; `loading` es true hasta leerla del almacenamiento cifrado. */
-export function useSession(): { session: Session | null; loading: boolean } {
-  const [state, setState] = useState<{ session: Session | null; loading: boolean }>({ session: null, loading: true });
-  useEffect(() => {
-    supabase.auth
-      .getSession()
-      .then(({ data }) => setState({ session: data.session, loading: false }))
-      .catch(() => setState({ session: null, loading: false }));
-    const { data } = supabase.auth.onAuthStateChange((_event, session) => setState({ session, loading: false }));
-    return () => data.subscription.unsubscribe();
-  }, []);
+/** Sesión actual compartida por SessionProvider. */
+export function useSession(): SessionState {
+  const state = useContext(SessionContext);
+  if (!state) throw new Error('useSession debe usarse dentro de SessionProvider');
   return state;
+}
+
+/** Id del usuario con sesión iniciada. Solo para pantallas protegidas (detrás de Stack.Protected). */
+export function useUserId(): string {
+  const { session } = useSession();
+  if (!session) throw new Error('No hay sesión iniciada');
+  return session.user.id;
 }

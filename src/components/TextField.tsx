@@ -1,18 +1,17 @@
 import { useState } from 'react';
-import { Text, TextInput, View, type KeyboardTypeOptions, type TextInputProps } from 'react-native';
+import { Text, TextInput, View, type TextInputProps } from 'react-native';
 import { colors, fonts, MIN_TOUCH, typeScale } from '@/theme/tokens';
 
-interface Props {
+type Props = Omit<TextInputProps, 'style' | 'value' | 'onChangeText'> & {
   label: string;
   value: string;
   onChangeText: (value: string) => void;
-  secureTextEntry?: boolean;
-  keyboardType?: KeyboardTypeOptions;
-  autoComplete?: TextInputProps['autoComplete'];
-}
+  /** Mensaje bajo el campo; se anuncia al lector de pantalla. */
+  error?: string | null;
+};
 
 /** Campo de texto: etiqueta arriba, caja `panel` con barra roja a la izquierda cuando tiene foco. */
-export function TextField({ label, value, onChangeText, secureTextEntry, keyboardType, autoComplete }: Props) {
+export function TextField({ label, error, autoCapitalize = 'none', autoCorrect = false, onFocus, onBlur, ...input }: Props) {
   const [focused, setFocused] = useState(false);
   return (
     <View style={{ marginBottom: 16 }}>
@@ -23,16 +22,18 @@ export function TextField({ label, value, onChangeText, secureTextEntry, keyboar
         {label}
       </Text>
       <TextInput
+        {...input}
         accessibilityLabel={label}
-        value={value}
-        onChangeText={onChangeText}
-        secureTextEntry={secureTextEntry}
-        keyboardType={keyboardType}
-        autoComplete={autoComplete}
-        autoCapitalize="none"
-        autoCorrect={false}
-        onFocus={() => setFocused(true)}
-        onBlur={() => setFocused(false)}
+        autoCapitalize={autoCapitalize}
+        autoCorrect={autoCorrect}
+        onFocus={(e) => {
+          setFocused(true);
+          onFocus?.(e);
+        }}
+        onBlur={(e) => {
+          setFocused(false);
+          onBlur?.(e);
+        }}
         selectionColor={colors.blood}
         style={{
           minHeight: MIN_TOUCH,
@@ -45,6 +46,14 @@ export function TextField({ label, value, onChangeText, secureTextEntry, keyboar
           fontSize: typeScale.body,
         }}
       />
+      {error ? (
+        <Text
+          accessibilityLiveRegion="polite"
+          style={{ fontFamily: fonts.bodyStrong, fontSize: typeScale.caption, color: colors.signal, marginTop: 6 }}
+        >
+          {error}
+        </Text>
+      ) : null}
     </View>
   );
 }
