@@ -33,6 +33,8 @@
 - **Worktrees del harness (`isolation: worktree`):** nacen de un commit viejo (`eb14f21`). Cada implementer debe hacer `git merge --ff-only <BASE de su oleada>` antes de trabajar y `bun install` (en Windows puede fallar solo `@expo/sudo-prompt`: es inofensivo). Los subagentes **no pueden escribir fuera de su worktree**: piden el reporte en la respuesta. El controller integra las ramas a `dev` con `git cherry-pick` (historial lineal). `.claude/worktrees/` está en `.git/info/exclude`.
 - `.env.local` (gitignored) ya tiene `EXPO_PUBLIC_SUPABASE_URL` y `EXPO_PUBLIC_SUPABASE_ANON_KEY` en el checkout principal; los worktrees no lo tienen y no deben crearlo (`verify:bundle` compila sin él).
 - Al final, el usuario corre la checklist de la Task 9 en su Android con Expo Go (`bun run start`).
+- `bun run start` puede reescribir `tsconfig.json` en el checkout principal (formato y la lista `include`). Ese cambio no es parte del plan: no agregarlo a ningún commit (los `git add` de cada tarea nombran sus archivos).
+- La fila editable (`TransactionRow`) se crea en la Task 6 para que las Tasks 7 y 8 no dependan entre sí.
 
 ## Mapa de archivos
 
@@ -58,9 +60,12 @@
 | `src/features/transactions/{filters,grouping,mapping,expense-date}.ts` | Lógica pura de movimientos | 4 |
 | `src/features/summary/{comparison,mapping}.ts`, `src/features/categories/recent.ts`, `src/features/budgets/active.ts` | Lógica pura de resumen, categorías y presupuestos | 4 |
 | `src/features/*/keys.ts`, `api.ts`, `hooks.ts` (transactions, summary, categories, budgets, profile) | Acceso a datos | 5 |
-| `src/features/transactions/components/{ExpenseSheet,ExpenseForm}.tsx`, `src/components/AddFab.tsx` | Panel de gasto | 6 |
-| `src/features/transactions/components/{TransactionsScreen,FilterBar,DayHeader,TransactionRow}.tsx`, `app/(tabs)/transactions.tsx` (mod.) | Movimientos | 7 |
-| `src/features/summary/components/{HomeScreen,SummaryBlock,DayTag,RecentTransactions}.tsx`, `app/(tabs)/index.tsx` (mod.) | Inicio | 8 |
+| `src/features/transactions/{expense-draft,messages}.ts` | Borrador del panel (crear/editar) y textos compartidos | 6 |
+| `src/features/transactions/components/{ExpenseSheet,ExpenseForm,AmountDisplay,CategoryPicker,ExpenseDateChips,ExpenseActions,TransactionRow}.tsx` | Panel de gasto y fila editable | 6 |
+| `src/features/transactions/hooks.ts` (mod.) | `useExpenseSheet` | 6 |
+| `src/components/{AddFab,FieldLabel}.tsx`, `src/components/{SkewButton,TextField}.tsx` (mod.), `app/dev/gallery.tsx` (mod.) | Botón "+", etiqueta de campo, botón deshabilitado, galería | 6 |
+| `src/features/transactions/filters.ts` (mod.), `src/features/transactions/components/{TransactionsScreen,FilterBar,DayHeader}.tsx`, `app/(tabs)/transactions.tsx` (mod.) | Movimientos | 7 |
+| `src/theme/tokens.ts`, `src/components/Amount.tsx`, `src/features/summary/hooks.ts` (mod.), `src/features/summary/components/{HomeScreen,SummaryBlock,DayTag,RecentTransactions}.tsx`, `app/(tabs)/index.tsx` (mod.) | Inicio | 8 |
 | `CLAUDE.md`, roadmap, `docs/superpowers/plans/2026-10-06-plan-4b1-device-checklist.md` | Documentación | 9 |
 
 ---
@@ -1896,4 +1901,1479 @@ git commit -m "feat(app): add data access for transactions, summaries, categorie
 
 ---
 
-> **PLAN INCOMPLETO (2026-10-06):** faltan por escribir la Task 6 (ExpenseSheet/ExpenseForm + AddFab + datetimepicker), la Task 7 (Movimientos: TransactionsScreen, FilterBar, DayHeader, TransactionRow), la Task 8 (Inicio: HomeScreen, SummaryBlock, DayTag, RecentTransactions) y la Task 9 (CLAUDE.md, roadmap, checklist 2026-10-06-plan-4b1-device-checklist.md). Ver el spec §4–§6. No ejecutar hasta completarlas.
+### Task 6: Panel de gasto (crear y editar), botón "+" y fila editable
+
+**Files:**
+- Install: `@react-native-community/datetimepicker` (`bunx expo install`)
+- Create: `src/features/transactions/expense-draft.ts`, `src/features/transactions/messages.ts`, `src/components/FieldLabel.tsx`, `src/components/AddFab.tsx`, `src/features/transactions/components/{AmountDisplay,ExpenseDateChips,CategoryPicker,ExpenseActions,ExpenseForm,ExpenseSheet,TransactionRow}.tsx`
+- Modify: `src/components/SkewButton.tsx`, `src/components/TextField.tsx`, `src/features/transactions/hooks.ts`, `app/dev/gallery.tsx`
+- Test: `tests/unit/src/features/transactions/expense-draft.test.ts`
+
+**Interfaces:**
+- Consumes: Task 1 (`TextField`), Task 2 (`localDate`, `toLocalDate`, `addDays`, `isSameDate`, `formatDayLabel`), Task 3 (`pressKey`, `textToCents`, `centsToText`, `formatAmountInput`, `AmountKey`, `AmountKeypad`, `SkewChip`, `OptionSheet`, `PlaceholderRows`), Task 4 (`DateChoice`, `occurredAtFor`, `TransactionListItem`, `presentRow`, `CURRENCY_LABELS`, `TxSource`), Task 5 (`NewExpense`, `ExpenseChanges`, `useCreateExpense`, `useUpdateExpense`, `useSetIgnored`, `useDeleteExpense`, `useCategories`, `useRecentCategories`, `useProfile`, `useTimeZone`).
+- Produces:
+  - `messages.ts`: `NO_TRANSACTIONS`, `LOAD_TRANSACTIONS_ERROR`, `SAVE_ERROR`, `AMOUNT_REQUIRED` (strings).
+  - `expense-draft.ts`: `interface ExpenseDraft { amountText: string; currency: Currency; merchant: string; categoryId: string | null; date: DateChoice }`; `emptyDraft(currency: Currency): ExpenseDraft`; `dateChoiceOf(occurredAt: string, now: Date, timeZone: string): DateChoice`; `draftFromItem(item: TransactionListItem, now: Date, timeZone: string): ExpenseDraft`; `canSave(draft: ExpenseDraft): boolean`; `draftToNewExpense(draft: ExpenseDraft, now: Date, timeZone: string): NewExpense`; `draftToChanges(draft: ExpenseDraft, original: ExpenseDraft, source: TxSource, now: Date, timeZone: string): ExpenseChanges`.
+  - `<FieldLabel text={string} decorative?: boolean />`; `<AddFab onPress={() => void} />` (posición absoluta abajo a la derecha); `SkewButton` acepta `disabled?: boolean`.
+  - `<ExpenseSheet visible={boolean} item={TransactionListItem | null} onClose={() => void} />`
+  - `<TransactionRow item={TransactionListItem} onPress={(item: TransactionListItem) => void} />` (memo)
+  - `useExpenseSheet(): { openNew: () => void; openEdit: (item: TransactionListItem) => void; sheet: { visible: boolean; item: TransactionListItem | null; onClose: () => void } }` en `@/features/transactions/hooks`.
+
+- [ ] **Step 1: Instalar el selector de fecha**
+
+Run: `bunx expo install @react-native-community/datetimepicker` → `package.json` lo agrega con la versión que corresponde al SDK 57 (Expo Go ya trae el módulo nativo; no hace falta plugin en `app.json`).
+Run: `grep -rln "onValueChange" node_modules/@react-native-community/datetimepicker/src` → si aparece algún archivo, la versión instalada usa `onValueChange` (código del Step 5). Si no aparece nada, en `ExpenseDateChips` usar la variante con `onChange` indicada en el Step 5.
+
+- [ ] **Step 2: Test del borrador (falla)**
+
+`tests/unit/src/features/transactions/expense-draft.test.ts`:
+```ts
+import { describe, expect, it } from 'vitest';
+import {
+  canSave,
+  dateChoiceOf,
+  draftFromItem,
+  draftToChanges,
+  draftToNewExpense,
+  emptyDraft,
+} from '@/features/transactions/expense-draft';
+import type { TransactionListItem } from '@/features/transactions/mapping';
+import { localDate } from '@/lib/dates';
+
+const SD = 'America/Santo_Domingo';
+// martes 6 de octubre, 22:30 en Santo Domingo (ya es 7 en UTC)
+const now = new Date('2026-10-07T02:30:00Z');
+
+const item: TransactionListItem = {
+  id: 't1',
+  amount: 275.7,
+  currency: 'USD',
+  merchant: null,
+  occurredAt: '2026-10-06T03:00:00Z', // lun 5, 23:00 → AYER
+  categoryId: 'c1',
+  categoryName: 'Comida',
+  isIgnored: false,
+  source: 'manual',
+  bankCode: null,
+};
+
+describe('emptyDraft', () => {
+  it('starts empty, today, in the given currency', () => {
+    expect(emptyDraft('DOP')).toEqual({ amountText: '', currency: 'DOP', merchant: '', categoryId: null, date: { kind: 'today' } });
+  });
+});
+
+describe('dateChoiceOf', () => {
+  it('names today and yesterday in the profile zone, otherwise keeps the local date', () => {
+    expect(dateChoiceOf('2026-10-07T01:00:00Z', now, SD)).toEqual({ kind: 'today' });
+    expect(dateChoiceOf('2026-10-06T03:00:00Z', now, SD)).toEqual({ kind: 'yesterday' });
+    expect(dateChoiceOf('2026-10-01T15:00:00Z', now, SD)).toEqual({ kind: 'other', date: localDate(2026, 10, 1) });
+  });
+});
+
+describe('draftFromItem', () => {
+  it('preloads the expense with its amount as editable text', () => {
+    expect(draftFromItem(item, now, SD)).toEqual({
+      amountText: '275.70',
+      currency: 'USD',
+      merchant: '',
+      categoryId: 'c1',
+      date: { kind: 'yesterday' },
+    });
+  });
+});
+
+describe('canSave', () => {
+  it('requires an amount greater than zero', () => {
+    expect(canSave(emptyDraft('DOP'))).toBe(false);
+    expect(canSave({ ...emptyDraft('DOP'), amountText: '0.' })).toBe(false);
+    expect(canSave({ ...emptyDraft('DOP'), amountText: '0.05' })).toBe(true);
+  });
+});
+
+describe('draftToNewExpense', () => {
+  it('converts the draft to cents and the chosen day to an instant', () => {
+    const draft = { ...emptyDraft('DOP'), amountText: '1234.5', merchant: 'Colmado', date: { kind: 'yesterday' as const } };
+    expect(draftToNewExpense(draft, now, SD)).toEqual({
+      amountCents: 123450,
+      currency: 'DOP',
+      merchant: 'Colmado',
+      categoryId: null,
+      occurredAt: '2026-10-06T02:30:00.000Z',
+    });
+  });
+});
+
+describe('draftToChanges', () => {
+  const original = draftFromItem(item, now, SD);
+
+  it('never sends currency or date for an imported transaction', () => {
+    const draft = { ...original, amountText: '300', currency: 'DOP' as const, date: { kind: 'today' as const } };
+    expect(draftToChanges(draft, original, 'email', now, SD)).toEqual({ amountCents: 30000, merchant: '', categoryId: 'c1' });
+  });
+  it('keeps the original time of a manual expense when the day did not change', () => {
+    expect(draftToChanges(original, original, 'manual', now, SD)).toEqual({
+      amountCents: 27570,
+      merchant: '',
+      categoryId: 'c1',
+      currency: 'USD',
+    });
+  });
+  it('sends the new instant when the day of a manual expense changed', () => {
+    const draft = { ...original, date: { kind: 'today' as const } };
+    expect(draftToChanges(draft, original, 'manual', now, SD)).toMatchObject({ occurredAt: '2026-10-07T02:30:00.000Z' });
+  });
+});
+```
+Run: `bun run test` → FAIL (módulo inexistente).
+
+- [ ] **Step 3: Implementar el borrador y los textos**
+
+`src/features/transactions/messages.ts`:
+```ts
+/** Textos de Movimientos que se repiten en varias pantallas. */
+export const NO_TRANSACTIONS = 'Todavía no hay movimientos. Agrega tu primer gasto con +';
+export const LOAD_TRANSACTIONS_ERROR = 'No se pudieron cargar tus movimientos. Tira hacia abajo para reintentar.';
+export const SAVE_ERROR = 'No se pudo guardar. Revisa tu conexión e inténtalo otra vez.';
+export const AMOUNT_REQUIRED = 'Escribe un monto mayor que cero.';
+```
+
+`src/features/transactions/expense-draft.ts`:
+```ts
+import { addDays, isSameDate, toLocalDate } from '@/lib/dates';
+import type { Currency, TxSource } from '@/types/database';
+import { centsToText, textToCents } from './amount-input';
+import type { ExpenseChanges, NewExpense } from './api';
+import { occurredAtFor, type DateChoice } from './expense-date';
+import type { TransactionListItem } from './mapping';
+
+/** Lo que el usuario tiene escrito en el panel de gasto. */
+export interface ExpenseDraft {
+  amountText: string;
+  currency: Currency;
+  merchant: string;
+  categoryId: string | null;
+  date: DateChoice;
+}
+
+export function emptyDraft(currency: Currency): ExpenseDraft {
+  return { amountText: '', currency, merchant: '', categoryId: null, date: { kind: 'today' } };
+}
+
+/** Fecha de un movimiento existente como Hoy / Ayer / otro día, en la zona del perfil. */
+export function dateChoiceOf(occurredAt: string, now: Date, timeZone: string): DateChoice {
+  const date = toLocalDate(new Date(occurredAt), timeZone);
+  const today = toLocalDate(now, timeZone);
+  if (isSameDate(date, today)) return { kind: 'today' };
+  if (isSameDate(date, addDays(today, -1))) return { kind: 'yesterday' };
+  return { kind: 'other', date };
+}
+
+export function draftFromItem(item: TransactionListItem, now: Date, timeZone: string): ExpenseDraft {
+  return {
+    amountText: centsToText(Math.round(item.amount * 100)),
+    currency: item.currency,
+    merchant: item.merchant ?? '',
+    categoryId: item.categoryId,
+    date: dateChoiceOf(item.occurredAt, now, timeZone),
+  };
+}
+
+export function canSave(draft: ExpenseDraft): boolean {
+  return textToCents(draft.amountText) > 0;
+}
+
+export function draftToNewExpense(draft: ExpenseDraft, now: Date, timeZone: string): NewExpense {
+  return {
+    amountCents: textToCents(draft.amountText),
+    currency: draft.currency,
+    merchant: draft.merchant,
+    categoryId: draft.categoryId,
+    occurredAt: occurredAtFor(draft.date, now, timeZone),
+  };
+}
+
+function sameChoice(a: DateChoice, b: DateChoice): boolean {
+  if (a.kind === 'other' && b.kind === 'other') return isSameDate(a.date, b.date);
+  return a.kind === b.kind;
+}
+
+/**
+ * Cambios a guardar al editar. La moneda y la fecha solo se envían en gastos manuales (en los importados
+ * son datos del banco); la fecha solo si el usuario cambió el día, para conservar la hora original.
+ */
+export function draftToChanges(
+  draft: ExpenseDraft,
+  original: ExpenseDraft,
+  source: TxSource,
+  now: Date,
+  timeZone: string,
+): ExpenseChanges {
+  const base = { amountCents: textToCents(draft.amountText), merchant: draft.merchant, categoryId: draft.categoryId };
+  if (source !== 'manual') return base;
+  return {
+    ...base,
+    currency: draft.currency,
+    ...(sameChoice(draft.date, original.date) ? {} : { occurredAt: occurredAtFor(draft.date, now, timeZone) }),
+  };
+}
+```
+Run: `bun run test` → PASS.
+
+- [ ] **Step 4: Piezas genéricas (`FieldLabel`, `TextField`, `SkewButton` deshabilitado, `AddFab`)**
+
+`src/components/FieldLabel.tsx`:
+```tsx
+import { Text } from 'react-native';
+import { colors, fonts, typeScale } from '@/theme/tokens';
+
+interface Props {
+  text: string;
+  /** true si el control ya se anuncia con su propia etiqueta (p. ej. un TextInput). */
+  decorative?: boolean;
+}
+
+/** Etiqueta pequeña sobre un campo o una fila de chips. */
+export function FieldLabel({ text, decorative = false }: Props) {
+  return (
+    <Text
+      importantForAccessibility={decorative ? 'no' : 'auto'}
+      style={{ fontFamily: fonts.bodyStrong, fontSize: typeScale.caption, color: colors.ash, marginBottom: 6 }}
+    >
+      {text}
+    </Text>
+  );
+}
+```
+
+En `src/components/TextField.tsx` (DRY con `FieldLabel`):
+1. Agregar `import { FieldLabel } from './FieldLabel';`.
+2. Reemplazar el bloque `<Text importantForAccessibility="no" style={{ … marginBottom: 6 }}>{label}</Text>` por `<FieldLabel text={label} decorative />`.
+3. `Text` sigue importado (lo usa el mensaje de error).
+
+`src/components/SkewButton.tsx` (reemplazar completo):
+```tsx
+import { ActivityIndicator, Pressable, Text } from 'react-native';
+import Animated, { useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
+import { tapFeedback } from '@/lib/haptics';
+import { useMotionPreference } from '@/theme/motion';
+import { durations } from '@/theme/motion-tokens';
+import { angles, colors, fonts, MIN_TOUCH, typeScale } from '@/theme/tokens';
+
+interface Props {
+  label: string;
+  onPress: () => void;
+  variant?: 'primary' | 'ghost';
+  loading?: boolean;
+  /** Apagado (p. ej. "Guardar" sin monto): fondo `panel`, texto `ash`, no responde. */
+  disabled?: boolean;
+  accessibilityHint?: string;
+}
+
+/** Botón inclinado: al tocarlo se hunde 4 dp en diagonal y vibra (sin desplazamiento si se redujeron animaciones). */
+export function SkewButton({ label, onPress, variant = 'primary', loading = false, disabled = false, accessibilityHint }: Props) {
+  const { reduced } = useMotionPreference();
+  const pressed = useSharedValue(0);
+  const style = useAnimatedStyle(() => ({
+    transform: [
+      { skewX: `${angles.row}deg` },
+      { translateX: pressed.value * 4 },
+      { translateY: pressed.value * 2 },
+    ],
+  }));
+  const primary = variant === 'primary';
+  const inactive = loading || disabled;
+  return (
+    <Pressable
+      accessibilityRole="button"
+      accessibilityLabel={label}
+      accessibilityHint={accessibilityHint}
+      accessibilityState={{ busy: loading, disabled: inactive }}
+      disabled={inactive}
+      onPress={() => {
+        tapFeedback();
+        onPress();
+      }}
+      onPressIn={() => {
+        if (!reduced) pressed.value = withTiming(1, { duration: durations.tap });
+      }}
+      onPressOut={() => {
+        pressed.value = withTiming(0, { duration: durations.tap });
+      }}
+      style={{ minHeight: MIN_TOUCH }}
+    >
+      <Animated.View
+        style={[
+          {
+            minHeight: MIN_TOUCH,
+            paddingHorizontal: 24,
+            alignItems: 'center',
+            justifyContent: 'center',
+            backgroundColor: primary ? (disabled ? colors.panel : colors.blood) : 'transparent',
+            borderWidth: primary ? 0 : 2,
+            borderColor: disabled ? colors.ash : colors.paper,
+          },
+          style,
+        ]}
+      >
+        {loading ? (
+          <ActivityIndicator color={colors.paper} />
+        ) : (
+          <Text
+            style={{
+              fontFamily: fonts.display,
+              fontSize: typeScale.displaySm,
+              color: disabled ? colors.ash : colors.paper,
+              transform: [{ skewX: `${-angles.row}deg` }],
+            }}
+          >
+            {label}
+          </Text>
+        )}
+      </Animated.View>
+    </Pressable>
+  );
+}
+```
+
+`src/components/AddFab.tsx`:
+```tsx
+import { Ionicons } from '@expo/vector-icons';
+import { Pressable, View } from 'react-native';
+import { tapFeedback } from '@/lib/haptics';
+import { colors } from '@/theme/tokens';
+
+const SIZE = 56;
+/** Lado del cuadrado girado 45°: su diagonal (~56 dp) llena el área táctil. */
+const DIAMOND = 40;
+
+/** Botón flotante "+": rombo rojo abajo a la derecha que abre el panel de gasto. */
+export function AddFab({ onPress }: { onPress: () => void }) {
+  return (
+    <Pressable
+      accessibilityRole="button"
+      accessibilityLabel="Agregar gasto"
+      onPress={() => {
+        tapFeedback();
+        onPress();
+      }}
+      style={{ position: 'absolute', right: 20, bottom: 20, width: SIZE, height: SIZE, alignItems: 'center', justifyContent: 'center' }}
+    >
+      <View style={{ width: DIAMOND, height: DIAMOND, backgroundColor: colors.blood, transform: [{ rotate: '45deg' }] }} />
+      <View style={{ position: 'absolute' }}>
+        <Ionicons name="add" size={28} color={colors.paper} />
+      </View>
+    </Pressable>
+  );
+}
+```
+
+- [ ] **Step 5: Componentes del panel**
+
+`src/features/transactions/components/AmountDisplay.tsx`:
+```tsx
+import { Pressable, Text, View } from 'react-native';
+import { moneyAccessibilityLabel } from '@/lib/money';
+import { colors, fonts, typeScale } from '@/theme/tokens';
+import type { Currency } from '@/types/database';
+import { formatAmountInput, textToCents } from '../amount-input';
+
+interface Props {
+  text: string;
+  currency: Currency;
+  /** El teclado propio está activo: se muestra el cursor rojo. */
+  active: boolean;
+  onPress: () => void;
+}
+
+/** Monto gigante mientras se escribe (cifras de ancho fijo, nunca inclinado). Tocarlo vuelve al teclado propio. */
+export function AmountDisplay({ text, currency, active, onPress }: Props) {
+  return (
+    <Pressable
+      accessibilityRole="button"
+      accessibilityLabel={`Monto: ${moneyAccessibilityLabel(textToCents(text) / 100, currency)}`}
+      accessibilityHint="Muestra el teclado de montos"
+      accessibilityLiveRegion="polite"
+      onPress={onPress}
+      style={{ flexDirection: 'row', alignItems: 'center', minHeight: typeScale.amountHero + 8, marginBottom: 12 }}
+    >
+      <Text
+        numberOfLines={1}
+        adjustsFontSizeToFit
+        style={{
+          flexShrink: 1,
+          fontFamily: fonts.amount,
+          fontSize: typeScale.amountHero,
+          lineHeight: typeScale.amountHero,
+          color: colors.paper,
+          fontVariant: ['tabular-nums'],
+        }}
+      >
+        {formatAmountInput(text, currency)}
+      </Text>
+      {active ? (
+        <View style={{ width: 4, height: typeScale.amountHero * 0.8, marginLeft: 4, backgroundColor: colors.blood }} />
+      ) : null}
+    </Pressable>
+  );
+}
+```
+
+`src/features/transactions/components/ExpenseDateChips.tsx`:
+```tsx
+import { DateTimePickerAndroid } from '@react-native-community/datetimepicker';
+import { View } from 'react-native';
+import { SkewChip } from '@/components/SkewChip';
+import { formatDayLabel, localDate } from '@/lib/dates';
+import type { DateChoice } from '../expense-date';
+
+interface Props {
+  value: DateChoice;
+  onChange: (choice: DateChoice) => void;
+}
+
+/** Hoy / Ayer / Otro día. "Otro día" abre el calendario nativo de Android, sin días futuros. */
+export function ExpenseDateChips({ value, onChange }: Props) {
+  const openCalendar = () => {
+    const initial = value.kind === 'other' ? new Date(value.date.year, value.date.month - 1, value.date.day) : new Date();
+    DateTimePickerAndroid.open({
+      value: initial,
+      mode: 'date',
+      maximumDate: new Date(),
+      onValueChange: (_event, date) => {
+        // El calendario devuelve el día elegido en la hora del dispositivo: se leen sus componentes locales.
+        if (date) onChange({ kind: 'other', date: localDate(date.getFullYear(), date.getMonth() + 1, date.getDate()) });
+      },
+    });
+  };
+  return (
+    <View style={{ flexDirection: 'row', flexWrap: 'wrap', marginBottom: 12 }}>
+      <SkewChip label="Hoy" selected={value.kind === 'today'} onPress={() => onChange({ kind: 'today' })} />
+      <SkewChip label="Ayer" selected={value.kind === 'yesterday'} onPress={() => onChange({ kind: 'yesterday' })} />
+      <SkewChip
+        label={value.kind === 'other' ? formatDayLabel(value.date) : 'Otro día'}
+        selected={value.kind === 'other'}
+        onPress={openCalendar}
+      />
+    </View>
+  );
+}
+```
+Variante si la versión instalada no tiene `onValueChange` (Step 1): reemplazar esa propiedad por
+```tsx
+      onChange: (event, date) => {
+        if (event.type === 'set' && date) onChange({ kind: 'other', date: localDate(date.getFullYear(), date.getMonth() + 1, date.getDate()) });
+      },
+```
+
+`src/features/transactions/components/CategoryPicker.tsx`:
+```tsx
+import { useState } from 'react';
+import { View } from 'react-native';
+import { OptionSheet } from '@/components/OptionSheet';
+import { SkewChip } from '@/components/SkewChip';
+import { useCategories, useRecentCategories } from '@/features/categories/hooks';
+
+interface Props {
+  value: string | null;
+  onChange: (categoryId: string | null) => void;
+}
+
+/** Las 3 categorías usadas más recientemente + "Más…" (lista completa). Tocar la elegida la quita. */
+export function CategoryPicker({ value, onChange }: Props) {
+  const [open, setOpen] = useState(false);
+  const recent = useRecentCategories();
+  const all = useCategories().data ?? [];
+  const chosen = all.find((category) => category.id === value);
+  // Si la elegida no está entre las recientes (p. ej. al editar), se muestra también.
+  const chips = chosen && !recent.some((category) => category.id === chosen.id) ? [...recent, chosen] : recent;
+  const options = all.map((category) => ({ value: category.id, label: category.name }));
+  return (
+    <View style={{ flexDirection: 'row', flexWrap: 'wrap', marginBottom: 12 }}>
+      {chips.map((category) => (
+        <SkewChip
+          key={category.id}
+          label={category.name}
+          selected={category.id === value}
+          onPress={() => onChange(category.id === value ? null : category.id)}
+        />
+      ))}
+      <SkewChip label="Más…" onPress={() => setOpen(true)} />
+      <OptionSheet
+        visible={open}
+        title="CATEGORÍA"
+        options={options}
+        selected={value}
+        noneLabel="Sin categoría"
+        onSelect={onChange}
+        onClose={() => setOpen(false)}
+      />
+    </View>
+  );
+}
+```
+
+`src/features/transactions/components/ExpenseActions.tsx`:
+```tsx
+import { Alert, View } from 'react-native';
+import { SkewButton } from '@/components/SkewButton';
+import { useDeleteExpense, useSetIgnored } from '../hooks';
+import type { TransactionListItem } from '../mapping';
+import { SAVE_ERROR } from '../messages';
+
+interface Props {
+  item: TransactionListItem;
+  onDone: () => void;
+  onError: (message: string) => void;
+}
+
+/** Acciones de edición: ignorar/contar (cualquier movimiento) y borrar (solo manuales, con confirmación). */
+export function ExpenseActions({ item, onDone, onError }: Props) {
+  const setIgnored = useSetIgnored();
+  const remove = useDeleteExpense();
+  const callbacks = { onSuccess: onDone, onError: () => onError(SAVE_ERROR) };
+  const confirmDelete = () =>
+    Alert.alert('¿Borrar este gasto?', 'No se puede deshacer.', [
+      { text: 'Cancelar', style: 'cancel' },
+      { text: 'Borrar', style: 'destructive', onPress: () => remove.mutate(item.id, callbacks) },
+    ]);
+  return (
+    <View style={{ marginTop: 16 }}>
+      <SkewButton
+        variant="ghost"
+        label={item.isIgnored ? 'Contar este gasto' : 'Ignorar este gasto'}
+        loading={setIgnored.isPending}
+        onPress={() => setIgnored.mutate({ id: item.id, ignored: !item.isIgnored }, callbacks)}
+      />
+      {item.source === 'manual' ? (
+        <View style={{ marginTop: 12 }}>
+          <SkewButton variant="ghost" label="Borrar" loading={remove.isPending} onPress={confirmDelete} />
+        </View>
+      ) : null}
+    </View>
+  );
+}
+```
+
+`src/features/transactions/components/ExpenseForm.tsx`:
+```tsx
+import { useState } from 'react';
+import { Keyboard, Text, View } from 'react-native';
+import { AmountKeypad } from '@/components/AmountKeypad';
+import { FieldLabel } from '@/components/FieldLabel';
+import { SkewButton } from '@/components/SkewButton';
+import { SkewChip } from '@/components/SkewChip';
+import { TextField } from '@/components/TextField';
+import { useProfile, useTimeZone } from '@/features/profile/hooks';
+import { formatDayLabel, toLocalDate } from '@/lib/dates';
+import { colors, fonts, typeScale } from '@/theme/tokens';
+import type { Currency } from '@/types/database';
+import { pressKey, type AmountKey } from '../amount-input';
+import { canSave, draftFromItem, draftToChanges, draftToNewExpense, emptyDraft, type ExpenseDraft } from '../expense-draft';
+import { CURRENCY_LABELS } from '../filters';
+import { useCreateExpense, useUpdateExpense } from '../hooks';
+import type { TransactionListItem } from '../mapping';
+import { AMOUNT_REQUIRED, SAVE_ERROR } from '../messages';
+import { AmountDisplay } from './AmountDisplay';
+import { CategoryPicker } from './CategoryPicker';
+import { ExpenseActions } from './ExpenseActions';
+import { ExpenseDateChips } from './ExpenseDateChips';
+
+const CURRENCIES: readonly Currency[] = ['DOP', 'USD'];
+
+interface Props {
+  /** Sin `item` crea un gasto manual; con `item` lo edita. */
+  item?: TransactionListItem;
+  onDone: () => void;
+}
+
+/** Panel de gasto en el orden del mockup: monto, moneda, comercio, categoría, fecha, teclado y "Guardar". */
+export function ExpenseForm({ item, onDone }: Props) {
+  const timeZone = useTimeZone();
+  const primaryCurrency = useProfile().data?.primaryCurrency ?? 'DOP';
+  const [original] = useState<ExpenseDraft>(() =>
+    item ? draftFromItem(item, new Date(), timeZone) : emptyDraft(primaryCurrency),
+  );
+  const [draft, setDraft] = useState<ExpenseDraft>(original);
+  const [typingMerchant, setTypingMerchant] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const createExpense = useCreateExpense();
+  const updateExpense = useUpdateExpense();
+  // La moneda y la fecha de un movimiento importado por correo son datos del banco: no se editan.
+  const bankData = item !== undefined && item.source !== 'manual';
+  const ready = canSave(draft);
+
+  const change = <K extends keyof ExpenseDraft>(key: K, value: ExpenseDraft[K]) => {
+    setDraft((current) => ({ ...current, [key]: value }));
+    setError(null);
+  };
+  const onKey = (key: AmountKey) => {
+    setDraft((current) => ({ ...current, amountText: pressKey(current.amountText, key) }));
+    setError(null);
+  };
+  const save = () => {
+    const now = new Date();
+    const callbacks = { onSuccess: onDone, onError: () => setError(SAVE_ERROR) };
+    if (item) {
+      updateExpense.mutate({ id: item.id, changes: draftToChanges(draft, original, item.source, now, timeZone) }, callbacks);
+    } else {
+      createExpense.mutate(draftToNewExpense(draft, now, timeZone), callbacks);
+    }
+  };
+
+  return (
+    <View>
+      <AmountDisplay
+        text={draft.amountText}
+        currency={draft.currency}
+        active={!typingMerchant}
+        onPress={() => Keyboard.dismiss()}
+      />
+      {bankData ? null : (
+        <>
+          <FieldLabel text="Moneda" />
+          <View style={{ flexDirection: 'row', marginBottom: 12 }}>
+            {CURRENCIES.map((currency) => (
+              <SkewChip
+                key={currency}
+                label={CURRENCY_LABELS[currency]}
+                selected={draft.currency === currency}
+                onPress={() => change('currency', currency)}
+              />
+            ))}
+          </View>
+        </>
+      )}
+      <TextField
+        label="Comercio o descripción"
+        value={draft.merchant}
+        onChangeText={(merchant) => change('merchant', merchant)}
+        maxLength={80}
+        autoCapitalize="sentences"
+        returnKeyType="done"
+        onFocus={() => setTypingMerchant(true)}
+        onBlur={() => setTypingMerchant(false)}
+      />
+      <FieldLabel text="Categoría" />
+      <CategoryPicker value={draft.categoryId} onChange={(categoryId) => change('categoryId', categoryId)} />
+      <FieldLabel text="Fecha" />
+      {item && bankData ? (
+        <Text style={{ fontFamily: fonts.body, fontSize: typeScale.body, color: colors.paper, marginBottom: 12 }}>
+          {formatDayLabel(toLocalDate(new Date(item.occurredAt), timeZone))} · fecha del banco
+        </Text>
+      ) : (
+        <ExpenseDateChips value={draft.date} onChange={(date) => change('date', date)} />
+      )}
+      {typingMerchant ? null : <AmountKeypad onKey={onKey} />}
+      <View style={{ marginTop: 16 }}>
+        <SkewButton
+          label="Guardar"
+          onPress={save}
+          disabled={!ready}
+          loading={createExpense.isPending || updateExpense.isPending}
+          accessibilityHint={ready ? undefined : AMOUNT_REQUIRED}
+        />
+      </View>
+      {error ? (
+        <Text
+          accessibilityLiveRegion="polite"
+          style={{ fontFamily: fonts.bodyStrong, fontSize: typeScale.caption, color: colors.signal, marginTop: 8 }}
+        >
+          {error}
+        </Text>
+      ) : null}
+      {item ? <ExpenseActions item={item} onDone={onDone} onError={setError} /> : null}
+    </View>
+  );
+}
+```
+La moneda por defecto sale de `profiles.primary_currency`; el perfil ya está en caché porque ambas pantallas llaman `useTimeZone()` antes de que se abra el panel.
+
+`src/features/transactions/components/ExpenseSheet.tsx`:
+```tsx
+import { SlamSheet } from '@/components/SlamSheet';
+import type { TransactionListItem } from '../mapping';
+import { ExpenseForm } from './ExpenseForm';
+
+interface Props {
+  visible: boolean;
+  /** null = gasto nuevo. */
+  item: TransactionListItem | null;
+  onClose: () => void;
+}
+
+/** Panel de gasto. `SlamSheet` desmonta el contenido al cerrarse, así que cada apertura empieza limpia. */
+export function ExpenseSheet({ visible, item, onClose }: Props) {
+  return (
+    <SlamSheet visible={visible} onClose={onClose} title={item ? 'EDITAR GASTO' : 'NUEVO GASTO'}>
+      <ExpenseForm key={item?.id ?? 'new'} item={item ?? undefined} onDone={onClose} />
+    </SlamSheet>
+  );
+}
+```
+
+`src/features/transactions/components/TransactionRow.tsx`:
+```tsx
+import { memo } from 'react';
+import { SkewRow } from '@/components/SkewRow';
+import { presentRow, type TransactionListItem } from '../mapping';
+
+interface Props {
+  item: TransactionListItem;
+  onPress: (item: TransactionListItem) => void;
+}
+
+/** Fila de un movimiento (monto en su moneda original); tocarla abre el panel de edición. */
+export const TransactionRow = memo(function TransactionRow({ item, onPress }: Props) {
+  const row = presentRow(item);
+  return (
+    <SkewRow
+      title={row.title}
+      subtitle={row.subtitle}
+      badge={row.badge}
+      muted={row.muted}
+      amount={{ value: item.amount, currency: item.currency }}
+      onPress={() => onPress(item)}
+    />
+  );
+});
+```
+
+Al final de `src/features/transactions/hooks.ts` agregar (y sumar `import { useCallback, useState } from 'react';` e `import type { TransactionListItem } from './mapping';` a los imports):
+```ts
+/** Estado del panel de gasto compartido por Inicio y Movimientos: cerrado, gasto nuevo o edición de `item`. */
+export function useExpenseSheet() {
+  const [state, setState] = useState<{ item: TransactionListItem | null } | null>(null);
+  const openNew = useCallback(() => setState({ item: null }), []);
+  const openEdit = useCallback((item: TransactionListItem) => setState({ item }), []);
+  const close = useCallback(() => setState(null), []);
+  return { openNew, openEdit, sheet: { visible: state !== null, item: state?.item ?? null, onClose: close } };
+}
+```
+
+- [ ] **Step 6: Galería**
+
+En `app/dev/gallery.tsx`:
+1. Imports nuevos: `AddFab`, `AmountKeypad`, `PlaceholderRows`, `SkewChip` (de `@/components/...`) y `import { formatAmountInput, pressKey } from '@/features/transactions/amount-input';`.
+2. Estado nuevo junto a los demás: `const [chip, setChip] = useState(0);` y `const [typed, setTyped] = useState('');`.
+3. Después del bloque `<Section name="Campo de texto" />` + su `TextField`, insertar:
+```tsx
+      <Section name="Chips" />
+      <View style={{ flexDirection: 'row', flexWrap: 'wrap' }}>
+        {['Hoy', 'Ayer', 'Otro día'].map((label, i) => (
+          <SkewChip key={label} label={label} selected={chip === i} onPress={() => setChip(i)} />
+        ))}
+      </View>
+
+      <Section name="Teclado de montos" />
+      <Text style={{ fontFamily: fonts.amount, fontSize: typeScale.amountHero, color: colors.paper, fontVariant: ['tabular-nums'] }}>
+        {formatAmountInput(typed, 'DOP')}
+      </Text>
+      <AmountKeypad onKey={(key) => setTyped((current) => pressKey(current, key))} />
+
+      <Section name="Cargando" />
+      <PlaceholderRows />
+
+      <Section name="Botón agregar" />
+      <View style={{ height: 72 }}>
+        <AddFab onPress={() => setSheet(true)} />
+      </View>
+```
+4. En la sección "Botones", después del primer `SkewButton` ("Agregar gasto") y su separador, agregar `<SkewButton label="Guardar (sin monto)" disabled onPress={() => undefined} />` seguido de `<View style={{ height: 12 }} />`.
+
+- [ ] **Step 7: Verificar y commit**
+
+Run: `bun run check` → verde. Run: `bun run verify:bundle` → `Exported`.
+Run: `grep -rnE "#[0-9a-fA-F]{3,8}|rgba\(" src/features src/components --include=*.tsx` → sin resultados.
+```bash
+git add package.json bun.lock src/features/transactions src/components/FieldLabel.tsx src/components/TextField.tsx src/components/SkewButton.tsx src/components/AddFab.tsx app/dev/gallery.tsx tests/unit/src/features/transactions/expense-draft.test.ts
+git commit -m "feat(app): add the expense sheet with custom keypad, date chips and edit actions" -m "Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
+```
+(Si el lockfile se llama distinto —`bun.lockb`—, agregar ese.)
+
+---
+
+### Task 7: Movimientos
+
+**Files:**
+- Modify: `src/features/transactions/filters.ts`, `app/(tabs)/transactions.tsx`
+- Create: `src/features/transactions/components/{TransactionsScreen,FilterBar,DayHeader}.tsx`
+- Test: `tests/unit/src/features/transactions/filters.test.ts` (ampliar)
+
+**Interfaces:**
+- Consumes: Task 2 (`ListScreen`), Task 3 (`SkewChip`, `OptionSheet`, `Option`, `PlaceholderRows`), Task 4 (`TransactionFilters`, `DEFAULT_FILTERS`, `PERIOD_LABELS`, `BANK_LABELS`, `CURRENCY_LABELS`, `Period`, `groupByDay`, `ListEntry`, `TransactionListItem`), Task 5 (`useTransactionList`, `useCategories`, `useTimeZone`), Task 6 (`AddFab`, `ExpenseSheet`, `TransactionRow`, `useExpenseSheet`, `NO_TRANSACTIONS`, `LOAD_TRANSACTIONS_ERROR`).
+- Produces: `countLabel(count: number): string`, `emptyMessage(filters: TransactionFilters): string` (en `filters.ts`); `<TransactionsScreen />`; `<FilterBar filters onChange count={number | null} />`; `<DayHeader title={string} />`.
+
+- [ ] **Step 1: Ampliar el test de filtros (falla)**
+
+Agregar a `tests/unit/src/features/transactions/filters.test.ts` (y `countLabel, emptyMessage` al import):
+```ts
+describe('countLabel', () => {
+  it('pluralizes and groups thousands', () => {
+    expect(countLabel(0)).toBe('0 movimientos');
+    expect(countLabel(1)).toBe('1 movimiento');
+    expect(countLabel(38)).toBe('38 movimientos');
+    expect(countLabel(1234)).toBe('1,234 movimientos');
+  });
+});
+
+describe('emptyMessage', () => {
+  it('invites to add the first expense when nothing limits the list', () => {
+    expect(emptyMessage({ ...DEFAULT_FILTERS, period: 'all' })).toBe('Todavía no hay movimientos. Agrega tu primer gasto con +');
+  });
+  it('names the period when only the period limits the list', () => {
+    expect(emptyMessage(DEFAULT_FILTERS)).toBe('No hay movimientos este mes. Agrega uno con +');
+    expect(emptyMessage({ ...DEFAULT_FILTERS, period: 'week' })).toBe('No hay movimientos esta semana. Agrega uno con +');
+  });
+  it('points at the filters when any other filter is on', () => {
+    expect(emptyMessage({ ...DEFAULT_FILTERS, review: true })).toBe('No hay movimientos con estos filtros.');
+    expect(emptyMessage({ ...DEFAULT_FILTERS, period: 'all', currency: 'USD' })).toBe('No hay movimientos con estos filtros.');
+  });
+});
+```
+Run: `bun run test` → FAIL.
+
+- [ ] **Step 2: Implementar en `filters.ts`**
+
+Agregar `import { NO_TRANSACTIONS } from './messages';` a los imports y al final del archivo:
+```ts
+const PERIOD_PHRASE: Record<Exclude<Period, 'all'>, string> = { week: 'esta semana', month: 'este mes' };
+const counter = new Intl.NumberFormat('en-US');
+
+/** "38 movimientos" / "1 movimiento". */
+export function countLabel(count: number): string {
+  return `${counter.format(count)} ${count === 1 ? 'movimiento' : 'movimientos'}`;
+}
+
+/** Mensaje de lista vacía según lo que la está limitando. */
+export function emptyMessage(filters: TransactionFilters): string {
+  if (filters.categoryId || filters.currency || filters.bankCode || filters.review) return 'No hay movimientos con estos filtros.';
+  if (filters.period === 'all') return NO_TRANSACTIONS;
+  return `No hay movimientos ${PERIOD_PHRASE[filters.period]}. Agrega uno con +`;
+}
+```
+Run: `bun run test` → PASS.
+
+- [ ] **Step 3: Componentes de Movimientos**
+
+`src/features/transactions/components/DayHeader.tsx`:
+```tsx
+import { Text, View } from 'react-native';
+import { angles, colors, fonts, typeScale } from '@/theme/tokens';
+
+/** Encabezado de día inclinado ("HOY", "AYER", "MAR 06 / OCT"). */
+export function DayHeader({ title }: { title: string }) {
+  return (
+    <View
+      accessible
+      accessibilityRole="header"
+      accessibilityLabel={title}
+      style={{ alignSelf: 'flex-start', marginTop: 18, marginBottom: 6, transform: [{ rotate: `${angles.title}deg` }] }}
+    >
+      <Text style={{ fontFamily: fonts.display, fontSize: typeScale.displaySm, color: colors.paper }}>{title}</Text>
+    </View>
+  );
+}
+```
+
+`src/features/transactions/components/FilterBar.tsx`:
+```tsx
+import { useState } from 'react';
+import { ScrollView, Text, View } from 'react-native';
+import { OptionSheet, type Option } from '@/components/OptionSheet';
+import { SkewChip } from '@/components/SkewChip';
+import { useCategories } from '@/features/categories/hooks';
+import { colors, fonts, typeScale } from '@/theme/tokens';
+import type { BankCode, Currency } from '@/types/database';
+import { BANK_LABELS, countLabel, CURRENCY_LABELS, PERIOD_LABELS, type Period, type TransactionFilters } from '../filters';
+
+const PERIODS: readonly Period[] = ['week', 'month', 'all'];
+const CURRENCIES: readonly Currency[] = ['DOP', 'USD'];
+const BANKS: readonly BankCode[] = ['bhd', 'banreservas', 'popular', 'apap'];
+const CURRENCY_OPTIONS: readonly Option<Currency>[] = CURRENCIES.map((value) => ({ value, label: CURRENCY_LABELS[value] }));
+const BANK_OPTIONS: readonly Option<BankCode>[] = BANKS.map((value) => ({ value, label: BANK_LABELS[value] }));
+
+type SheetName = 'category' | 'currency' | 'bank';
+
+interface Props {
+  filters: TransactionFilters;
+  onChange: (filters: TransactionFilters) => void;
+  /** Total de movimientos que cumplen los filtros; null mientras carga. */
+  count: number | null;
+}
+
+/** Chips de período, filtros que abren una hoja de opciones, "Revisar" y el conteo total. */
+export function FilterBar({ filters, onChange, count }: Props) {
+  const [sheet, setSheet] = useState<SheetName | null>(null);
+  const categories = useCategories().data ?? [];
+  const categoryOptions = categories.map((category) => ({ value: category.id, label: category.name }));
+  const categoryName = categories.find((category) => category.id === filters.categoryId)?.name;
+  const close = () => setSheet(null);
+  return (
+    <View style={{ marginBottom: 12 }}>
+      <ScrollView horizontal showsHorizontalScrollIndicator={false} keyboardShouldPersistTaps="handled">
+        {PERIODS.map((period) => (
+          <SkewChip
+            key={period}
+            label={PERIOD_LABELS[period]}
+            selected={filters.period === period}
+            onPress={() => onChange({ ...filters, period })}
+          />
+        ))}
+      </ScrollView>
+      <ScrollView horizontal showsHorizontalScrollIndicator={false} keyboardShouldPersistTaps="handled">
+        <SkewChip label={categoryName ?? 'Categoría'} selected={filters.categoryId !== null} onPress={() => setSheet('category')} />
+        <SkewChip
+          label={filters.currency ? CURRENCY_LABELS[filters.currency] : 'Moneda'}
+          selected={filters.currency !== null}
+          onPress={() => setSheet('currency')}
+        />
+        <SkewChip
+          label={filters.bankCode ? BANK_LABELS[filters.bankCode] : 'Banco'}
+          selected={filters.bankCode !== null}
+          onPress={() => setSheet('bank')}
+        />
+        <SkewChip label="Revisar" selected={filters.review} onPress={() => onChange({ ...filters, review: !filters.review })} />
+      </ScrollView>
+      {count !== null ? (
+        <Text
+          accessibilityLiveRegion="polite"
+          style={{ fontFamily: fonts.bodyStrong, fontSize: typeScale.caption, color: colors.ash, marginTop: 8 }}
+        >
+          {countLabel(count)}
+        </Text>
+      ) : null}
+      <OptionSheet
+        visible={sheet === 'category'}
+        title="CATEGORÍA"
+        options={categoryOptions}
+        selected={filters.categoryId}
+        noneLabel="Todas"
+        onSelect={(categoryId) => onChange({ ...filters, categoryId })}
+        onClose={close}
+      />
+      <OptionSheet
+        visible={sheet === 'currency'}
+        title="MONEDA"
+        options={CURRENCY_OPTIONS}
+        selected={filters.currency}
+        noneLabel="Todas"
+        onSelect={(currency) => onChange({ ...filters, currency })}
+        onClose={close}
+      />
+      <OptionSheet
+        visible={sheet === 'bank'}
+        title="BANCO"
+        options={BANK_OPTIONS}
+        selected={filters.bankCode}
+        noneLabel="Todos"
+        onSelect={(bankCode) => onChange({ ...filters, bankCode })}
+        onClose={close}
+      />
+    </View>
+  );
+}
+```
+
+`src/features/transactions/components/TransactionsScreen.tsx`:
+```tsx
+import { useCallback, useMemo, useState } from 'react';
+import { RefreshControl, Text, type ListRenderItem } from 'react-native';
+import { AddFab } from '@/components/AddFab';
+import { ListScreen } from '@/components/ListScreen';
+import { PlaceholderRows } from '@/components/PlaceholderRows';
+import { useTimeZone } from '@/features/profile/hooks';
+import { colors, fonts, typeScale } from '@/theme/tokens';
+import { DEFAULT_FILTERS, emptyMessage, type TransactionFilters } from '../filters';
+import { groupByDay, type ListEntry } from '../grouping';
+import { useExpenseSheet, useTransactionList } from '../hooks';
+import type { TransactionListItem } from '../mapping';
+import { LOAD_TRANSACTIONS_ERROR } from '../messages';
+import { DayHeader } from './DayHeader';
+import { ExpenseSheet } from './ExpenseSheet';
+import { FilterBar } from './FilterBar';
+import { TransactionRow } from './TransactionRow';
+
+type Entry = ListEntry<TransactionListItem>;
+
+/** Movimientos: lista paginada agrupada por día, filtros, "tirar para actualizar" y botón "+". */
+export function TransactionsScreen() {
+  const [filters, setFilters] = useState<TransactionFilters>(DEFAULT_FILTERS);
+  const [pulling, setPulling] = useState(false);
+  const timeZone = useTimeZone();
+  const list = useTransactionList(filters);
+  const { openNew, openEdit, sheet } = useExpenseSheet();
+
+  const entries = useMemo(
+    () => groupByDay(list.data?.pages.flatMap((page) => page.items) ?? [], new Date(), timeZone),
+    [list.data, timeZone],
+  );
+  const renderItem = useCallback<ListRenderItem<Entry>>(
+    ({ item }) =>
+      item.kind === 'header' ? <DayHeader title={item.title} /> : <TransactionRow item={item.item} onPress={openEdit} />,
+    [openEdit],
+  );
+  const refresh = () => {
+    setPulling(true);
+    list.refetch().finally(() => setPulling(false));
+  };
+  const loadMore = () => {
+    if (list.hasNextPage && !list.isFetchingNextPage) list.fetchNextPage();
+  };
+
+  const messageStyle = { fontFamily: fonts.body, fontSize: typeScale.body, color: colors.ash, marginTop: 12 };
+  const empty = list.isPending ? (
+    <PlaceholderRows count={6} />
+  ) : (
+    <Text style={list.isError ? { ...messageStyle, color: colors.signal } : messageStyle}>
+      {list.isError ? LOAD_TRANSACTIONS_ERROR : emptyMessage(filters)}
+    </Text>
+  );
+
+  return (
+    <>
+      <ListScreen
+        title="MOVIMIENTOS"
+        backdrop={1}
+        header={<FilterBar filters={filters} onChange={setFilters} count={list.data?.pages[0]?.count ?? null} />}
+        data={entries}
+        keyExtractor={(entry) => entry.key}
+        renderItem={renderItem}
+        onEndReached={loadMore}
+        onEndReachedThreshold={0.5}
+        refreshControl={
+          <RefreshControl refreshing={pulling} onRefresh={refresh} colors={[colors.blood]} progressBackgroundColor={colors.panel} />
+        }
+        ListEmptyComponent={empty}
+        ListFooterComponent={list.isFetchingNextPage ? <PlaceholderRows count={2} /> : null}
+        floating={<AddFab onPress={openNew} />}
+      />
+      <ExpenseSheet {...sheet} />
+    </>
+  );
+}
+```
+
+`app/(tabs)/transactions.tsx` (reemplazar completo):
+```tsx
+import { TransactionsScreen } from '@/features/transactions/components/TransactionsScreen';
+
+export default function TransactionsTab() {
+  return <TransactionsScreen />;
+}
+```
+
+- [ ] **Step 4: Verificar y commit**
+
+Run: `bun run check` → verde. Run: `bun run verify:bundle` → `Exported`.
+```bash
+git add src/features/transactions/filters.ts tests/unit/src/features/transactions/filters.test.ts src/features/transactions/components/TransactionsScreen.tsx src/features/transactions/components/FilterBar.tsx src/features/transactions/components/DayHeader.tsx "app/(tabs)/transactions.tsx"
+git commit -m "feat(app): build the movements screen with day groups, filters and infinite scroll" -m "Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
+```
+
+---
+
+### Task 8: Inicio
+
+**Files:**
+- Modify: `src/theme/tokens.ts`, `src/components/Amount.tsx`, `src/features/summary/hooks.ts`, `app/(tabs)/index.tsx`
+- Create: `src/features/summary/components/{HomeScreen,SummaryBlock,DayTag,RecentTransactions}.tsx`
+
+**Interfaces:**
+- Consumes: Task 2 (`Screen` con `aboveTitle`/`floating`/`refreshControl`, `toLocalDate`, `formatDayLabel`), Task 3 (`PlaceholderRows`), Task 4 (`comparisonText`), Task 5 (`useSpendingSummary`, `useActiveBudgets`, `useRecentTransactions`, `useTimeZone`, `summaryKeys`, `budgetKeys`, `transactionKeys`), Task 6 (`AddFab`, `ExpenseSheet`, `TransactionRow`, `useExpenseSheet`, `NO_TRANSACTIONS`, `LOAD_TRANSACTIONS_ERROR`).
+- Produces: `typeScale.amountLarge = 32`; `Amount` acepta `size?: 'hero' | 'large' | 'row'`; `useHomeRefresh(): { refreshing: boolean; refresh: () => void }` en `@/features/summary/hooks`; `<HomeScreen />`, `<SummaryBlock period={BudgetPeriod} size={'hero' | 'large'} />`, `<DayTag label={string} />`, `<RecentTransactions onPressItem={(item: TransactionListItem) => void} />`.
+
+Sin tests nuevos (pantallas; la lógica ya está cubierta en las Tasks 4–6).
+
+- [ ] **Step 1: Monto mediano**
+
+En `src/theme/tokens.ts`, dentro de `typeScale`, agregar `amountLarge: 32,` después de `amountHero: 52,`.
+
+`src/components/Amount.tsx` (reemplazar completo):
+```tsx
+import { Text } from 'react-native';
+import { formatMoney, moneyAccessibilityLabel } from '@/lib/money';
+import { colors, fonts, typeScale, type ColorToken } from '@/theme/tokens';
+import type { Currency } from '@/types/database';
+
+const FONT_SIZE = { hero: typeScale.amountHero, large: typeScale.amountLarge, row: typeScale.amountRow } as const;
+const LINE_HEIGHT = {
+  hero: typeScale.amountHero,
+  large: typeScale.amountLarge * 1.15,
+  row: typeScale.amountRow * 1.25,
+} as const;
+
+interface Props {
+  value: number;
+  currency: Currency;
+  size?: keyof typeof FONT_SIZE;
+  tone?: ColorToken;
+}
+
+/** Monto. Regla del spec: nunca se inclina ni usa nota de rescate. */
+export function Amount({ value, currency, size = 'row', tone = 'paper' }: Props) {
+  return (
+    <Text
+      accessibilityLabel={moneyAccessibilityLabel(value, currency)}
+      style={{
+        fontFamily: fonts.amount,
+        fontSize: FONT_SIZE[size],
+        lineHeight: LINE_HEIGHT[size],
+        color: colors[tone],
+        fontVariant: ['tabular-nums'],
+      }}
+    >
+      {formatMoney(value, currency)}
+    </Text>
+  );
+}
+```
+
+- [ ] **Step 2: Actualizar Inicio al tirar hacia abajo**
+
+`src/features/summary/hooks.ts` (reemplazar completo):
+```ts
+import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useCallback, useState } from 'react';
+import { budgetKeys } from '@/features/budgets/keys';
+import { transactionKeys } from '@/features/transactions/keys';
+import type { BudgetPeriod } from '@/types/database';
+import { fetchSpendingSummary } from './api';
+import { summaryKeys } from './keys';
+
+export function useSpendingSummary(period: BudgetPeriod) {
+  return useQuery({ queryKey: summaryKeys.period(period), queryFn: () => fetchSpendingSummary(period) });
+}
+
+/** "Tirar para actualizar" de Inicio: vuelve a pedir totales, presupuestos y últimos movimientos. */
+export function useHomeRefresh() {
+  const queryClient = useQueryClient();
+  const [refreshing, setRefreshing] = useState(false);
+  const refresh = useCallback(() => {
+    setRefreshing(true);
+    Promise.all([
+      queryClient.refetchQueries({ queryKey: summaryKeys.all }),
+      queryClient.refetchQueries({ queryKey: budgetKeys.all }),
+      queryClient.refetchQueries({ queryKey: transactionKeys.recent() }),
+    ]).finally(() => setRefreshing(false));
+  }, [queryClient]);
+  return { refreshing, refresh };
+}
+```
+
+- [ ] **Step 3: Componentes de Inicio**
+
+`src/features/summary/components/DayTag.tsx`:
+```tsx
+import { Text, View } from 'react-native';
+import { angles, colors, fonts, typeScale } from '@/theme/tokens';
+
+/** Fecha de hoy en una etiqueta blanca inclinada, sobre el título. */
+export function DayTag({ label }: { label: string }) {
+  return (
+    <View
+      style={{
+        alignSelf: 'flex-start',
+        marginTop: 8,
+        paddingHorizontal: 12,
+        paddingVertical: 4,
+        backgroundColor: colors.paper,
+        transform: [{ skewX: `${angles.row}deg` }],
+      }}
+    >
+      <Text
+        style={{
+          fontFamily: fonts.bodyStrong,
+          fontSize: typeScale.caption,
+          color: colors.void,
+          transform: [{ skewX: `${-angles.row}deg` }],
+        }}
+      >
+        {label}
+      </Text>
+    </View>
+  );
+}
+```
+
+`src/features/summary/components/SummaryBlock.tsx`:
+```tsx
+import { router } from 'expo-router';
+import { Pressable, Text, View } from 'react-native';
+import { Amount } from '@/components/Amount';
+import { JaggedProgress } from '@/components/JaggedProgress';
+import { PlaceholderRows } from '@/components/PlaceholderRows';
+import { useActiveBudgets } from '@/features/budgets/hooks';
+import { colors, fonts, MIN_TOUCH, typeScale } from '@/theme/tokens';
+import type { BudgetPeriod } from '@/types/database';
+import { comparisonText } from '../comparison';
+import { useSpendingSummary } from '../hooks';
+
+const LOAD_ERROR = 'No se pudieron cargar tus totales. Tira hacia abajo para reintentar.';
+const DEFINE_BUDGET: Record<BudgetPeriod, string> = {
+  week: 'Define un presupuesto semanal',
+  month: 'Define un presupuesto mensual',
+};
+
+interface Props {
+  period: BudgetPeriod;
+  /** `hero` para la semana; `large` (más chico) para el mes. */
+  size: 'hero' | 'large';
+}
+
+/** Total del período en DOP (de la RPC), comparación neutra con el anterior y barra del presupuesto activo. */
+export function SummaryBlock({ period, size }: Props) {
+  const summary = useSpendingSummary(period);
+  const budgets = useActiveBudgets();
+  if (summary.isPending) return <PlaceholderRows count={size === 'hero' ? 2 : 1} />;
+  if (summary.isError) {
+    return (
+      <Text accessibilityLiveRegion="polite" style={{ fontFamily: fonts.bodyStrong, fontSize: typeScale.body, color: colors.signal }}>
+        {LOAD_ERROR}
+      </Text>
+    );
+  }
+  const { totalDop, previousTotalDop } = summary.data;
+  const limit = budgets.data?.[period] ?? null;
+  return (
+    <View>
+      <Amount value={totalDop} currency="DOP" size={size} />
+      <Text style={{ fontFamily: fonts.body, fontSize: typeScale.body, color: colors.ash, marginTop: 4, marginBottom: 12 }}>
+        {comparisonText(totalDop, previousTotalDop, period)}
+      </Text>
+      {limit !== null && limit > 0 ? (
+        <JaggedProgress spent={totalDop} limit={limit} currency="DOP" />
+      ) : budgets.isSuccess ? (
+        <Pressable
+          accessibilityRole="link"
+          onPress={() => router.push('/budget')}
+          style={{ minHeight: MIN_TOUCH, justifyContent: 'center', alignSelf: 'flex-start' }}
+        >
+          <Text style={{ fontFamily: fonts.bodyStrong, fontSize: typeScale.body, color: colors.paper, textDecorationLine: 'underline' }}>
+            {DEFINE_BUDGET[period]}
+          </Text>
+        </Pressable>
+      ) : null}
+    </View>
+  );
+}
+```
+
+`src/features/summary/components/RecentTransactions.tsx`:
+```tsx
+import { router } from 'expo-router';
+import { Pressable, Text, View } from 'react-native';
+import { PlaceholderRows } from '@/components/PlaceholderRows';
+import { RansomText } from '@/components/RansomText';
+import { TransactionRow } from '@/features/transactions/components/TransactionRow';
+import { useRecentTransactions } from '@/features/transactions/hooks';
+import type { TransactionListItem } from '@/features/transactions/mapping';
+import { LOAD_TRANSACTIONS_ERROR, NO_TRANSACTIONS } from '@/features/transactions/messages';
+import { colors, fonts, MIN_TOUCH, typeScale } from '@/theme/tokens';
+
+interface Props {
+  onPressItem: (item: TransactionListItem) => void;
+}
+
+/** "ÚLTIMOS MOVIMIENTOS": los 5 más recientes y el enlace "Ver todos" a Movimientos. */
+export function RecentTransactions({ onPressItem }: Props) {
+  const recent = useRecentTransactions();
+  const message = (text: string, error = false) => (
+    <Text style={{ fontFamily: fonts.body, fontSize: typeScale.body, color: error ? colors.signal : colors.ash }}>{text}</Text>
+  );
+  return (
+    <View>
+      <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
+        <View style={{ flexShrink: 1 }}>
+          <RansomText text="ÚLTIMOS MOVIMIENTOS" size="sm" />
+        </View>
+        <Pressable
+          accessibilityRole="link"
+          onPress={() => router.push('/transactions')}
+          style={{ minHeight: MIN_TOUCH, justifyContent: 'center', paddingLeft: 12 }}
+        >
+          <Text style={{ fontFamily: fonts.bodyStrong, fontSize: typeScale.body, color: colors.paper, textDecorationLine: 'underline' }}>
+            Ver todos
+          </Text>
+        </Pressable>
+      </View>
+      {recent.isPending
+        ? <PlaceholderRows count={3} />
+        : recent.isError
+          ? message(LOAD_TRANSACTIONS_ERROR, true)
+          : recent.data.length === 0
+            ? message(NO_TRANSACTIONS)
+            : recent.data.map((item) => <TransactionRow key={item.id} item={item} onPress={onPressItem} />)}
+    </View>
+  );
+}
+```
+
+`src/features/summary/components/HomeScreen.tsx`:
+```tsx
+import { RefreshControl, View } from 'react-native';
+import { AddFab } from '@/components/AddFab';
+import { RansomText } from '@/components/RansomText';
+import { Screen } from '@/components/Screen';
+import { useTimeZone } from '@/features/profile/hooks';
+import { ExpenseSheet } from '@/features/transactions/components/ExpenseSheet';
+import { useExpenseSheet } from '@/features/transactions/hooks';
+import { formatDayLabel, toLocalDate } from '@/lib/dates';
+import { colors } from '@/theme/tokens';
+import { useHomeRefresh } from '../hooks';
+import { DayTag } from './DayTag';
+import { RecentTransactions } from './RecentTransactions';
+import { SummaryBlock } from './SummaryBlock';
+
+/** Inicio: semana en grande, mes más chico, últimos movimientos y botón "+". */
+export function HomeScreen() {
+  const timeZone = useTimeZone();
+  const { refreshing, refresh } = useHomeRefresh();
+  const { openNew, openEdit, sheet } = useExpenseSheet();
+  return (
+    <>
+      <Screen
+        title="ESTA SEMANA"
+        backdrop={0}
+        aboveTitle={<DayTag label={formatDayLabel(toLocalDate(new Date(), timeZone))} />}
+        refreshControl={
+          <RefreshControl refreshing={refreshing} onRefresh={refresh} colors={[colors.blood]} progressBackgroundColor={colors.panel} />
+        }
+        floating={<AddFab onPress={openNew} />}
+      >
+        <SummaryBlock period="week" size="hero" />
+        <View style={{ marginTop: 36, marginBottom: 16 }}>
+          <RansomText text="ESTE MES" size="md" />
+        </View>
+        <SummaryBlock period="month" size="large" />
+        <View style={{ marginTop: 36 }}>
+          <RecentTransactions onPressItem={openEdit} />
+        </View>
+      </Screen>
+      <ExpenseSheet {...sheet} />
+    </>
+  );
+}
+```
+
+`app/(tabs)/index.tsx` (reemplazar completo):
+```tsx
+import { HomeScreen } from '@/features/summary/components/HomeScreen';
+
+export default function HomeTab() {
+  return <HomeScreen />;
+}
+```
+
+- [ ] **Step 4: Verificar y commit**
+
+Run: `bun run check` → verde. Run: `bun run verify:bundle` → `Exported`.
+```bash
+git add src/theme/tokens.ts src/components/Amount.tsx src/features/summary "app/(tabs)/index.tsx"
+git commit -m "feat(app): build the home screen with weekly and monthly totals and recent movements" -m "Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
+```
+
+---
+
+### Task 9: Documentación y checklist del dispositivo
+
+**Files:**
+- Modify: `CLAUDE.md`, `docs/superpowers/plans/2026-09-17-roadmap.md`
+- Create: `docs/superpowers/plans/2026-10-06-plan-4b1-device-checklist.md`
+
+- [ ] **Step 1: `CLAUDE.md`**
+
+1. En "Estructura clave", cambiar el comentario de `features/<dominio>/` por `# auth, accounts, transactions, budgets, history, categories, summary, profile`.
+2. Al final de "Convenciones de la app" agregar:
+```markdown
+- Sesión: `useSession()` / `useUserId()` de `src/features/auth/hooks.ts` (contexto de `SessionProvider`);
+  nunca `supabase.auth.getSession()` dentro de pantallas. Al cerrar sesión se borra la caché de TanStack Query.
+- Listas largas en `ListScreen` (un `FlatList` real, título como cabecera); `Screen` solo para contenido corto.
+  Nunca un `FlatList` dentro de un `ScrollView`.
+- Montos que escribe el usuario: `src/features/transactions/amount-input.ts` en centavos enteros; se envían
+  como `cents / 100`. Nunca `parseFloat` sobre lo escrito.
+- Fechas y rangos en la zona del perfil (`useTimeZone()` + `src/lib/dates.ts`); los rangos de filtros salen de
+  `periodRange`, con las mismas reglas que las RPC (semana desde el lunes).
+- Gasto manual: `source = 'manual'`, `type = 'card_purchase'`. El efectivo no se registra aparte: el retiro de
+  cajero es el gasto.
+```
+
+- [ ] **Step 2: Roadmap**
+
+En `docs/superpowers/plans/2026-09-17-roadmap.md`:
+1. En la fila del Plan 4, cambiar el estado `4a ejecutado; 4b y 4c pendientes` por `4a y 4b-1 ejecutados; 4b-2 y 4c pendientes`.
+2. Agregar al final de "Decisiones que cruzan planes":
+```markdown
+- **Plan 4b-1 (2026-10-06).** Spec `2026-10-06-plan-4b1-movimientos-inicio-design.md`. El retiro de cajero es
+  el gasto (los manuales son para lo que no pasa por el banco); gasto manual = `card_purchase` + `manual`; fecha
+  Hoy/Ayer/Otro día con la hora del registro; las categorías del panel son las 3 usadas más recientemente
+  (selección de los últimos 30 movimientos, no un conteo en el cliente); sin interruptor de animaciones dentro
+  de la app (solo el ajuste de Android). El 4b-2 cubre Historial, Presupuesto (crear/editar), Categorías y
+  reglas y Ajustes.
+```
+
+- [ ] **Step 3: Checklist del dispositivo**
+
+`docs/superpowers/plans/2026-10-06-plan-4b1-device-checklist.md`:
+```markdown
+# Plan 4b-1 — checklist en el dispositivo
+
+Requisitos: los del Plan 4a (Expo Go, `.env.local`, misma red). Ejecutar `bun run start` y escanear el QR.
+Para probar la barra de presupuesto hace falta un presupuesto activo: crearlo a mano en el Table Editor de
+Supabase (`budgets`: tu `user_id`, `period = week`, `limit_amount`, `is_active = true`). Crear y editar
+presupuestos desde la app llega en el 4b-2.
+
+## Inicio
+- [ ] Arriba aparece la fecha de hoy en una etiqueta blanca inclinada (p. ej. `MIÉ 07 / OCT`) y debajo ESTA SEMANA.
+- [ ] Sin gastos: `RD$ 0.00`, "Igual que la semana pasada" y el enlace "Define un presupuesto semanal", que abre Presupuesto.
+- [ ] El bloque ESTE MES es más chico que el de la semana.
+- [ ] Mientras carga se ven tiras grises inclinadas, no un spinner.
+- [ ] Tirar hacia abajo muestra el indicador rojo y recarga.
+- [ ] En modo avión, tirar hacia abajo → "No se pudieron cargar tus totales. Tira hacia abajo para reintentar."
+- [ ] Con un presupuesto semanal activo aparece la barra roja con el porcentaje.
+
+## Agregar un gasto
+- [ ] El "+" es un rombo rojo abajo a la derecha, en Inicio y en Movimientos.
+- [ ] Al tocarlo, el panel NUEVO GASTO entra en diagonal; el monto dice `RD$ 0` con un cursor rojo.
+- [ ] Cada tecla vibra. No deja escribir más de 2 decimales ni un segundo punto; "Punto" primero escribe `0.`.
+- [ ] No pasa de `9,999,999.99`; "Borrar" quita la última cifra.
+- [ ] "Guardar" está gris y no responde con el monto en cero.
+- [ ] Tocar "Comercio o descripción": el teclado propio desaparece y sale el de Android; tocar el monto lo regresa.
+- [ ] Categorías: aparecen 3 y "Más…"; "Más…" abre la lista completa y al elegir una se cierra.
+- [ ] "Ayer" y "Otro día": el calendario no deja elegir días futuros y el chip muestra la fecha elegida.
+- [ ] Guardar → el panel se cierra; el gasto aparece en Inicio (total y últimos movimientos) y en Movimientos sin recargar.
+- [ ] Un gasto en US$ se ve como `US$` en su fila y el total de Inicio sube en pesos.
+
+## Movimientos
+- [ ] La lista se agrupa por día con encabezados inclinados (HOY, AYER, `JUE 01 / OCT`).
+- [ ] Los gastos manuales llevan la marca "Manual".
+- [ ] Por defecto muestra "Este mes" y el conteo ("3 movimientos").
+- [ ] "Esta semana" y "Todo" cambian la lista y el conteo.
+- [ ] "Categoría", "Moneda" y "Banco" abren una hoja de opciones; el chip muestra lo elegido y "Todas"/"Todos" lo quita.
+- [ ] "Revisar" deja la lista vacía con "No hay movimientos con estos filtros." (todavía no hay reversas importadas).
+- [ ] Con más de 50 movimientos, al bajar carga más sin saltos.
+
+## Editar, ignorar y borrar
+- [ ] Tocar una fila abre EDITAR GASTO con monto, comercio, categoría y fecha precargados.
+- [ ] Cambiar el monto y guardar → la fila y el total de Inicio se actualizan.
+- [ ] "Ignorar este gasto" → la fila queda gris con la marca "Ignorado" y el total baja; "Contar este gasto" lo devuelve.
+- [ ] "Borrar" pide "¿Borrar este gasto? No se puede deshacer."; al confirmar, el gasto desaparece.
+- [ ] Cerrar sesión y entrar de nuevo: no quedan datos de la sesión anterior.
+
+## Accesibilidad
+- [ ] Con TalkBack: el "+" se anuncia "Agregar gasto"; las teclas "Borrar" y "Punto decimal"; el monto completo ("Monto: 275.70 pesos").
+- [ ] Con TalkBack, los chips anuncian si están seleccionados.
+- [ ] Con "Quitar animaciones" del sistema activado, el panel aparece con un fundido corto, sin rebote.
+
+## Rendimiento
+- [ ] Desplazarse rápido por una lista larga no se traba.
+```
+
+- [ ] **Step 4: Verificar y commit**
+
+Run: `bun run check` → verde.
+```bash
+git add CLAUDE.md docs/superpowers/plans/2026-09-17-roadmap.md docs/superpowers/plans/2026-10-06-plan-4b1-device-checklist.md
+git commit -m "docs: record plan 4b-1 conventions, roadmap status and device checklist" -m "Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
+```
+Después: `git push origin dev` y pedir al usuario que corra la checklist en su Android.
