@@ -49,7 +49,7 @@ app/                       # Expo Router: solo routing + layout, sin lógica
   (auth)/                  # login (registro cerrado: sin register ni reset)
   (tabs)/                  # home, transactions, history, budget, settings
 src/
-  features/<dominio>/      # auth, accounts, transactions, budgets, history, categories
+  features/<dominio>/      # auth, accounts, transactions, budgets, history, categories, summary, profile
     api.ts                 #   queries/mutations (TanStack Query + supabase)
     components/            #   UI del dominio
     hooks.ts
@@ -379,6 +379,16 @@ Se aplican en app, Edge Functions y SQL. Así se traducen a este proyecto:
   rotación/transform estática, la rotación va en un `View` interior (el `entering` de Reanimated
   reemplaza el transform).
 - Componentes nuevos se revisan primero en la galería (`/dev/gallery`).
+- Sesión: `useSession()` / `useUserId()` de `src/features/auth/hooks.ts` (contexto de `SessionProvider`);
+  nunca `supabase.auth.getSession()` dentro de pantallas. Al cerrar sesión se borra la caché de TanStack Query.
+- Listas largas en `ListScreen` (un `FlatList` real, título como cabecera); `Screen` solo para contenido corto.
+  Nunca un `FlatList` dentro de un `ScrollView`.
+- Montos que escribe el usuario: `src/features/transactions/amount-input.ts` en centavos enteros; se envían
+  como `cents / 100`. Nunca `parseFloat` sobre lo escrito.
+- Fechas y rangos en la zona del perfil (`useTimeZone()` + `src/lib/dates.ts`); los rangos de filtros salen de
+  `periodRange`, con las mismas reglas que las RPC (semana desde el lunes).
+- Gasto manual: `source = 'manual'`, `type = 'card_purchase'`. El efectivo no se registra aparte: el retiro de
+  cajero es el gasto.
 
 ## Testing — política
 Estricto donde duele, ligero donde no. La lógica de dinero, fechas, parsers y
