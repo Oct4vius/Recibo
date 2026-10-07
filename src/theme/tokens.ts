@@ -18,6 +18,7 @@ export const typeScale = {
   displayMd: 24,
   displaySm: 18,
   amountHero: 52,
+  amountLarge: 32,
   amountRow: 18,
   body: 15,
   caption: 13,

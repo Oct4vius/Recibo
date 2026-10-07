@@ -1,5 +1,5 @@
-import { Screen } from '@/components/Screen';
+import { HomeScreen } from '@/features/summary/components/HomeScreen';
 
-export default function HomeScreen() {
-  return <Screen title="ESTA SEMANA" backdrop={0} />;
+export default function HomeTab() {
+  return <HomeScreen />;
 }
