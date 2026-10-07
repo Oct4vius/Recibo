@@ -1,38 +1,39 @@
-import type { ReactNode } from 'react';
-import { ScrollView, View } from 'react-native';
-import Animated from 'react-native-reanimated';
+import type { ReactElement, ReactNode } from 'react';
+import { ScrollView, View, type RefreshControlProps } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { BACKDROPS } from '@/theme/backdrops';
-import { fadeInFor, useMotionPreference } from '@/theme/motion';
+import type { BackdropIndex } from '@/theme/backdrops';
 import { colors } from '@/theme/tokens';
 import { RansomText } from './RansomText';
+import { ScreenBackdrop } from './ScreenBackdrop';
 
 interface Props {
   title: string;
-  /** Índice de la forma de fondo (0–4); una por pestaña. */
-  backdrop: number;
+  backdrop: BackdropIndex;
+  /** Contenido sobre el título (p. ej. la fecha de hoy en Inicio). */
+  aboveTitle?: ReactNode;
+  /** Elementos flotantes sobre el scroll (p. ej. el botón "+"). */
+  floating?: ReactNode;
+  refreshControl?: ReactElement<RefreshControlProps>;
   children?: ReactNode;
 }
 
-/** Contenedor de pantalla: fondo `void`, forma roja de la pestaña, título en nota de rescate. */
-export function Screen({ title, backdrop, children }: Props) {
-  const { reduced } = useMotionPreference();
-  const shape = BACKDROPS[backdrop % BACKDROPS.length];
+/** Pantalla con scroll: fondo `void`, forma roja de la pestaña, título en nota de rescate. */
+export function Screen({ title, backdrop, aboveTitle, floating, refreshControl, children }: Props) {
   return (
     <SafeAreaView edges={['top']} style={{ flex: 1, backgroundColor: colors.void }}>
-      <Animated.View
-        entering={fadeInFor(reduced)}
-        pointerEvents="none"
-        style={{ position: 'absolute', top: shape.top, right: shape.right, width: shape.width, height: shape.height }}
+      <ScreenBackdrop index={backdrop} />
+      <ScrollView
+        keyboardShouldPersistTaps="handled"
+        refreshControl={refreshControl}
+        contentContainerStyle={{ padding: 16, paddingBottom: 96 }}
       >
-        <View style={{ flex: 1, backgroundColor: colors.blood, transform: [{ rotate: `${shape.rotate}deg` }] }} />
-      </Animated.View>
-      <ScrollView contentContainerStyle={{ padding: 16, paddingBottom: 32 }}>
+        {aboveTitle}
         <View style={{ marginTop: 12, marginBottom: 24 }}>
           <RansomText text={title} animate />
         </View>
         {children}
       </ScrollView>
+      {floating}
     </SafeAreaView>
   );
 }

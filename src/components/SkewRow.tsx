@@ -1,3 +1,4 @@
+import { memo } from 'react';
 import { Pressable, Text, View } from 'react-native';
 import Animated, { useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
 import { tapFeedback } from '@/lib/haptics';
@@ -12,20 +13,24 @@ interface Props {
   title: string;
   subtitle?: string;
   amount?: { value: number; currency: Currency };
+  /** Etiqueta corta junto al subtítulo (p. ej. "Manual", "Ignorado"). */
+  badge?: string;
+  /** Atenuado: no suma (ignorado). Título y monto en `ash`. */
+  muted?: boolean;
   /** Tira blanca con texto negro. */
   selected?: boolean;
   onPress?: () => void;
 }
 
 /** Tira de lista inclinada -8°. El contenido (y sobre todo el monto) queda derecho. */
-export function SkewRow({ title, subtitle, amount, selected = false, onPress }: Props) {
+export const SkewRow = memo(function SkewRow({ title, subtitle, amount, badge, muted = false, selected = false, onPress }: Props) {
   const { reduced } = useMotionPreference();
   const pressed = useSharedValue(0);
   const style = useAnimatedStyle(() => ({
     transform: [{ skewX: `${angles.row}deg` }, { translateX: pressed.value * 6 }],
   }));
-  const fg = selected ? 'void' : 'paper';
-  const label = [title, subtitle, amount && moneyAccessibilityLabel(amount.value, amount.currency)]
+  const fg = selected ? 'void' : muted ? 'ash' : 'paper';
+  const label = [title, subtitle, badge, amount && moneyAccessibilityLabel(amount.value, amount.currency)]
     .filter(Boolean)
     .join(', ');
 
@@ -49,13 +54,32 @@ export function SkewRow({ title, subtitle, amount, selected = false, onPress }: 
         <Text numberOfLines={1} style={{ fontFamily: fonts.bodyStrong, fontSize: typeScale.body, color: colors[fg] }}>
           {title}
         </Text>
-        {subtitle ? (
-          <Text
-            numberOfLines={1}
-            style={{ fontFamily: fonts.body, fontSize: typeScale.caption, color: selected ? colors.void : colors.ash }}
-          >
-            {subtitle}
-          </Text>
+        {subtitle || badge ? (
+          <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+            {subtitle ? (
+              <Text
+                numberOfLines={1}
+                style={{ flexShrink: 1, fontFamily: fonts.body, fontSize: typeScale.caption, color: selected ? colors.void : colors.ash }}
+              >
+                {subtitle}
+              </Text>
+            ) : null}
+            {badge ? (
+              <Text
+                style={{
+                  marginLeft: subtitle ? 8 : 0,
+                  paddingHorizontal: 6,
+                  borderWidth: 1,
+                  borderColor: selected ? colors.void : colors.ash,
+                  fontFamily: fonts.bodyStrong,
+                  fontSize: typeScale.caption,
+                  color: selected ? colors.void : colors.ash,
+                }}
+              >
+                {badge}
+              </Text>
+            ) : null}
+          </View>
         ) : null}
       </View>
       {amount ? (
@@ -93,4 +117,4 @@ export function SkewRow({ title, subtitle, amount, selected = false, onPress }: 
       {strip}
     </Pressable>
   );
-}
+});

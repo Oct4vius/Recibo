@@ -9,6 +9,9 @@ export interface Backdrop {
   rotate: number;
 }
 
+/** Índice de la forma de fondo (0–4); una por pestaña. */
+export type BackdropIndex = 0 | 1 | 2 | 3 | 4;
+
 const rotate = angles.backdrop;
 
 export const BACKDROPS: readonly Backdrop[] = [
