@@ -1,4 +1,5 @@
 import { useInfiniteQuery, useMutation, useQuery, useQueryClient, type QueryClient } from '@tanstack/react-query';
+import { useCallback, useState } from 'react';
 import { categoryKeys } from '@/features/categories/keys';
 import { useUserId } from '@/features/auth/hooks';
 import { useTimeZone } from '@/features/profile/hooks';
@@ -16,6 +17,7 @@ import {
 } from './api';
 import type { TransactionFilters } from './filters';
 import { transactionKeys } from './keys';
+import type { TransactionListItem } from './mapping';
 
 const RECENT_COUNT = 5;
 
@@ -73,4 +75,13 @@ export function useDeleteExpense() {
     mutationFn: (id: string) => deleteExpense(id),
     onSuccess: () => invalidateSpending(queryClient),
   });
+}
+
+/** Estado del panel de gasto compartido por Inicio y Movimientos: cerrado, gasto nuevo o edición de `item`. */
+export function useExpenseSheet() {
+  const [state, setState] = useState<{ item: TransactionListItem | null } | null>(null);
+  const openNew = useCallback(() => setState({ item: null }), []);
+  const openEdit = useCallback((item: TransactionListItem) => setState({ item }), []);
+  const close = useCallback(() => setState(null), []);
+  return { openNew, openEdit, sheet: { visible: state !== null, item: state?.item ?? null, onClose: close } };
 }

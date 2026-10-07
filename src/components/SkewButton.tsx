@@ -10,11 +10,13 @@ interface Props {
   onPress: () => void;
   variant?: 'primary' | 'ghost';
   loading?: boolean;
+  /** Apagado (p. ej. "Guardar" sin monto): fondo `panel`, texto `ash`, no responde. */
+  disabled?: boolean;
   accessibilityHint?: string;
 }
 
 /** Botón inclinado: al tocarlo se hunde 4 dp en diagonal y vibra (sin desplazamiento si se redujeron animaciones). */
-export function SkewButton({ label, onPress, variant = 'primary', loading = false, accessibilityHint }: Props) {
+export function SkewButton({ label, onPress, variant = 'primary', loading = false, disabled = false, accessibilityHint }: Props) {
   const { reduced } = useMotionPreference();
   const pressed = useSharedValue(0);
   const style = useAnimatedStyle(() => ({
@@ -25,13 +27,14 @@ export function SkewButton({ label, onPress, variant = 'primary', loading = fals
     ],
   }));
   const primary = variant === 'primary';
+  const inactive = loading || disabled;
   return (
     <Pressable
       accessibilityRole="button"
       accessibilityLabel={label}
       accessibilityHint={accessibilityHint}
-      accessibilityState={{ busy: loading, disabled: loading }}
-      disabled={loading}
+      accessibilityState={{ busy: loading, disabled: inactive }}
+      disabled={inactive}
       onPress={() => {
         tapFeedback();
         onPress();
@@ -51,9 +54,9 @@ export function SkewButton({ label, onPress, variant = 'primary', loading = fals
             paddingHorizontal: 24,
             alignItems: 'center',
             justifyContent: 'center',
-            backgroundColor: primary ? colors.blood : 'transparent',
+            backgroundColor: primary ? (disabled ? colors.panel : colors.blood) : 'transparent',
             borderWidth: primary ? 0 : 2,
-            borderColor: colors.paper,
+            borderColor: disabled ? colors.ash : colors.paper,
           },
           style,
         ]}
@@ -65,7 +68,7 @@ export function SkewButton({ label, onPress, variant = 'primary', loading = fals
             style={{
               fontFamily: fonts.display,
               fontSize: typeScale.displaySm,
-              color: colors.paper,
+              color: disabled ? colors.ash : colors.paper,
               transform: [{ skewX: `${-angles.row}deg` }],
             }}
           >

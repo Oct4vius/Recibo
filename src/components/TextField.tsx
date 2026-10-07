@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Text, TextInput, View, type TextInputProps } from 'react-native';
 import { colors, fonts, MIN_TOUCH, typeScale } from '@/theme/tokens';
+import { FieldLabel } from './FieldLabel';
 
 type Props = Omit<TextInputProps, 'style' | 'value' | 'onChangeText'> & {
   label: string;
@@ -15,12 +16,7 @@ export function TextField({ label, error, autoCapitalize = 'none', autoCorrect =
   const [focused, setFocused] = useState(false);
   return (
     <View style={{ marginBottom: 16 }}>
-      <Text
-        importantForAccessibility="no"
-        style={{ fontFamily: fonts.bodyStrong, fontSize: typeScale.caption, color: colors.ash, marginBottom: 6 }}
-      >
-        {label}
-      </Text>
+      <FieldLabel text={label} decorative />
       <TextInput
         {...input}
         accessibilityLabel={label}

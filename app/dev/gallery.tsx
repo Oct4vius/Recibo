@@ -1,16 +1,21 @@
 import { router } from 'expo-router';
 import { useState } from 'react';
 import { Text, View } from 'react-native';
+import { AddFab } from '@/components/AddFab';
 import { Amount } from '@/components/Amount';
+import { AmountKeypad } from '@/components/AmountKeypad';
 import { CallingCard } from '@/components/CallingCard';
 import { JaggedProgress } from '@/components/JaggedProgress';
+import { PlaceholderRows } from '@/components/PlaceholderRows';
 import { RansomText } from '@/components/RansomText';
 import { Screen } from '@/components/Screen';
 import { SkewButton } from '@/components/SkewButton';
+import { SkewChip } from '@/components/SkewChip';
 import { SkewRow } from '@/components/SkewRow';
 import { SlamSheet } from '@/components/SlamSheet';
 import { SlantPanel } from '@/components/SlantPanel';
 import { TextField } from '@/components/TextField';
+import { formatAmountInput, pressKey } from '@/features/transactions/amount-input';
 import { colors, fonts, typeScale } from '@/theme/tokens';
 
 const SPENT_STEPS = [2700, 5100, 6000, 7400];
@@ -32,6 +37,8 @@ export default function GalleryScreen() {
   const [field, setField] = useState('');
   const [amount, setAmount] = useState('');
   const [jagged, setJagged] = useState(false);
+  const [chip, setChip] = useState(0);
+  const [typed, setTyped] = useState('');
   return (
     <Screen title="GALERÍA" backdrop={2}>
       <SkewButton label="Volver" variant="ghost" onPress={() => router.back()} />
@@ -79,8 +86,31 @@ export default function GalleryScreen() {
       <Section name="Campo de texto" />
       <TextField label="Comercio" value={field} onChangeText={setField} />
 
+      <Section name="Chips" />
+      <View style={{ flexDirection: 'row', flexWrap: 'wrap' }}>
+        {['Hoy', 'Ayer', 'Otro día'].map((label, i) => (
+          <SkewChip key={label} label={label} selected={chip === i} onPress={() => setChip(i)} />
+        ))}
+      </View>
+
+      <Section name="Teclado de montos" />
+      <Text style={{ fontFamily: fonts.amount, fontSize: typeScale.amountHero, color: colors.paper, fontVariant: ['tabular-nums'] }}>
+        {formatAmountInput(typed, 'DOP')}
+      </Text>
+      <AmountKeypad onKey={(key) => setTyped((current) => pressKey(current, key))} />
+
+      <Section name="Cargando" />
+      <PlaceholderRows />
+
+      <Section name="Botón agregar" />
+      <View style={{ height: 72 }}>
+        <AddFab onPress={() => setSheet(true)} />
+      </View>
+
       <Section name="Botones" />
       <SkewButton label="Agregar gasto" onPress={() => setSheet(true)} />
+      <View style={{ height: 12 }} />
+      <SkewButton label="Guardar (sin monto)" disabled onPress={() => undefined} />
       <View style={{ height: 12 }} />
       <SkewButton label="Aviso al 80 %" variant="ghost" onPress={() => setCard('signal')} />
       <View style={{ height: 12 }} />
