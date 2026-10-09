@@ -49,7 +49,7 @@ app/                       # Expo Router: solo routing + layout, sin lógica
   (auth)/                  # login (registro cerrado: sin register ni reset)
   (tabs)/                  # home, transactions, history, budget, settings
 src/
-  features/<dominio>/      # auth, accounts, transactions, budgets, history, categories, summary, profile
+  features/<dominio>/      # auth, accounts, transactions, budgets, history, categories, rules, settings, summary, profile
     api.ts                 #   queries/mutations (TanStack Query + supabase)
     components/            #   UI del dominio
     hooks.ts
@@ -324,6 +324,14 @@ inventar un parser sin correo real.**
   visible. Todas las RPC de agregados filtran `counts_as_spending = true` y
   `is_ignored = false`. Esta es la única forma de excluir un gasto además de
   ignorarlo.
+- **Reglas de categoría en SQL.** `public.match_category(user, merchant, counterparty_last4)` es la única definición
+  de "qué regla aplica" (`strpos` literal sobre `lower()`, gana `priority` menor y luego el patrón más largo). El trigger
+  `transactions_assign_category` la usa al insertar cualquier movimiento sin categoría (manual o del sync); la RPC
+  `save_merchant_rule` crea/actualiza la regla y la aplica a los movimientos sin categoría. Ni la app ni `sync-mail`
+  reimplementan la coincidencia.
+- **Avisos de presupuesto.** `profiles.alert_thresholds` (`{80,100}` por defecto) es la única fuente de qué umbrales
+  envían push; `sync-mail` (Plan 3) solo notifica esos. La app muestra el borde amarillo y la `CallingCard` siempre.
+- `profiles.timezone` se valida contra `pg_timezone_names` (trigger; zona inválida → 22023).
 
 ## Principios de diseño — SOLID y DRY, siempre
 Se aplican en app, Edge Functions y SQL. Así se traducen a este proyecto:
@@ -389,6 +397,12 @@ Se aplican en app, Edge Functions y SQL. Así se traducen a este proyecto:
   `periodRange`, con las mismas reglas que las RPC (semana desde el lunes).
 - Gasto manual: `source = 'manual'`, `type = 'card_purchase'`. El efectivo no se registra aparte: el retiro de
   cajero es el gasto.
+- Encabezados de grupo con `SectionHeader`; interruptores con `SkewToggle` (fila completa tocable); paneles que solo
+  piden un monto con `AmountForm`; avisos posteriores a una acción con `NoticeBar`; subpantallas (`/categories`,
+  `/rules`) con `BackButton` arriba.
+- Toda mutación que cambie qué cuenta como gasto (movimientos, categorías, reglas) invalida con `invalidateSpending`
+  de `src/features/transactions/invalidate.ts`. Cambiar la zona o la tasa en Ajustes invalida todas las consultas.
+- Valores optimistas solo desde `mutation.variables` mientras `isPending`; nunca `setQueryData`.
 
 ## Testing — política
 Estricto donde duele, ligero donde no. La lógica de dinero, fechas, parsers y
