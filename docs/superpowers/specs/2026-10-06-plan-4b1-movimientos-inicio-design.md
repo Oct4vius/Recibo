@@ -86,7 +86,8 @@ Botón "Ignorar este gasto" / "Contar este gasto". Botón "Borrar" solo en manua
 
 ## 6. Inicio
 
-1. Fecha de hoy en la etiqueta blanca inclinada (`formatDayLabel`).
+1. Fecha de hoy (`formatDayLabel`) como sello blanco en Anton 18 con texto `void`, girado −4° (`angles.title`);
+   entra con `slam` junto con el título.
 2. Título "ESTA SEMANA" en nota de rescate.
 3. Total de la semana en monto héroe; debajo, comparación con la semana pasada en texto
    `paper`/`ash` ("RD$ 612.30 más que la semana pasada", "… menos …", "Igual que la semana pasada").

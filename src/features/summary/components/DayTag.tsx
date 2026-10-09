@@ -3,26 +3,26 @@ import Animated from 'react-native-reanimated';
 import { enteringFor, useMotionPreference } from '@/theme/motion';
 import { angles, colors, fonts, typeScale } from '@/theme/tokens';
 
-/** Fecha de hoy en una etiqueta blanca inclinada, sobre el título; entra de golpe como los títulos. */
+/** Fecha de hoy como sello blanco girado -4° sobre el título; entra con `slam`, igual que el título. */
 export function DayTag({ label }: { label: string }) {
   const { reduced } = useMotionPreference();
   return (
-    <Animated.View entering={enteringFor(reduced)} style={{ alignSelf: 'flex-start', marginTop: 8 }}>
-      {/* La inclinación va en un View interior: el `entering` de Reanimated reemplaza el transform. */}
+    // La entrada y la rotación van en capas separadas: la animación de entrada reemplaza el `transform` de su vista.
+    <Animated.View entering={enteringFor(reduced)} style={{ alignSelf: 'flex-start', marginTop: 8, marginBottom: 4 }}>
       <View
         style={{
-          paddingHorizontal: 12,
+          paddingHorizontal: 10,
           paddingVertical: 2,
           backgroundColor: colors.paper,
-          transform: [{ skewX: `${angles.row}deg` }],
+          transform: [{ rotate: `${angles.title}deg` }],
         }}
       >
         <Text
           style={{
             fontFamily: fonts.display,
             fontSize: typeScale.displaySm,
+            lineHeight: typeScale.displaySm * 1.2,
             color: colors.void,
-            transform: [{ skewX: `${-angles.row}deg` }],
           }}
         >
           {label}
