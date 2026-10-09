@@ -123,7 +123,7 @@ Pantalla con scroll; cada grupo bajo un `SectionHeader`:
 
 ### 4.1 Subpantallas
 Rutas `app/categories.tsx` y `app/rules.tsx` (`/categories` y `/rules`, protegidas por sesión, fuera de las
-pestañas; no bajo `app/settings/` para no chocar con la pestaña `(tabs)/settings`), con botón "Atrás" arriba además del Atrás de Android; `ListScreen`.
+pestañas; no bajo `app/settings/` para no chocar con la pestaña `(tabs)/settings`), con botón "Atrás" arriba además del Atrás de Android; `Screen` (las listas son cortas: categorías propias + 13 por defecto, y reglas; CLAUDE.md permite `Screen` para contenido corto).
 
 - **CATEGORÍAS:** grupo "TUYAS" con "Nueva categoría"; tocar una abre el panel (nombre, `SkewToggle`
   "Cuenta como gasto", Guardar, Borrar). Borrar confirma: "¿Borrar «Gym»? Sus movimientos quedan sin
