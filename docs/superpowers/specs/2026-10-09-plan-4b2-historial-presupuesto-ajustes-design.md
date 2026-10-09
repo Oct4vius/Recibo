@@ -1,6 +1,6 @@
 # Plan 4b-2 — Historial, Presupuesto, Categorías y reglas, Ajustes
 
-**Fecha:** 2026-10-09 · **Estado:** aprobado en brainstorming (secciones 1–6), pendiente de revisión del spec
+**Fecha:** 2026-10-09 · **Estado:** aprobado (spec y plan; cambios del plan incorporados en §4, §6, §7 y §4.1)
 **Rama:** `dev` · **Hereda:** `docs/superpowers/specs/2026-10-06-plan-4-ui-design.md` (dirección visual,
 tokens, movimiento, reglas innegociables §3.1). **Depende de:** Plan 2 (esquema, RLS, RPC), Plan 4a y
 Plan 4b-1 (fundación, componentes, Movimientos, Inicio, panel de gasto).
@@ -119,15 +119,16 @@ Pantalla con scroll; cada grupo bajo un `SectionHeader`:
   "Guardar" desactivado en cero. Aviso: "Cambiarla recalcula todos tus totales, incluido el historial."
 - **Zona del teléfono:** `expo-localization` (`bunx expo install`); el plan verifica qué devuelve en
   Expo Go. El nombre legible sale de una función pura con tests.
-- Error al guardar cualquier ajuste: "No se pudo guardar. Intenta de nuevo." en `signal`.
+- Error al guardar cualquier ajuste: el `SAVE_ERROR` existente ("No se pudo guardar. Revisa tu conexión e inténtalo otra vez.") en `signal`.
 
 ### 4.1 Subpantallas
-Rutas `app/settings/categories.tsx` y `app/settings/rules.tsx` (protegidas por sesión, fuera de las
-pestañas), con botón "Atrás" arriba además del Atrás de Android; `ListScreen`.
+Rutas `app/categories.tsx` y `app/rules.tsx` (`/categories` y `/rules`, protegidas por sesión, fuera de las
+pestañas; no bajo `app/settings/` para no chocar con la pestaña `(tabs)/settings`), con botón "Atrás" arriba además del Atrás de Android; `ListScreen`.
 
 - **CATEGORÍAS:** grupo "TUYAS" con "Nueva categoría"; tocar una abre el panel (nombre, `SkewToggle`
   "Cuenta como gasto", Guardar, Borrar). Borrar confirma: "¿Borrar «Gym»? Sus movimientos quedan sin
-  categoría y se borran sus 2 reglas." Grupo "POR DEFECTO": las 13, no tocables; "Transferencias
+  categoría y se borran sus 2 reglas." Si la categoría no cuenta como gasto, agrega: "Esos movimientos vuelven a
+  contar como gasto." Grupo "POR DEFECTO": las 13, no tocables; "Transferencias
   propias" con subtítulo "No cuenta como gasto". Nombre repetido (23505): "Ya tienes una categoría con
   ese nombre."
 - **REGLAS:** filas `UBER → Transporte` · "Comercio contiene" y `0099 → Transferencias propias` ·
@@ -157,7 +158,8 @@ pestañas), con botón "Atrás" arriba además del Atrás de Android; `ListScree
   ventana un bloque atrás; "Siguientes ›" vuelve. Sin scroll infinito.
 - El rango de la ventana sale de `dates.ts`/`filters.ts` (función hermana de `periodRange`, semana desde
   el lunes). Key `historyKeys.window(granularidad, desde, zona)`.
-- **Gráfica** (`react-native-svg`):
+- **Gráfica** (barras con `View`/`Pressable`, rectángulos de radio 0; no SVG, para que cada barra tenga etiqueta
+  accesible y área táctil de columna completa de forma fiable en Android):
   - Barras verticales rectas, sin inclinar, radio 0. Una serie, sin leyenda.
   - Grises (`ash`) y la actual en `blood` (validado con el script de `dataviz`: ΔE 15 CVD, 25 normal,
     contraste ≥ 3:1). La actual también se distingue por posición y por "Actual" en la lista.
@@ -186,7 +188,9 @@ pestañas), con botón "Atrás" arriba además del Atrás de Android; `ListScree
 - Lógica de oferta (cuándo, qué patrón, qué campo) en `src/features/rules/offer.ts`, pura y con tests.
 - Al guardar: primero el gasto; si la opción está encendida, `save_merchant_rule`. Mensajes: "Gasto
   guardado · la regla se aplicó a 4 movimientos más." / "Se guardó el gasto, pero no la regla. Intenta
-  desde Ajustes → Reglas." Invalida movimientos, resumen, historial y presupuesto.
+  desde Ajustes → Reglas." Aparecen en un **`NoticeBar`** (tira inclinada `panel` con borde `blood`, texto `paper`,
+  abajo a la izquierda sin tapar el "+", entra con fundido y se va sola a los 4 s) en Inicio y Movimientos; no el
+  toast nativo de Android. Invalida movimientos, resumen, historial y presupuesto.
 - Gastos manuales nuevos sin categoría: los categoriza el trigger (§2.3); la app no repite la lógica.
 
 ## 8. Movimiento, pruebas, accesibilidad y riesgos
