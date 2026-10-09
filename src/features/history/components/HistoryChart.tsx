@@ -39,8 +39,9 @@ export function HistoryChart({ granularity, buckets, currentIso, selectedIso, on
       ) : null}
       <View style={{ flexDirection: 'row', alignItems: 'flex-end', height: CHART_HEIGHT, borderBottomWidth: 2, borderBottomColor: colors.ash }}>
         {buckets.map((bucket, i) => (
+          // Clave por posición: la barra persiste al cambiar de ventana y anima a su nueva altura.
           <HistoryBar
-            key={bucket.startIso}
+            key={i}
             ratio={ratios[i]}
             tone={bucket.startIso === selectedIso ? 'paper' : bucket.startIso === currentIso ? 'blood' : 'ash'}
             label={bucketAccessibilityLabel(granularity, bucket.start, bucket.totalDop)}
@@ -51,7 +52,7 @@ export function HistoryChart({ granularity, buckets, currentIso, selectedIso, on
       </View>
       <View style={{ flexDirection: 'row', marginTop: 4 }} importantForAccessibility="no-hide-descendants">
         {axis.map((label, i) => (
-          <View key={buckets[i].startIso} style={{ flex: 1, alignItems: 'center' }}>
+          <View key={i} style={{ flex: 1, alignItems: 'center' }}>
             <Text style={caption}>{label.top}</Text>
             <Text style={caption}>{label.bottom}</Text>
           </View>
