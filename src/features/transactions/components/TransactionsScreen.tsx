@@ -3,6 +3,7 @@ import { RefreshControl, Text, type ListRenderItem } from 'react-native';
 import { AddFab } from '@/components/AddFab';
 import { ListScreen } from '@/components/ListScreen';
 import { PlaceholderRows } from '@/components/PlaceholderRows';
+import { SectionHeader } from '@/components/SectionHeader';
 import { useTimeZone } from '@/features/profile/hooks';
 import { colors, fonts, typeScale } from '@/theme/tokens';
 import { DEFAULT_FILTERS, emptyMessage, type TransactionFilters } from '../filters';
@@ -10,7 +11,6 @@ import { groupByDay, type ListEntry } from '../grouping';
 import { useExpenseSheet, useTransactionList } from '../hooks';
 import type { TransactionListItem } from '../mapping';
 import { LOAD_TRANSACTIONS_ERROR } from '../messages';
-import { DayHeader } from './DayHeader';
 import { ExpenseSheet } from './ExpenseSheet';
 import { FilterBar } from './FilterBar';
 import { TransactionRow } from './TransactionRow';
@@ -31,7 +31,7 @@ export function TransactionsScreen() {
   );
   const renderItem = useCallback<ListRenderItem<Entry>>(
     ({ item }) =>
-      item.kind === 'header' ? <DayHeader title={item.title} /> : <TransactionRow item={item.item} onPress={openEdit} />,
+      item.kind === 'header' ? <SectionHeader title={item.title} /> : <TransactionRow item={item.item} onPress={openEdit} />,
     [openEdit],
   );
   const refresh = () => {

@@ -1,11 +1,10 @@
 import { memo } from 'react';
 import { Pressable, Text, View } from 'react-native';
-import Animated, { useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
+import Animated, { useAnimatedStyle } from 'react-native-reanimated';
 import { tapFeedback } from '@/lib/haptics';
 import { moneyAccessibilityLabel } from '@/lib/money';
-import { useMotionPreference } from '@/theme/motion';
-import { durations } from '@/theme/motion-tokens';
 import { angles, colors, fonts, MIN_TOUCH, typeScale } from '@/theme/tokens';
+import { usePressNudge } from '@/theme/use-press-nudge';
 import type { Currency } from '@/types/database';
 import { Amount } from './Amount';
 
@@ -24,8 +23,7 @@ interface Props {
 
 /** Tira de lista inclinada -8°. El contenido (y sobre todo el monto) queda derecho. */
 export const SkewRow = memo(function SkewRow({ title, subtitle, amount, badge, muted = false, selected = false, onPress }: Props) {
-  const { reduced } = useMotionPreference();
-  const pressed = useSharedValue(0);
+  const { pressed, onPressIn, onPressOut } = usePressNudge();
   const style = useAnimatedStyle(() => ({
     transform: [{ skewX: `${angles.row}deg` }, { translateX: pressed.value * 6 }],
   }));
@@ -107,12 +105,8 @@ export const SkewRow = memo(function SkewRow({ title, subtitle, amount, badge, m
         tapFeedback();
         onPress();
       }}
-      onPressIn={() => {
-        if (!reduced) pressed.value = withTiming(1, { duration: durations.tap });
-      }}
-      onPressOut={() => {
-        pressed.value = withTiming(0, { duration: durations.tap });
-      }}
+      onPressIn={onPressIn}
+      onPressOut={onPressOut}
     >
       {strip}
     </Pressable>

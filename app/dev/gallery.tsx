@@ -1,17 +1,19 @@
-import { router } from 'expo-router';
 import { useState } from 'react';
 import { Text, View } from 'react-native';
 import { AddFab } from '@/components/AddFab';
 import { Amount } from '@/components/Amount';
 import { AmountKeypad } from '@/components/AmountKeypad';
+import { BackButton } from '@/components/BackButton';
 import { CallingCard } from '@/components/CallingCard';
 import { JaggedProgress } from '@/components/JaggedProgress';
 import { PlaceholderRows } from '@/components/PlaceholderRows';
 import { RansomText } from '@/components/RansomText';
 import { Screen } from '@/components/Screen';
+import { SectionHeader } from '@/components/SectionHeader';
 import { SkewButton } from '@/components/SkewButton';
 import { SkewChip } from '@/components/SkewChip';
 import { SkewRow } from '@/components/SkewRow';
+import { SkewToggle } from '@/components/SkewToggle';
 import { SlamSheet } from '@/components/SlamSheet';
 import { SlantPanel } from '@/components/SlantPanel';
 import { TextField } from '@/components/TextField';
@@ -39,9 +41,10 @@ export default function GalleryScreen() {
   const [jagged, setJagged] = useState(false);
   const [chip, setChip] = useState(0);
   const [typed, setTyped] = useState('');
+  const [toggle, setToggle] = useState(true);
   return (
     <Screen title="GALERÍA" backdrop={2}>
-      <SkewButton label="Volver" variant="ghost" onPress={() => router.back()} />
+      <BackButton />
 
       <Section name="Nota de rescate" />
       <RansomText text="ESTA SEMANA" />
@@ -92,6 +95,13 @@ export default function GalleryScreen() {
           <SkewChip key={label} label={label} selected={chip === i} onPress={() => setChip(i)} />
         ))}
       </View>
+
+      <Section name="Encabezado de grupo" />
+      <SectionHeader title="AVISOS DE PRESUPUESTO" />
+
+      <Section name="Interruptores" />
+      <SkewToggle label="Aviso al 80 %" value={toggle} onChange={setToggle} />
+      <SkewToggle label="Desactivado" value={false} onChange={() => undefined} disabled />
 
       <Section name="Teclado de montos" />
       <Text style={{ fontFamily: fonts.amount, fontSize: typeScale.amountHero, color: colors.paper, fontVariant: ['tabular-nums'] }}>

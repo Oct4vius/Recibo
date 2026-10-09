@@ -1,9 +1,8 @@
 import { ActivityIndicator, Pressable, Text } from 'react-native';
-import Animated, { useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
+import Animated, { useAnimatedStyle } from 'react-native-reanimated';
 import { tapFeedback } from '@/lib/haptics';
-import { useMotionPreference } from '@/theme/motion';
-import { durations } from '@/theme/motion-tokens';
 import { angles, colors, fonts, MIN_TOUCH, typeScale } from '@/theme/tokens';
+import { usePressNudge } from '@/theme/use-press-nudge';
 
 interface Props {
   label: string;
@@ -17,8 +16,7 @@ interface Props {
 
 /** Botón inclinado: al tocarlo se hunde 4 dp en diagonal y vibra (sin desplazamiento si se redujeron animaciones). */
 export function SkewButton({ label, onPress, variant = 'primary', loading = false, disabled = false, accessibilityHint }: Props) {
-  const { reduced } = useMotionPreference();
-  const pressed = useSharedValue(0);
+  const { pressed, onPressIn, onPressOut } = usePressNudge();
   const style = useAnimatedStyle(() => ({
     transform: [
       { skewX: `${angles.row}deg` },
@@ -39,12 +37,8 @@ export function SkewButton({ label, onPress, variant = 'primary', loading = fals
         tapFeedback();
         onPress();
       }}
-      onPressIn={() => {
-        if (!reduced) pressed.value = withTiming(1, { duration: durations.tap });
-      }}
-      onPressOut={() => {
-        pressed.value = withTiming(0, { duration: durations.tap });
-      }}
+      onPressIn={onPressIn}
+      onPressOut={onPressOut}
       style={{ minHeight: MIN_TOUCH }}
     >
       <Animated.View

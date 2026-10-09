@@ -2,7 +2,7 @@ import { Pressable, Text, View } from 'react-native';
 import { moneyAccessibilityLabel } from '@/lib/money';
 import { colors, fonts, typeScale } from '@/theme/tokens';
 import type { Currency } from '@/types/database';
-import { formatAmountInput, textToCents } from '../amount-input';
+import { formatAmountInput, textToCents } from '@/features/transactions/amount-input';
 
 interface Props {
   text: string;

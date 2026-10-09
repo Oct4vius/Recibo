@@ -1,8 +1,8 @@
 import { Text, View } from 'react-native';
 import { angles, colors, fonts, typeScale } from '@/theme/tokens';
 
-/** Encabezado de día inclinado ("HOY", "AYER", "MAR 06 / OCT"). */
-export function DayHeader({ title }: { title: string }) {
+/** Encabezado de grupo inclinado ("HOY", "CUENTA", "SEMANAL"): Anton 18, girado como los títulos. */
+export function SectionHeader({ title }: { title: string }) {
   return (
     <View
       accessible

@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Keyboard, Text, View } from 'react-native';
+import { AmountDisplay } from '@/components/AmountDisplay';
 import { AmountKeypad } from '@/components/AmountKeypad';
 import { FieldLabel } from '@/components/FieldLabel';
 import { SkewButton } from '@/components/SkewButton';
@@ -15,7 +16,6 @@ import { CURRENCY_LABELS } from '../filters';
 import { useCreateExpense, useUpdateExpense } from '../hooks';
 import type { TransactionListItem } from '../mapping';
 import { AMOUNT_REQUIRED, SAVE_ERROR } from '../messages';
-import { AmountDisplay } from './AmountDisplay';
 import { CategoryPicker } from './CategoryPicker';
 import { ExpenseActions } from './ExpenseActions';
 import { ExpenseDateChips } from './ExpenseDateChips';
