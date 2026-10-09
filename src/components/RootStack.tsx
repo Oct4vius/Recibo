@@ -26,6 +26,7 @@ export function RootStack() {
       <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: colors.void }, animation: 'fade' }}>
         <Stack.Protected guard={signedIn}>
           <Stack.Screen name="(tabs)" />
+          <Stack.Screen name="categories" />
         </Stack.Protected>
         <Stack.Protected guard={signedIn && __DEV__}>
           <Stack.Screen name="dev/gallery" />
