@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Text, View } from 'react-native';
 import { AddFab } from '@/components/AddFab';
 import { Amount } from '@/components/Amount';
+import { AmountForm } from '@/components/AmountForm';
 import { AmountKeypad } from '@/components/AmountKeypad';
 import { BackButton } from '@/components/BackButton';
 import { CallingCard } from '@/components/CallingCard';
@@ -111,6 +112,9 @@ export default function GalleryScreen() {
       </Text>
       <AmountKeypad onKey={(key) => setTyped((current) => pressKey(current, key))} />
 
+      <Section name="Formulario de monto" />
+      <AmountForm currency="DOP" initialCents={600000} saving={false} error={null} onSave={() => undefined} />
+
       <Section name="Cargando" />
       <PlaceholderRows />
 
@@ -143,7 +147,7 @@ export default function GalleryScreen() {
         </View>
       ) : null}
 
-      <SectionHeader title="AVISO" />
+      <Section name="Aviso" />
       <SkewButton
         label="Mostrar aviso"
         variant="ghost"
