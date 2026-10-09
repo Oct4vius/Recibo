@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useState } from 'react';
 import { Text, View } from 'react-native';
 import { PlaceholderRows } from '@/components/PlaceholderRows';
 import { SectionHeader } from '@/components/SectionHeader';
@@ -14,7 +14,8 @@ import { colors, fonts, typeScale } from '@/theme/tokens';
 export function TimeZoneSection() {
   const profile = useProfile();
   const update = useUpdateProfile();
-  const device = useMemo(() => deviceTimeZone(), []);
+  // Se relee en cada render (barato): la pestaña sigue montada y el teléfono puede cambiar de zona.
+  const device = deviceTimeZone();
   const [error, setError] = useState<string | null>(null);
   const current = profile.data?.timeZone;
   return (
