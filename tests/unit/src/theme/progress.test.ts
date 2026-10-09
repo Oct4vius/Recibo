@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { progressState } from '@/theme/progress';
+import { budgetBalance, progressState } from '@/theme/progress';
 
 describe('progressState', () => {
   it('is normal below 80%', () => {
@@ -29,5 +29,20 @@ describe('regression — progressState percent floating point', () => {
     expect(progressState(57, 100).percent).toBe(57);
     expect(progressState(58, 100).percent).toBe(58);
     expect(progressState(9.1, 10).percent).toBe(91);
+  });
+});
+
+describe('budgetBalance', () => {
+  it('says what is left, in whole cents', () => {
+    expect(budgetBalance(4275.72, 6300)).toEqual({ kind: 'left', cents: 202428 });
+  });
+  it('leaves zero exactly at the limit', () => {
+    expect(budgetBalance(6300, 6300)).toEqual({ kind: 'left', cents: 0 });
+  });
+  it('reports one cent over', () => {
+    expect(budgetBalance(6300.01, 6300)).toEqual({ kind: 'over', cents: 1 });
+  });
+  it('treats no spending as the whole limit left', () => {
+    expect(budgetBalance(0, 6300)).toEqual({ kind: 'left', cents: 630000 });
   });
 });

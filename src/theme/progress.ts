@@ -1,3 +1,5 @@
+import { toCents } from '@/lib/money';
+
 export type ProgressTone = 'normal' | 'warning' | 'over';
 
 export interface ProgressState {
@@ -12,8 +14,8 @@ export interface ProgressState {
 export function progressState(spent: number, limit: number): ProgressState {
   if (limit <= 0) throw new Error('limit must be greater than 0');
   // Los montos son numeric(14,2): se compara en centavos enteros para evitar errores de coma flotante.
-  const spentCents = Math.round(Math.max(spent, 0) * 100);
-  const limitCents = Math.round(limit * 100);
+  const spentCents = toCents(Math.max(spent, 0));
+  const limitCents = toCents(limit);
   const tone: ProgressTone =
     spentCents >= limitCents ? 'over' : spentCents * 100 >= limitCents * 80 ? 'warning' : 'normal';
   return {
@@ -21,4 +23,18 @@ export function progressState(spent: number, limit: number): ProgressState {
     percent: Math.floor((spentCents * 100) / limitCents),
     tone,
   };
+}
+
+export interface BudgetBalance {
+  kind: 'left' | 'over';
+  cents: number;
+}
+
+/** Cuánto queda (o cuánto se pasó), en centavos enteros. Exactamente en el límite quedan 0. */
+export function budgetBalance(spent: number, limit: number): BudgetBalance {
+  const spentCents = toCents(Math.max(spent, 0));
+  const limitCents = toCents(limit);
+  return spentCents <= limitCents
+    ? { kind: 'left', cents: limitCents - spentCents }
+    : { kind: 'over', cents: spentCents - limitCents };
 }

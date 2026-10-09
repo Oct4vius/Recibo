@@ -10,3 +10,4 @@ export type TxSource = Enums<'tx_source'>;
 
 export const CURRENCIES: readonly Currency[] = Constants.public.Enums.currency_code;
 export const BANK_CODES: readonly BankCode[] = Constants.public.Enums.bank_code;
+export const BUDGET_PERIODS: readonly BudgetPeriod[] = Constants.public.Enums.budget_period;

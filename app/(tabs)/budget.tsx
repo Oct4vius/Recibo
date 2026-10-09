@@ -1,5 +1,5 @@
-import { Screen } from '@/components/Screen';
+import { BudgetScreen } from '@/features/budgets/components/BudgetScreen';
 
-export default function BudgetScreen() {
-  return <Screen title="PRESUPUESTO" backdrop={3} />;
+export default function BudgetTab() {
+  return <BudgetScreen />;
 }
