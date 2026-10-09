@@ -1,5 +1,5 @@
 import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { useCallback, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { useUserId } from '@/features/auth/hooks';
 import { useTimeZone } from '@/features/profile/hooks';
 import {
@@ -67,11 +67,23 @@ export function useDeleteExpense() {
   });
 }
 
-/** Estado del panel de gasto compartido por Inicio y Movimientos: cerrado, gasto nuevo o edición de `item`. */
+/** Cuánto dura el aviso posterior a guardar. */
+export const NOTICE_MS = 4000;
+
+/** Estado del panel de gasto compartido por Inicio y Movimientos, y el aviso que deja al cerrarse. */
 export function useExpenseSheet() {
   const [state, setState] = useState<{ item: TransactionListItem | null } | null>(null);
+  const [notice, setNotice] = useState<string | null>(null);
+  useEffect(() => {
+    if (!notice) return;
+    const timer = setTimeout(() => setNotice(null), NOTICE_MS);
+    return () => clearTimeout(timer);
+  }, [notice]);
   const openNew = useCallback(() => setState({ item: null }), []);
   const openEdit = useCallback((item: TransactionListItem) => setState({ item }), []);
-  const close = useCallback(() => setState(null), []);
-  return { openNew, openEdit, sheet: { visible: state !== null, item: state?.item ?? null, onClose: close } };
+  const close = useCallback((message?: string) => {
+    setState(null);
+    if (message) setNotice(message);
+  }, []);
+  return { openNew, openEdit, notice, sheet: { visible: state !== null, item: state?.item ?? null, onClose: close } };
 }

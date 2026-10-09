@@ -25,6 +25,8 @@ const item: TransactionListItem = {
   isIgnored: false,
   source: 'manual',
   bankCode: null,
+  type: 'card_purchase',
+  counterpartyLast4: null,
 };
 
 describe('emptyDraft', () => {

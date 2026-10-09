@@ -3,6 +3,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { RefreshControl, Text, type ListRenderItem } from 'react-native';
 import { AddFab } from '@/components/AddFab';
 import { ListScreen } from '@/components/ListScreen';
+import { NoticeBar } from '@/components/NoticeBar';
 import { PlaceholderRows } from '@/components/PlaceholderRows';
 import { SectionHeader } from '@/components/SectionHeader';
 import { useTimeZone } from '@/features/profile/hooks';
@@ -25,7 +26,7 @@ export function TransactionsScreen() {
   const [pulling, setPulling] = useState(false);
   const timeZone = useTimeZone();
   const list = useTransactionList(filters);
-  const { openNew, openEdit, sheet } = useExpenseSheet();
+  const { openNew, openEdit, notice, sheet } = useExpenseSheet();
   const params = useLocalSearchParams<{ from?: string; to?: string; label?: string }>();
   // Historial navega con ?from&to&label: se convierte en filtro una vez y se limpian los parámetros.
   useEffect(() => {
@@ -78,7 +79,12 @@ export function TransactionsScreen() {
         }
         ListEmptyComponent={empty}
         ListFooterComponent={list.isFetchingNextPage ? <PlaceholderRows count={2} /> : null}
-        floating={<AddFab onPress={openNew} />}
+        floating={
+          <>
+            <AddFab onPress={openNew} />
+            <NoticeBar text={notice} />
+          </>
+        }
       />
       <ExpenseSheet {...sheet} />
     </>

@@ -11,6 +11,8 @@ const row = {
   is_ignored: false,
   source: 'email' as const,
   bank_code: 'bhd' as const,
+  type: 'transfer_out' as const,
+  counterparty_last4: '0099',
   categories: { name: 'Transporte' },
 };
 
@@ -29,6 +31,8 @@ describe('toListItem', () => {
       isIgnored: false,
       source: 'email',
       bankCode: 'bhd',
+      type: 'transfer_out',
+      counterpartyLast4: '0099',
     });
   });
   it('handles a row without category', () => {

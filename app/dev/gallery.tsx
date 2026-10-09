@@ -6,6 +6,7 @@ import { AmountKeypad } from '@/components/AmountKeypad';
 import { BackButton } from '@/components/BackButton';
 import { CallingCard } from '@/components/CallingCard';
 import { JaggedProgress } from '@/components/JaggedProgress';
+import { NoticeBar } from '@/components/NoticeBar';
 import { PlaceholderRows } from '@/components/PlaceholderRows';
 import { RansomText } from '@/components/RansomText';
 import { Screen } from '@/components/Screen';
@@ -42,6 +43,7 @@ export default function GalleryScreen() {
   const [chip, setChip] = useState(0);
   const [typed, setTyped] = useState('');
   const [toggle, setToggle] = useState(true);
+  const [notice, setNotice] = useState<string | null>(null);
   return (
     <Screen title="GALERÍA" backdrop={2}>
       <BackButton />
@@ -140,6 +142,17 @@ export default function GalleryScreen() {
           />
         </View>
       ) : null}
+
+      <SectionHeader title="AVISO" />
+      <SkewButton
+        label="Mostrar aviso"
+        variant="ghost"
+        onPress={() => setNotice('Gasto guardado · la regla se aplicó a 4 movimientos más.')}
+      />
+      <SkewButton label="Ocultar" variant="ghost" onPress={() => setNotice(null)} />
+      <View style={{ height: 72 }}>
+        <NoticeBar text={notice} />
+      </View>
 
       <SlamSheet visible={sheet} onClose={() => setSheet(false)} title="NUEVO GASTO">
         <TextField label="Monto" value={amount} onChangeText={setAmount} keyboardType="decimal-pad" />

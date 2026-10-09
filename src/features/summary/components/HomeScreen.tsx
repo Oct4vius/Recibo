@@ -1,5 +1,6 @@
 import { RefreshControl, View } from 'react-native';
 import { AddFab } from '@/components/AddFab';
+import { NoticeBar } from '@/components/NoticeBar';
 import { RansomText } from '@/components/RansomText';
 import { Screen } from '@/components/Screen';
 import { useTimeZone } from '@/features/profile/hooks';
@@ -16,7 +17,7 @@ import { SummaryBlock } from './SummaryBlock';
 export function HomeScreen() {
   const timeZone = useTimeZone();
   const { refreshing, refresh } = useHomeRefresh();
-  const { openNew, openEdit, sheet } = useExpenseSheet();
+  const { openNew, openEdit, notice, sheet } = useExpenseSheet();
   return (
     <>
       <Screen
@@ -26,7 +27,12 @@ export function HomeScreen() {
         refreshControl={
           <RefreshControl refreshing={refreshing} onRefresh={refresh} colors={[colors.blood]} progressBackgroundColor={colors.panel} />
         }
-        floating={<AddFab onPress={openNew} />}
+        floating={
+          <>
+            <AddFab onPress={openNew} />
+            <NoticeBar text={notice} />
+          </>
+        }
       >
         <SummaryBlock period="week" size="hero" />
         <View style={{ marginTop: 36, marginBottom: 16 }}>

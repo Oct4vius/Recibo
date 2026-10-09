@@ -1,9 +1,9 @@
-import type { BankCode, Currency, Tables, TxSource } from '@/types/database';
+import type { BankCode, Currency, Tables, TxSource, TxType } from '@/types/database';
 
 /** Fila tal como la devuelve la consulta de la lista (con el nombre de la categoría embebido). */
 export type TransactionRow = Pick<
   Tables<'transactions'>,
-  'id' | 'amount' | 'currency' | 'merchant' | 'occurred_at' | 'category_id' | 'is_ignored' | 'source' | 'bank_code'
+  'id' | 'amount' | 'currency' | 'merchant' | 'occurred_at' | 'category_id' | 'is_ignored' | 'source' | 'bank_code' | 'type' | 'counterparty_last4'
 > & { categories: { name: string } | null };
 
 export interface TransactionListItem {
@@ -17,6 +17,9 @@ export interface TransactionListItem {
   isIgnored: boolean;
   source: TxSource;
   bankCode: BankCode | null;
+  type: TxType;
+  /** Últimos 4 de la cuenta destino (transferencias del banco). */
+  counterpartyLast4: string | null;
 }
 
 export function toListItem(row: TransactionRow): TransactionListItem {
@@ -31,6 +34,8 @@ export function toListItem(row: TransactionRow): TransactionListItem {
     isIgnored: row.is_ignored,
     source: row.source,
     bankCode: row.bank_code,
+    type: row.type,
+    counterpartyLast4: row.counterparty_last4,
   };
 }
 

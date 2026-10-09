@@ -5,7 +5,7 @@ import { toListItem, type TransactionListItem, type TransactionRow } from './map
 
 export const PAGE_SIZE = 50;
 
-const LIST_COLUMNS = 'id, amount, currency, merchant, occurred_at, category_id, is_ignored, source, bank_code, categories(name)';
+const LIST_COLUMNS = 'id, amount, currency, merchant, occurred_at, category_id, is_ignored, source, bank_code, type, counterparty_last4, categories(name)';
 
 export interface TransactionPage {
   items: TransactionListItem[];

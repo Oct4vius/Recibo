@@ -1,5 +1,6 @@
 import {
   FadeIn,
+  FadeOut,
   useReducedMotion,
   withSpring,
   withTiming,
@@ -40,7 +41,10 @@ export function slamIn(values: EntryAnimationsValues) {
   };
 }
 
-export const fadeInReduced = FadeIn.duration(durations.reducedFade);
+/** Fundido de 120 ms para piezas que aparecen dentro de un panel (sin animar el layout). */
+export const fadeInQuick = FadeIn.duration(durations.reducedFade);
+export const fadeOutQuick = FadeOut.duration(durations.reducedFade);
+export const fadeInReduced = fadeInQuick;
 
 /** Fundido de entrada para movimiento cotidiano (fondos): `screen` normal, 120 ms si se redujeron animaciones. */
 export function fadeInFor(reduced: boolean) {
