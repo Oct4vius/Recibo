@@ -14,7 +14,7 @@ interface Props {
 export function ExpenseActions({ item, onDone, onError }: Props) {
   const setIgnored = useSetIgnored();
   const remove = useDeleteExpense();
-  const callbacks = { onSuccess: onDone, onError: () => onError(SAVE_ERROR) };
+  const callbacks = { onSuccess: () => onDone(), onError: () => onError(SAVE_ERROR) };
   const confirmDelete = () =>
     Alert.alert('¿Borrar este gasto?', 'No se puede deshacer.', [
       { text: 'Cancelar', style: 'cancel' },

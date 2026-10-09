@@ -35,7 +35,12 @@ export function useSaveCategory() {
   const userId = useUserId();
   return useMutation({
     mutationFn: (input: CategoryInput) => saveCategory(input, userId),
-    onSuccess: () => Promise.all([queryClient.invalidateQueries({ queryKey: categoryKeys.all }), invalidateSpending(queryClient)]),
+    onSuccess: () =>
+      Promise.all([
+        queryClient.invalidateQueries({ queryKey: categoryKeys.all }),
+        queryClient.invalidateQueries({ queryKey: rulesKeys.all }),
+        invalidateSpending(queryClient),
+      ]),
   });
 }
 

@@ -50,7 +50,7 @@ export function ExpenseForm({ item, onDone }: Props) {
   const [rulePattern, setRulePattern] = useState<string | null>(null);
   const offer = ruleOffer({
     merchant: draft.merchant,
-    counterpartyLast4: item?.counterpartyLast4 ?? null,
+    counterpartyLast4: item?.type === 'transfer_out' ? item.counterpartyLast4 : null,
     categoryId: draft.categoryId,
     originalCategoryId: original.categoryId,
   });

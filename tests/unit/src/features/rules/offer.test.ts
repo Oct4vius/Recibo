@@ -36,7 +36,7 @@ describe('ruleOfferLabel', () => {
 
 describe('ruleNotice', () => {
   it('says how many other movements the rule categorized', () => {
-    expect(ruleNotice(0)).toBe('Gasto guardado · regla creada.');
+    expect(ruleNotice(0)).toBe('Gasto guardado · regla guardada.');
     expect(ruleNotice(1)).toBe('Gasto guardado · la regla se aplicó a 1 movimiento más.');
     expect(ruleNotice(4)).toBe('Gasto guardado · la regla se aplicó a 4 movimientos más.');
     expect(RULE_SAVE_FAILED).toBe('Se guardó el gasto, pero no la regla. Intenta desde Ajustes → Reglas.');

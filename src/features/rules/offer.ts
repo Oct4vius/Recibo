@@ -29,7 +29,7 @@ export function ruleOfferLabel(offer: RuleOffer, pattern: string, categoryName: 
 }
 
 export function ruleNotice(appliedCount: number): string {
-  if (appliedCount === 0) return 'Gasto guardado · regla creada.';
+  if (appliedCount === 0) return 'Gasto guardado · regla guardada.';
   return `Gasto guardado · la regla se aplicó a ${appliedCount} ${appliedCount === 1 ? 'movimiento' : 'movimientos'} más.`;
 }
 
