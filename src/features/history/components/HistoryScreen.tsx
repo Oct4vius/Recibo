@@ -7,12 +7,11 @@ import { SkewButton } from '@/components/SkewButton';
 import { SkewChip } from '@/components/SkewChip';
 import { SkewRow } from '@/components/SkewRow';
 import { useTimeZone } from '@/features/profile/hooks';
-import { countLabel } from '@/features/transactions/filters';
 import { toIsoDate, toLocalDate } from '@/lib/dates';
 import { colors, fonts, typeScale } from '@/theme/tokens';
 import { GRANULARITIES, type Granularity } from '../granularity';
 import { useHistory } from '../hooks';
-import { bucketLabel, GRANULARITY_LABELS } from '../labels';
+import { bucketLabel, expenseCountLabel, GRANULARITY_LABELS } from '../labels';
 import { bucketRange, periodStartOf } from '../window';
 import { HistoryChart } from './HistoryChart';
 
@@ -26,8 +25,10 @@ export function HistoryScreen() {
   const [pulling, setPulling] = useState(false);
   const timeZone = useTimeZone();
   const { query } = useHistory(granularity, offset);
-  const currentIso = toIsoDate(periodStartOf(granularity, toLocalDate(new Date(), timeZone)));
-  const buckets = query.data ?? [];
+  // Granularidad de los datos mostrados: difiere de la elegida solo mientras llegan los nuevos (se ven los anteriores).
+  const shown = query.data?.granularity ?? granularity;
+  const currentIso = toIsoDate(periodStartOf(shown, toLocalDate(new Date(), timeZone)));
+  const buckets = query.data?.buckets ?? [];
   const empty = buckets.every((bucket) => bucket.totalDop === 0);
 
   const choose = (next: Granularity) => {
@@ -62,7 +63,7 @@ export function HistoryScreen() {
       {query.isSuccess ? (
         <>
           <HistoryChart
-            granularity={granularity}
+            granularity={shown}
             buckets={buckets}
             currentIso={currentIso}
             selectedIso={selectedIso}
@@ -80,15 +81,15 @@ export function HistoryScreen() {
           {[...buckets].reverse().map((bucket) => (
             <SkewRow
               key={bucket.startIso}
-              title={bucketLabel(granularity, bucket.start)}
-              subtitle={countLabel(bucket.txCount)}
+              title={bucketLabel(shown, bucket.start)}
+              subtitle={expenseCountLabel(bucket.txCount)}
               badge={bucket.startIso === currentIso ? 'Actual' : undefined}
               amount={{ value: bucket.totalDop, currency: 'DOP' }}
               selected={bucket.startIso === selectedIso}
               onPress={() =>
                 router.navigate({
                   pathname: '/transactions',
-                  params: { ...bucketRange(granularity, bucket.start, timeZone), label: bucketLabel(granularity, bucket.start) },
+                  params: { ...bucketRange(shown, bucket.start, timeZone), label: bucketLabel(shown, bucket.start) },
                 })
               }
             />

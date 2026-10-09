@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { axisLabels, bucketAccessibilityLabel, bucketLabel } from '@/features/history/labels';
+import { axisLabels, bucketAccessibilityLabel, bucketLabel, expenseCountLabel } from '@/features/history/labels';
 import { localDate } from '@/lib/dates';
 
 describe('bucketLabel', () => {
@@ -39,5 +39,14 @@ describe('bucketAccessibilityLabel', () => {
     expect(bucketAccessibilityLabel('week', localDate(2026, 10, 5), 4275.72)).toBe('Semana del 5 de octubre: 4,275.72 pesos');
     expect(bucketAccessibilityLabel('month', localDate(2026, 10, 1), 0)).toBe('Octubre de 2026: 0.00 pesos');
     expect(bucketAccessibilityLabel('year', localDate(2026, 1, 1), 10)).toBe('2026: 10.00 pesos');
+  });
+});
+
+describe('expenseCountLabel', () => {
+  it('counts expenses with grouped thousands', () => {
+    expect(expenseCountLabel(0)).toBe('0 gastos');
+    expect(expenseCountLabel(1)).toBe('1 gasto');
+    expect(expenseCountLabel(3)).toBe('3 gastos');
+    expect(expenseCountLabel(1234)).toBe('1,234 gastos');
   });
 });

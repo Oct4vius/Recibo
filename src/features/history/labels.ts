@@ -2,6 +2,8 @@ import { addDays, monthAbbreviation, monthName, type LocalDate } from '@/lib/dat
 import { moneyAccessibilityLabel } from '@/lib/money';
 import type { Granularity } from './granularity';
 
+const counter = new Intl.NumberFormat('en-US');
+
 export const GRANULARITY_LABELS: Record<Granularity, string> = { week: 'Semana', month: 'Mes', year: 'Año' };
 
 const day2 = (date: LocalDate) => String(date.day).padStart(2, '0');
@@ -44,4 +46,9 @@ export function bucketAccessibilityLabel(granularity: Granularity, start: LocalD
     return `${name.charAt(0).toUpperCase()}${name.slice(1)} de ${start.year}: ${amount}`;
   }
   return `${start.year}: ${amount}`;
+}
+
+/** "3 gastos" / "1 gasto": `get_history` cuenta solo lo que suma al gasto (no los movimientos ignorados). */
+export function expenseCountLabel(count: number): string {
+  return `${counter.format(count)} ${count === 1 ? 'gasto' : 'gastos'}`;
 }
