@@ -30,7 +30,10 @@ export function BudgetLimitForm({ period, onDone }: { period: BudgetPeriod; onDo
         initialCents={limit === null ? 0 : toCents(limit)}
         saving={save.isPending}
         error={error}
-        onSave={(cents) => save.mutate({ period, limitCents: cents }, { onSuccess: onDone, onError: () => setError(SAVE_ERROR) })}
+        onSave={(cents) => {
+          setError(null);
+          save.mutate({ period, limitCents: cents }, { onSuccess: onDone, onError: () => setError(SAVE_ERROR) });
+        }}
       />
       {limit !== null ? (
         <View style={{ marginTop: 12 }}>

@@ -16,7 +16,10 @@ export function UsdRateForm({ rate, onDone }: { rate: number; onDone: () => void
       initialCents={toCents(rate)}
       saving={update.isPending}
       error={error}
-      onSave={(cents) => update.mutate({ usd_rate: cents / 100 }, { onSuccess: onDone, onError: () => setError(SAVE_ERROR) })}
+      onSave={(cents) => {
+        setError(null);
+        update.mutate({ usd_rate: cents / 100 }, { onSuccess: onDone, onError: () => setError(SAVE_ERROR) });
+      }}
     >
       <Text style={{ fontFamily: fonts.body, fontSize: typeScale.body, color: colors.ash, marginBottom: 8 }}>
         Pesos por cada US$ 1. Cambiarla recalcula todos tus totales, incluido el historial.

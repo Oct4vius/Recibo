@@ -73,7 +73,13 @@ export function CategoryForm({ category, onDone }: Props) {
       ) : null}
       {category ? (
         <View style={{ marginTop: 12 }}>
-          <SkewButton label="Borrar" variant="ghost" loading={remove.isPending} onPress={() => confirmDelete(category)} />
+          <SkewButton
+            label="Borrar"
+            variant="ghost"
+            disabled={!ruleCount.isSuccess}
+            loading={remove.isPending}
+            onPress={() => confirmDelete(category)}
+          />
         </View>
       ) : null}
     </View>
