@@ -1,9 +1,7 @@
-import { useInfiniteQuery, useMutation, useQuery, useQueryClient, type QueryClient } from '@tanstack/react-query';
+import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useCallback, useState } from 'react';
-import { categoryKeys } from '@/features/categories/keys';
 import { useUserId } from '@/features/auth/hooks';
 import { useTimeZone } from '@/features/profile/hooks';
-import { summaryKeys } from '@/features/summary/keys';
 import {
   createExpense,
   deleteExpense,
@@ -16,24 +14,16 @@ import {
   type NewExpense,
 } from './api';
 import type { TransactionFilters } from './filters';
+import { invalidateSpending } from './invalidate';
 import { transactionKeys } from './keys';
 import type { TransactionListItem } from './mapping';
 
 const RECENT_COUNT = 5;
 
-/** Todo lo que depende de los movimientos: lista, totales y categorías recientes. */
-function invalidateSpending(queryClient: QueryClient) {
-  return Promise.all([
-    queryClient.invalidateQueries({ queryKey: transactionKeys.all }),
-    queryClient.invalidateQueries({ queryKey: summaryKeys.all }),
-    queryClient.invalidateQueries({ queryKey: categoryKeys.recent() }),
-  ]);
-}
-
 export function useTransactionList(filters: TransactionFilters) {
   const timeZone = useTimeZone();
   return useInfiniteQuery({
-    queryKey: transactionKeys.list(filters),
+    queryKey: transactionKeys.list(filters, timeZone),
     queryFn: ({ pageParam }) => fetchTransactionPage(filters, pageParam, new Date(), timeZone),
     initialPageParam: 0,
     getNextPageParam: (last, pages) => (pages.length * PAGE_SIZE < last.count ? pages.length : undefined),

@@ -10,6 +10,10 @@ export const DEFAULT_TIME_ZONE = 'America/Santo_Domingo';
 
 const WEEKDAY_ES = ['LUN', 'MAR', 'MIÉ', 'JUE', 'VIE', 'SÁB', 'DOM'];
 const MONTH_ES = ['ENE', 'FEB', 'MAR', 'ABR', 'MAY', 'JUN', 'JUL', 'AGO', 'SEP', 'OCT', 'NOV', 'DIC'];
+const MONTH_NAMES_ES = [
+  'enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio',
+  'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre',
+];
 const DAY_MS = 86_400_000;
 
 const formatters = new Map<string, Intl.DateTimeFormat>();
@@ -106,5 +110,43 @@ export function zonedInstant(date: LocalDate, minutesOfDay: number, timeZone: st
 /** `MAR 06 / OCT`: etiqueta corta de día para la UI. */
 export function formatDayLabel(date: LocalDate): string {
   const day = String(date.day).padStart(2, '0');
-  return `${WEEKDAY_ES[date.weekday - 1]} ${day} / ${MONTH_ES[date.month - 1]}`;
+  return `${WEEKDAY_ES[date.weekday - 1]} ${day} / ${monthAbbreviation(date.month)}`;
+}
+
+/** `OCT`: abreviatura del mes (1 = enero). */
+export function monthAbbreviation(month: number): string {
+  return MONTH_ES[month - 1];
+}
+
+/** `octubre`: nombre del mes en minúsculas (1 = enero). */
+export function monthName(month: number): string {
+  return MONTH_NAMES_ES[month - 1];
+}
+
+/** `2026-10-05` (columna `date` de Postgres) → fecha de calendario. */
+export function parseIsoDate(iso: string): LocalDate {
+  const [year, month, day] = iso.split('-').map(Number);
+  return localDate(year, month, day);
+}
+
+/** Días de `from` a `to` (negativo si `to` es anterior). */
+export function daysBetween(from: LocalDate, to: LocalDate): number {
+  return Math.round((Date.UTC(to.year, to.month - 1, to.day) - Date.UTC(from.year, from.month - 1, from.day)) / DAY_MS);
+}
+
+/** Día 1 del mes que está `months` meses después (o antes) del mes de `date`. */
+export function addMonths(date: LocalDate, months: number): LocalDate {
+  return localDate(date.year, date.month + months, 1);
+}
+
+export function yearStart(date: LocalDate): LocalDate {
+  return localDate(date.year, 1, 1);
+}
+
+/** Desfase de `timeZone` respecto de UTC en ese instante, en minutos (Santo Domingo: -240). */
+export function utcOffsetMinutes(instant: Date, timeZone: string): number {
+  const p = localParts(instant, timeZone);
+  const wall = Date.UTC(p.year, p.month - 1, p.day, 0, p.minutes);
+  const minute = Math.floor(instant.getTime() / 60_000) * 60_000;
+  return Math.round((wall - minute) / 60_000);
 }

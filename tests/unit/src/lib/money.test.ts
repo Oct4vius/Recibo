@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { currencySymbol, formatMoney, moneyAccessibilityLabel } from '@/lib/money';
+import { currencySymbol, formatMoney, moneyAccessibilityLabel, toCents } from '@/lib/money';
 
 describe('formatMoney', () => {
   it('formats DOP with the RD$ prefix, thousands separator and 2 decimals', () => {
@@ -37,5 +37,13 @@ describe('currencySymbol', () => {
   it('returns the display prefix of each currency', () => {
     expect(currencySymbol('DOP')).toBe('RD$');
     expect(currencySymbol('USD')).toBe('US$');
+  });
+});
+
+describe('toCents', () => {
+  it('rounds amounts to whole cents', () => {
+    expect(toCents(275.72)).toBe(27572);
+    expect(toCents(60.1234)).toBe(6012);
+    expect(toCents(0.29)).toBe(29);
   });
 });

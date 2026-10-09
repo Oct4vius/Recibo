@@ -2,16 +2,23 @@ import { describe, expect, it } from 'vitest';
 import {
   DEFAULT_TIME_ZONE,
   addDays,
+  addMonths,
+  daysBetween,
   formatDayLabel,
   isSameDate,
   localDate,
   minutesOfDay,
+  monthAbbreviation,
+  monthName,
   monthStart,
   nextMonthStart,
+  parseIsoDate,
   toIsoDate,
   toLocalDate,
+  utcOffsetMinutes,
   weekStart,
   weekdayOf,
+  yearStart,
   zonedInstant,
   type LocalDate,
 } from '@/lib/dates';
@@ -95,5 +102,42 @@ describe('calendar arithmetic', () => {
     expect(isSameDate(localDate(2026, 10, 6), d(2026, 10, 6, 2))).toBe(true);
     expect(isSameDate(localDate(2026, 10, 6), localDate(2026, 10, 7))).toBe(false);
     expect(toIsoDate(localDate(2026, 1, 5))).toBe('2026-01-05');
+  });
+});
+
+describe('parseIsoDate / daysBetween', () => {
+  it('parses a Postgres date', () => {
+    expect(parseIsoDate('2026-10-05')).toEqual({ year: 2026, month: 10, day: 5, weekday: 1 });
+  });
+  it('counts days between calendar dates, across months and years', () => {
+    expect(daysBetween(parseIsoDate('2026-10-09'), parseIsoDate('2026-10-12'))).toBe(3);
+    expect(daysBetween(parseIsoDate('2026-12-31'), parseIsoDate('2027-01-01'))).toBe(1);
+    expect(daysBetween(parseIsoDate('2026-10-12'), parseIsoDate('2026-10-09'))).toBe(-3);
+  });
+});
+
+describe('addMonths / yearStart', () => {
+  it('moves to the first day of another month, across years', () => {
+    expect(addMonths(localDate(2026, 10, 1), -10)).toEqual(localDate(2025, 12, 1));
+    expect(addMonths(localDate(2026, 12, 1), 1)).toEqual(localDate(2027, 1, 1));
+  });
+  it('returns January 1st', () => {
+    expect(yearStart(localDate(2026, 10, 9))).toEqual(localDate(2026, 1, 1));
+  });
+});
+
+describe('utcOffsetMinutes', () => {
+  const now = new Date('2026-10-09T15:00:30Z');
+  it('is -240 in Santo Domingo, +330 in Kolkata and 0 in UTC', () => {
+    expect(utcOffsetMinutes(now, 'America/Santo_Domingo')).toBe(-240);
+    expect(utcOffsetMinutes(now, 'Asia/Kolkata')).toBe(330);
+    expect(utcOffsetMinutes(now, 'UTC')).toBe(0);
+  });
+});
+
+describe('month names', () => {
+  it('abbreviates and names months in Spanish', () => {
+    expect(monthAbbreviation(10)).toBe('OCT');
+    expect(monthName(10)).toBe('octubre');
   });
 });

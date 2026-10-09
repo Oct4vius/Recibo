@@ -25,3 +25,8 @@ export function moneyAccessibilityLabel(amount: number, currency: Currency): str
   const sign = amount < 0 ? 'menos ' : '';
   return `${sign}${digits(amount)} ${SPOKEN[currency]}`;
 }
+
+/** Monto → centavos enteros (toda la lógica de dinero del cliente trabaja en centavos). */
+export function toCents(amount: number): number {
+  return Math.round(amount * 100);
+}
