@@ -1,5 +1,5 @@
-import { Screen } from '@/components/Screen';
+import { HistoryScreen } from '@/features/history/components/HistoryScreen';
 
-export default function HistoryScreen() {
-  return <Screen title="HISTORIAL" backdrop={2} />;
+export default function HistoryTab() {
+  return <HistoryScreen />;
 }
