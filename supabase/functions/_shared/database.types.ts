@@ -465,6 +465,26 @@ export type Database = {
           tx_count: number
         }[]
       }
+      match_category: {
+        Args: {
+          p_counterparty_last4: string
+          p_merchant: string
+          p_user_id: string
+        }
+        Returns: string
+      }
+      save_merchant_rule: {
+        Args: {
+          p_category_id: string
+          p_match_field: string
+          p_pattern: string
+          p_rule_id?: string
+        }
+        Returns: {
+          applied_count: number
+          rule_id: string
+        }[]
+      }
     }
     Enums: {
       account_status: "active" | "error" | "revoked" | "paused"
