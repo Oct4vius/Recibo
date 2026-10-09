@@ -1,6 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useMemo } from 'react';
 import { useUserId } from '@/features/auth/hooks';
+import { rulesKeys } from '@/features/rules/keys';
 import { invalidateSpending } from '@/features/transactions/invalidate';
 import { countCategoryRules, deleteCategory, fetchCategories, fetchRecentCategoryIds, saveCategory, type CategoryInput } from './api';
 import { categoryKeys } from './keys';
@@ -42,6 +43,11 @@ export function useDeleteCategory() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: (id: string) => deleteCategory(id),
-    onSuccess: () => Promise.all([queryClient.invalidateQueries({ queryKey: categoryKeys.all }), invalidateSpending(queryClient)]),
+    onSuccess: () =>
+      Promise.all([
+        queryClient.invalidateQueries({ queryKey: categoryKeys.all }),
+        queryClient.invalidateQueries({ queryKey: rulesKeys.all }),
+        invalidateSpending(queryClient),
+      ]),
   });
 }

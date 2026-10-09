@@ -27,6 +27,7 @@ export function RootStack() {
         <Stack.Protected guard={signedIn}>
           <Stack.Screen name="(tabs)" />
           <Stack.Screen name="categories" />
+          <Stack.Screen name="rules" />
         </Stack.Protected>
         <Stack.Protected guard={signedIn && __DEV__}>
           <Stack.Screen name="dev/gallery" />
