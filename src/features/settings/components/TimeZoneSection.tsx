@@ -4,8 +4,7 @@ import { PlaceholderRows } from '@/components/PlaceholderRows';
 import { SectionHeader } from '@/components/SectionHeader';
 import { SkewButton } from '@/components/SkewButton';
 import { SkewRow } from '@/components/SkewRow';
-import { deviceTimeZone } from '@/features/profile/device-time-zone';
-import { useProfile, useUpdateProfile } from '@/features/profile/hooks';
+import { useDeviceTimeZone, useProfile, useUpdateProfile } from '@/features/profile/hooks';
 import { timeZoneCity, timeZoneLabel } from '@/features/profile/time-zone';
 import { SAVE_ERROR } from '@/features/transactions/messages';
 import { colors, fonts, typeScale } from '@/theme/tokens';
@@ -14,8 +13,7 @@ import { colors, fonts, typeScale } from '@/theme/tokens';
 export function TimeZoneSection() {
   const profile = useProfile();
   const update = useUpdateProfile();
-  // Se relee en cada render (barato): la pestaña sigue montada y el teléfono puede cambiar de zona.
-  const device = deviceTimeZone();
+  const device = useDeviceTimeZone();
   const [error, setError] = useState<string | null>(null);
   const current = profile.data?.timeZone;
   return (

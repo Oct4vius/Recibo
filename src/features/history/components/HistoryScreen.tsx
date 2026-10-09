@@ -12,6 +12,7 @@ import { colors, fonts, typeScale } from '@/theme/tokens';
 import { GRANULARITIES, type Granularity } from '../granularity';
 import { useHistory } from '../hooks';
 import { bucketLabel, expenseCountLabel, GRANULARITY_LABELS } from '../labels';
+import { type HistorySelection, selectedStartFor, windowKeyOf } from '../selection';
 import { bucketRange, periodStartOf } from '../window';
 import { HistoryChart } from './HistoryChart';
 
@@ -21,7 +22,7 @@ const LOAD_HISTORY_ERROR = 'No se pudo cargar tu historial. Tira hacia abajo par
 export function HistoryScreen() {
   const [granularity, setGranularity] = useState<Granularity>('week');
   const [offset, setOffset] = useState(0);
-  const [selectedIso, setSelectedIso] = useState<string | null>(null);
+  const [selection, setSelection] = useState<HistorySelection | null>(null);
   const [pulling, setPulling] = useState(false);
   const timeZone = useTimeZone();
   const { query } = useHistory(granularity, offset);
@@ -29,16 +30,19 @@ export function HistoryScreen() {
   const shown = query.data?.granularity ?? granularity;
   const currentIso = toIsoDate(periodStartOf(shown, toLocalDate(new Date(), timeZone)));
   const buckets = query.data?.buckets ?? [];
+  // La barra elegida vale solo para los datos en pantalla: si llegan otros (misma fecha de inicio incluida), se descarta.
+  const windowKey = windowKeyOf(shown, buckets[0]?.startIso);
+  const selectedIso = selectedStartFor(selection, windowKey);
   const empty = buckets.every((bucket) => bucket.totalDop === 0);
 
   const choose = (next: Granularity) => {
     setGranularity(next);
     setOffset(0);
-    setSelectedIso(null);
+    setSelection(null);
   };
   const move = (delta: number) => {
     setOffset((current) => current + delta);
-    setSelectedIso(null);
+    setSelection(null);
   };
   const refresh = () => {
     setPulling(true);
@@ -67,7 +71,7 @@ export function HistoryScreen() {
             buckets={buckets}
             currentIso={currentIso}
             selectedIso={selectedIso}
-            onSelect={setSelectedIso}
+            onSelect={(startIso) => setSelection({ windowKey, startIso })}
           />
           {empty ? (
             <Text style={{ fontFamily: fonts.body, fontSize: typeScale.body, color: colors.ash, marginBottom: 8 }}>
