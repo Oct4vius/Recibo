@@ -52,7 +52,6 @@ export type Database = {
           is_active: boolean
           limit_amount: number
           period: Database["public"]["Enums"]["budget_period"]
-          thresholds: number[]
           updated_at: string
           user_id: string
         }
@@ -63,7 +62,6 @@ export type Database = {
           is_active?: boolean
           limit_amount: number
           period: Database["public"]["Enums"]["budget_period"]
-          thresholds?: number[]
           updated_at?: string
           user_id: string
         }
@@ -74,7 +72,6 @@ export type Database = {
           is_active?: boolean
           limit_amount?: number
           period?: Database["public"]["Enums"]["budget_period"]
-          thresholds?: number[]
           updated_at?: string
           user_id?: string
         }
@@ -192,6 +189,7 @@ export type Database = {
       }
       profiles: {
         Row: {
+          alert_thresholds: number[]
           created_at: string
           primary_currency: Database["public"]["Enums"]["currency_code"]
           timezone: string
@@ -200,6 +198,7 @@ export type Database = {
           user_id: string
         }
         Insert: {
+          alert_thresholds?: number[]
           created_at?: string
           primary_currency?: Database["public"]["Enums"]["currency_code"]
           timezone?: string
@@ -208,6 +207,7 @@ export type Database = {
           user_id: string
         }
         Update: {
+          alert_thresholds?: number[]
           created_at?: string
           primary_currency?: Database["public"]["Enums"]["currency_code"]
           timezone?: string

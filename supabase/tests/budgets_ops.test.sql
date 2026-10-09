@@ -33,9 +33,9 @@ select throws_ok(
 set local role authenticated;
 set local request.jwt.claim.sub = '11111111-1111-1111-1111-111111111111';
 select results_eq(
-  $$insert into public.budgets (user_id, period, limit_amount) values ('11111111-1111-1111-1111-111111111111', 'month', 40000) returning thresholds$$,
-  $$values (array[80, 100])$$,
-  'owner creates monthly budget with default thresholds'
+  $$insert into public.budgets (user_id, period, limit_amount) values ('11111111-1111-1111-1111-111111111111', 'month', 40000) returning is_active$$,
+  $$values (true)$$,
+  'owner creates monthly budget (active by default)'
 );
 select throws_ok(
   $$insert into public.budgets (user_id, period, limit_amount) values ('11111111-1111-1111-1111-111111111111', 'month', 1)$$,
