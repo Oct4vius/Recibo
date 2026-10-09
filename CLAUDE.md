@@ -428,7 +428,8 @@ SQL nace con tests. Las pantallas no se testean en v1.
   muestra estado "backend pausado" en cuentas vinculadas; no reintentar en loop.
 - **Fuera de alcance v1** (no implementar aunque parezca fácil): iOS, registro
   público, dedup autorización/liquidación, tests de UI, IMAP, parseo con LLM,
-  ingresos, versión web, tasa de cambio automática, multi-idioma.
+  ingresos, versión web, multi-idioma. (La tasa automática del BCRD entró al
+  alcance el 2026-10-09 como tarea del Plan 3; ver `docs/ALCANCE.md` §3.)
 - **No bloquear v2**: presupuesto compartido en pareja. `budgets` y
   `transactions` se relacionan por `user_id`; una futura `budget_members` debe
   poder agregarse sin migrar datos. No diseñar nada que lo impida.
