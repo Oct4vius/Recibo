@@ -1,5 +1,5 @@
 begin;
-select plan(23);
+select plan(24);
 
 select has_function('public', 'match_category', array['uuid', 'text', 'text'], 'match_category exists');
 select has_function('public', 'save_merchant_rule', array['text', 'text', 'uuid', 'uuid'], 'save_merchant_rule exists');
@@ -91,10 +91,13 @@ select throws_ok(
   'P0002', null, 'a user cannot edit another user''s rule'
 );
 
-set local role anon;
-select throws_ok(
-  $$select * from public.save_merchant_rule('merchant', 'x', null)$$,
-  '42501', null, 'anon cannot save rules'
+select ok(
+  not has_function_privilege('anon', 'public.save_merchant_rule(text,text,uuid,uuid)', 'execute'),
+  'anon cannot execute save_merchant_rule'
+);
+select ok(
+  not has_function_privilege('anon', 'public.match_category(uuid,text,text)', 'execute'),
+  'anon cannot execute match_category'
 );
 
 select * from finish();
