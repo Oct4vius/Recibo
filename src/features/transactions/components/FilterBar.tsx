@@ -5,9 +5,8 @@ import { SkewChip } from '@/components/SkewChip';
 import { useCategories } from '@/features/categories/hooks';
 import { colors, fonts, typeScale } from '@/theme/tokens';
 import { BANK_CODES, CURRENCIES, type BankCode, type Currency } from '@/types/database';
-import { BANK_LABELS, countLabel, CURRENCY_LABELS, PERIOD_LABELS, type Period, type TransactionFilters } from '../filters';
+import { BANK_LABELS, countLabel, CURRENCY_LABELS, isRange, PERIOD_LABELS, PRESET_PERIODS, type TransactionFilters } from '../filters';
 
-const PERIODS: readonly Period[] = ['week', 'month', 'all'];
 const CURRENCY_OPTIONS: readonly Option<Currency>[] = CURRENCIES.map((value) => ({ value, label: CURRENCY_LABELS[value] }));
 const BANK_OPTIONS: readonly Option<BankCode>[] = BANK_CODES.map((value) => ({ value, label: BANK_LABELS[value] }));
 
@@ -30,7 +29,10 @@ export function FilterBar({ filters, onChange, count }: Props) {
   return (
     <View style={{ marginBottom: 12 }}>
       <ScrollView horizontal showsHorizontalScrollIndicator={false} keyboardShouldPersistTaps="handled">
-        {PERIODS.map((period) => (
+        {isRange(filters.period) ? (
+          <SkewChip label={`${filters.period.label} ✕`} selected onPress={() => onChange({ ...filters, period: 'month' })} />
+        ) : null}
+        {PRESET_PERIODS.map((period) => (
           <SkewChip
             key={period}
             label={PERIOD_LABELS[period]}

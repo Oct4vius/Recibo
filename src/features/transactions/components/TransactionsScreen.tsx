@@ -1,4 +1,5 @@
-import { useCallback, useMemo, useState } from 'react';
+import { router, useLocalSearchParams } from 'expo-router';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { RefreshControl, Text, type ListRenderItem } from 'react-native';
 import { AddFab } from '@/components/AddFab';
 import { ListScreen } from '@/components/ListScreen';
@@ -7,6 +8,7 @@ import { SectionHeader } from '@/components/SectionHeader';
 import { useTimeZone } from '@/features/profile/hooks';
 import { colors, fonts, typeScale } from '@/theme/tokens';
 import { DEFAULT_FILTERS, emptyMessage, type TransactionFilters } from '../filters';
+import { CLEARED_RANGE_PARAMS, rangeFromParams } from '../route-params';
 import { groupByDay, type ListEntry } from '../grouping';
 import { useExpenseSheet, useTransactionList } from '../hooks';
 import type { TransactionListItem } from '../mapping';
@@ -24,6 +26,15 @@ export function TransactionsScreen() {
   const timeZone = useTimeZone();
   const list = useTransactionList(filters);
   const { openNew, openEdit, sheet } = useExpenseSheet();
+  const params = useLocalSearchParams<{ from?: string; to?: string; label?: string }>();
+  // Historial navega con ?from&to&label: se convierte en filtro una vez y se limpian los parámetros.
+  useEffect(() => {
+    const range = rangeFromParams({ from: params.from, to: params.to, label: params.label });
+    if (!range) return;
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- sincroniza un parámetro de navegación (sistema externo) con el estado
+    setFilters({ ...DEFAULT_FILTERS, period: range });
+    router.setParams(CLEARED_RANGE_PARAMS);
+  }, [params.from, params.to, params.label]);
 
   const entries = useMemo(
     () => groupByDay(list.data?.pages.flatMap((page) => page.items) ?? [], new Date(), timeZone),

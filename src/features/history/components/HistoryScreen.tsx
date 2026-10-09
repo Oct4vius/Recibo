@@ -1,3 +1,4 @@
+import { router } from 'expo-router';
 import { useState } from 'react';
 import { RefreshControl, Text, View } from 'react-native';
 import { PlaceholderRows } from '@/components/PlaceholderRows';
@@ -12,7 +13,7 @@ import { colors, fonts, typeScale } from '@/theme/tokens';
 import { GRANULARITIES, type Granularity } from '../granularity';
 import { useHistory } from '../hooks';
 import { bucketLabel, GRANULARITY_LABELS } from '../labels';
-import { periodStartOf } from '../window';
+import { bucketRange, periodStartOf } from '../window';
 import { HistoryChart } from './HistoryChart';
 
 const LOAD_HISTORY_ERROR = 'No se pudo cargar tu historial. Tira hacia abajo para reintentar.';
@@ -84,6 +85,12 @@ export function HistoryScreen() {
               badge={bucket.startIso === currentIso ? 'Actual' : undefined}
               amount={{ value: bucket.totalDop, currency: 'DOP' }}
               selected={bucket.startIso === selectedIso}
+              onPress={() =>
+                router.navigate({
+                  pathname: '/transactions',
+                  params: { ...bucketRange(granularity, bucket.start, timeZone), label: bucketLabel(granularity, bucket.start) },
+                })
+              }
             />
           ))}
         </>

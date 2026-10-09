@@ -50,3 +50,16 @@ describe('emptyMessage', () => {
     expect(emptyMessage({ ...DEFAULT_FILTERS, period: 'all', currency: 'USD' })).toBe('No hay movimientos con estos filtros.');
   });
 });
+
+describe('range periods', () => {
+  const range = { kind: 'range', from: '2026-09-28T04:00:00.000Z', to: '2026-10-05T04:00:00.000Z', label: '28 SEP – 04 OCT' } as const;
+  it('uses the range bounds as they are', () => {
+    expect(periodRange(range, new Date('2026-10-06T15:00:00Z'), SD)).toEqual({ from: range.from, to: range.to });
+  });
+  it('has its own empty message', () => {
+    expect(emptyMessage({ ...DEFAULT_FILTERS, period: range })).toBe('No hay movimientos en este período.');
+  });
+  it('still points at the filters when another filter is on', () => {
+    expect(emptyMessage({ ...DEFAULT_FILTERS, period: range, currency: 'USD' })).toBe('No hay movimientos con estos filtros.');
+  });
+});
