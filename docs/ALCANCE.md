@@ -154,8 +154,11 @@ el plan gratuito de Supabase.
   no suman a totales ni presupuesto, aunque siguen visibles.
 - **Presupuesto:** límite semanal y/o mensual en DOP; alertas push al 80 % y
   100 %, una sola vez por período y umbral.
-- **Moneda consolidada:** DOP es la principal; USD se convierte con una tasa
-  fija configurable en ajustes para los totales.
+- **Moneda consolidada:** DOP es la principal; USD se convierte a DOP para los
+  totales. Hasta el Plan 3, con una tasa fija configurable en ajustes. Desde el
+  Plan 3 (decisión del 2026-10-09), con la tasa de referencia diaria del Banco
+  Central (BCRD): se guarda una tasa por día y cada gasto en USD se convierte con
+  la tasa de **su** fecha, para que los totales pasados no cambien solos.
 
 ## 4. Modelo de datos (Supabase, schema `public`, RLS por `user_id`)
 
@@ -254,7 +257,6 @@ en `CLAUDE.md`.
 - Versión web.
 - Integración directa con APIs bancarias.
 - Multi-idioma (UI solo en español).
-- Tasa de cambio automática.
 
 ## 8.1 Candidatos a v2 (no bloquear en el diseño)
 

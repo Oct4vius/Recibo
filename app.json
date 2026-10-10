@@ -1,0 +1,23 @@
+{
+  "expo": {
+    "name": "Recibo",
+    "slug": "recibo",
+    "scheme": "recibo",
+    "version": "0.1.0",
+    "orientation": "portrait",
+    "userInterfaceStyle": "dark",
+    "backgroundColor": "#000000",
+    "platforms": ["android"],
+    "android": {
+      "package": "com.oct4vius.recibo",
+      "edgeToEdgeEnabled": true
+    },
+    "plugins": [
+      "expo-router",
+      "expo-secure-store",
+      ["expo-splash-screen", { "backgroundColor": "#000000" }],
+      "@react-native-community/datetimepicker",
+      "expo-localization"
+    ]
+  }
+}

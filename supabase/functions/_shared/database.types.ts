@@ -52,7 +52,6 @@ export type Database = {
           is_active: boolean
           limit_amount: number
           period: Database["public"]["Enums"]["budget_period"]
-          thresholds: number[]
           updated_at: string
           user_id: string
         }
@@ -63,7 +62,6 @@ export type Database = {
           is_active?: boolean
           limit_amount: number
           period: Database["public"]["Enums"]["budget_period"]
-          thresholds?: number[]
           updated_at?: string
           user_id: string
         }
@@ -74,7 +72,6 @@ export type Database = {
           is_active?: boolean
           limit_amount?: number
           period?: Database["public"]["Enums"]["budget_period"]
-          thresholds?: number[]
           updated_at?: string
           user_id?: string
         }
@@ -192,6 +189,7 @@ export type Database = {
       }
       profiles: {
         Row: {
+          alert_thresholds: number[]
           created_at: string
           primary_currency: Database["public"]["Enums"]["currency_code"]
           timezone: string
@@ -200,6 +198,7 @@ export type Database = {
           user_id: string
         }
         Insert: {
+          alert_thresholds?: number[]
           created_at?: string
           primary_currency?: Database["public"]["Enums"]["currency_code"]
           timezone?: string
@@ -208,6 +207,7 @@ export type Database = {
           user_id: string
         }
         Update: {
+          alert_thresholds?: number[]
           created_at?: string
           primary_currency?: Database["public"]["Enums"]["currency_code"]
           timezone?: string
@@ -463,6 +463,26 @@ export type Database = {
           previous_total_dop: number
           total_dop: number
           tx_count: number
+        }[]
+      }
+      match_category: {
+        Args: {
+          p_counterparty_last4: string
+          p_merchant: string
+          p_user_id: string
+        }
+        Returns: string
+      }
+      save_merchant_rule: {
+        Args: {
+          p_category_id: string
+          p_match_field: string
+          p_pattern: string
+          p_rule_id?: string
+        }
+        Returns: {
+          applied_count: number
+          rule_id: string
         }[]
       }
     }

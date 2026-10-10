@@ -23,10 +23,10 @@ parezca fácil.
 ## Comandos
 ```bash
 bun install
-bun run typecheck                  # tsc --noEmit (scripts, tests y código fuente de parsers)
+bun run typecheck                  # tsc --noEmit (app, src, scripts, tests y código fuente de parsers)
 bun run test                       # Vitest (tests/unit)
 bun run test:deno                  # deno test --allow-read supabase/functions/
-bun run lint                       # deno lint (Plan 4 agrega ESLint de Expo)
+bun run lint                       # deno lint (supabase/functions) + expo lint (app)
 bun run check                      # typecheck + test + test:deno + lint — obligatorio antes de done
 bun run fixtures:build             # fixtures-raw/**/*.eml → parsers/<bank>/fixtures/*.json
 bun run db:start                   # stack local (Docker Desktop debe estar corriendo)
@@ -35,21 +35,28 @@ bun run db:test                    # pgTAP (supabase/tests/*.test.sql)
 bun run check:db                   # db:reset + db:test — obligatorio si tocaste supabase/migrations
 bun run db:types                   # regenera supabase/functions/_shared/database.types.ts
 # Desde Plan 3: supabase functions serve
-# Desde Plan 4: bunx expo start
+bun run start                      # Expo (abrir con Expo Go en Android); requiere .env.local con EXPO_PUBLIC_*
+bun run verify:bundle              # empaqueta Android sin dispositivo (verificación de Metro/Babel/NativeWind)
 ```
+Pins por compatibilidad (no "actualizar" a ciegas): TypeScript `~6.0` (typescript-eslint, que usa
+`eslint-config-expo`, aún no soporta TS 7) y ESLint `^9` (`eslint-plugin-react` falla con ESLint 10).
+`tsconfig.json` usa `"types": ["node", "expo/types"]`: todo `@types/*` nuevo debe agregarse ahí.
 
 ## Estructura clave
 ```
 app/                       # Expo Router: solo routing + layout, sin lógica
-  (auth)/                  # login, register, reset
+  dev/gallery.tsx          # galería de componentes, solo __DEV__
+  (auth)/                  # login (registro cerrado: sin register ni reset)
   (tabs)/                  # home, transactions, history, budget, settings
 src/
-  features/<dominio>/      # auth, accounts, transactions, budgets, history, categories
+  features/<dominio>/      # auth, accounts, transactions, budgets, history, categories, rules, settings, summary, profile
     api.ts                 #   queries/mutations (TanStack Query + supabase)
     components/            #   UI del dominio
     hooks.ts
   components/              # UI genérica (Button, Card, Amount, ...)
   lib/                     # supabase.ts, queryClient.ts, env.ts, money.ts, dates.ts
+  theme/                   # tokens.ts + colors.json (paleta única), motion*, ransom, shapes, progress, backdrops
+                           #   (progress.ts calcula el % de presupuesto en centavos enteros)
   types/                   # tipos compartidos; database.ts re-exporta _shared/database.types.ts (Plan 4)
 supabase/
   migrations/              # SQL versionado, una migración por cambio
@@ -317,6 +324,14 @@ inventar un parser sin correo real.**
   visible. Todas las RPC de agregados filtran `counts_as_spending = true` y
   `is_ignored = false`. Esta es la única forma de excluir un gasto además de
   ignorarlo.
+- **Reglas de categoría en SQL.** `public.match_category(user, merchant, counterparty_last4)` es la única definición
+  de "qué regla aplica" (`strpos` literal sobre `lower()`, gana `priority` menor y luego el patrón más largo). El trigger
+  `transactions_assign_category` la usa al insertar cualquier movimiento sin categoría (manual o del sync); la RPC
+  `save_merchant_rule` crea/actualiza la regla y la aplica a los movimientos sin categoría. Ni la app ni `sync-mail`
+  reimplementan la coincidencia.
+- **Avisos de presupuesto.** `profiles.alert_thresholds` (`{80,100}` por defecto) es la única fuente de qué umbrales
+  envían push; `sync-mail` (Plan 3) solo notifica esos. La app muestra el borde amarillo y la `CallingCard` siempre.
+- `profiles.timezone` se valida contra `pg_timezone_names` (trigger; zona inválida → 22023).
 
 ## Principios de diseño — SOLID y DRY, siempre
 Se aplican en app, Edge Functions y SQL. Así se traducen a este proyecto:
@@ -363,6 +378,31 @@ Se aplican en app, Edge Functions y SQL. Así se traducen a este proyecto:
   conserva su moneda.
 - Textos de UI en español, sin i18n. Sin `console.log` en código de producción.
 - Componentes funcionales, hooks, sin clases. Un componente por archivo.
+- Estilo visual: spec `docs/superpowers/specs/2026-10-06-plan-4-ui-design.md`. Colores solo desde
+  `src/theme` (ningún hex fuera de `colors.json`); los montos siempre con `Amount`/`formatMoney`,
+  nunca inclinados; el rojo nunca en texto de menos de 18 px; toda animación pasa por
+  `src/theme/motion.ts` y respeta "reducir animaciones".
+- Entradas animadas: las formas de fondo entran con fundido (`fadeInFor`); títulos, paneles y
+  tarjetas con `slam` (`enteringFor`). Si un elemento necesita animación de entrada **y** una
+  rotación/transform estática, la rotación va en un `View` interior (el `entering` de Reanimated
+  reemplaza el transform).
+- Componentes nuevos se revisan primero en la galería (`/dev/gallery`).
+- Sesión: `useSession()` / `useUserId()` de `src/features/auth/hooks.ts` (contexto de `SessionProvider`);
+  nunca `supabase.auth.getSession()` dentro de pantallas. Al cerrar sesión se borra la caché de TanStack Query.
+- Listas largas en `ListScreen` (un `FlatList` real, título como cabecera); `Screen` solo para contenido corto.
+  Nunca un `FlatList` dentro de un `ScrollView`.
+- Montos que escribe el usuario: `src/features/transactions/amount-input.ts` en centavos enteros; se envían
+  como `cents / 100`. Nunca `parseFloat` sobre lo escrito.
+- Fechas y rangos en la zona del perfil (`useTimeZone()` + `src/lib/dates.ts`); los rangos de filtros salen de
+  `periodRange`, con las mismas reglas que las RPC (semana desde el lunes).
+- Gasto manual: `source = 'manual'`, `type = 'card_purchase'`. El efectivo no se registra aparte: el retiro de
+  cajero es el gasto.
+- Encabezados de grupo con `SectionHeader`; interruptores con `SkewToggle` (fila completa tocable); paneles que solo
+  piden un monto con `AmountForm`; avisos posteriores a una acción con `NoticeBar`; subpantallas (`/categories`,
+  `/rules`) con `BackButton` arriba.
+- Toda mutación que cambie qué cuenta como gasto (movimientos, categorías, reglas) invalida con `invalidateSpending`
+  de `src/features/transactions/invalidate.ts`. Cambiar la zona o la tasa en Ajustes invalida todas las consultas.
+- Valores optimistas solo desde `mutation.variables` mientras `isPending`; nunca `setQueryData`.
 
 ## Testing — política
 Estricto donde duele, ligero donde no. La lógica de dinero, fechas, parsers y
@@ -402,7 +442,8 @@ SQL nace con tests. Las pantallas no se testean en v1.
   muestra estado "backend pausado" en cuentas vinculadas; no reintentar en loop.
 - **Fuera de alcance v1** (no implementar aunque parezca fácil): iOS, registro
   público, dedup autorización/liquidación, tests de UI, IMAP, parseo con LLM,
-  ingresos, versión web, tasa de cambio automática, multi-idioma.
+  ingresos, versión web, multi-idioma. (La tasa automática del BCRD entró al
+  alcance el 2026-10-09 como tarea del Plan 3; ver `docs/ALCANCE.md` §3.)
 - **No bloquear v2**: presupuesto compartido en pareja. `budgets` y
   `transactions` se relacionan por `user_id`; una futura `budget_members` debe
   poder agregarse sin migrar datos. No diseñar nada que lo impida.
