@@ -304,6 +304,7 @@ export type Database = {
           raw_snippet: string | null
           reference: string | null
           reversed_by: string | null
+          reviewed_at: string | null
           source: Database["public"]["Enums"]["tx_source"]
           template_id: string | null
           type: Database["public"]["Enums"]["tx_type"]
@@ -328,6 +329,7 @@ export type Database = {
           raw_snippet?: string | null
           reference?: string | null
           reversed_by?: string | null
+          reviewed_at?: string | null
           source?: Database["public"]["Enums"]["tx_source"]
           template_id?: string | null
           type: Database["public"]["Enums"]["tx_type"]
@@ -352,6 +354,7 @@ export type Database = {
           raw_snippet?: string | null
           reference?: string | null
           reversed_by?: string | null
+          reviewed_at?: string | null
           source?: Database["public"]["Enums"]["tx_source"]
           template_id?: string | null
           type?: Database["public"]["Enums"]["tx_type"]
@@ -464,6 +467,10 @@ export type Database = {
           total_dop: number
           tx_count: number
         }[]
+      }
+      ingest_transactions: {
+        Args: { p_account_id: string; p_rows: Json }
+        Returns: Json
       }
       initial_sync_cursor: { Args: { p_user_id: string }; Returns: string }
       link_mail_account: {
