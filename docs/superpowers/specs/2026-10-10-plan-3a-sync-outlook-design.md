@@ -66,7 +66,7 @@ desktop applications" para clientes nativos.
 
 ### 2.4 Herramientas
 
-`bun run dev:link-outlook`: login de Microsoft en el navegador, código recibido en `http://localhost`, llamada a
+`bun run dev:link-outlook`: login de Microsoft en el navegador, código recibido en `http://localhost/callback`, llamada a
 `link-account` real (local o remoto). No guarda tokens.
 
 ## 3. Flujo de sincronización
@@ -181,7 +181,7 @@ Movimiento: sin animaciones nuevas; se reutilizan `SkewRow`, `SlamSheet`, `SkewB
 9. Remoto con aprobación del usuario: migraciones, `supabase functions deploy`, secretos, valores del cron en Vault.
 
 **Pasos del usuario:** registro en Microsoft Entra (plataforma "Mobile and desktop applications", cuentas personales y
-de trabajo, URIs `recibo://auth/microsoft` y `http://localhost`); `eas login` y la build; aprobar el paso al remoto.
+de trabajo, URIs `recibo://auth/microsoft` y `http://localhost/callback`); `eas login` y la build; aprobar el paso al remoto.
 
 **Riesgos:** límites de la búsqueda de Graph (los resuelve el spike); tiempo de las Edge Functions en el plan
 gratuito (acotado a 10 páginas por corrida); refresh tokens de Microsoft caducan tras ~90 días sin uso (el cron los

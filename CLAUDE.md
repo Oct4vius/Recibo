@@ -225,7 +225,8 @@ Detalles técnicos comunes:
 ### Reversas en `sync-mail`
 El emparejamiento vive en SQL, en `ingest_transactions` (no en TypeScript). Procesa las filas por `occurred_at`
 (compras antes que reversas con la misma marca de tiempo) y luego `message_id`; monto exacto; empareja con la compra
-más cercana dentro de las 72 h. "Marcar como revisado" pone `transactions.reviewed_at` y saca la fila de "Revisar"
+más cercana dentro de las 72 h. Funciona en las dos direcciones: una compra que llega después (otra página) busca la
+reversa `unmatched_reversal` más cercana de las 72 h siguientes, con el mismo monto exacto. "Marcar como revisado" pone `transactions.reviewed_at` y saca la fila de "Revisar"
 sin cambiar `ignored_reason` ni los totales.
 
 Caso real: compra `Aprobada $438.42` y `Reversada $434.22` en el mismo minuto,
