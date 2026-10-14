@@ -33,3 +33,6 @@ expo-env.d.ts
 
 # planes de implementación: solo locales
 docs/superpowers/plans/
+
+# spikes desechables
+.spike/
