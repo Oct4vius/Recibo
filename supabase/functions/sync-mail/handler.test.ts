@@ -1,7 +1,7 @@
 import { assertEquals } from 'jsr:@std/assert@1';
 import type { SyncAccount } from '../_shared/sync/repository.ts';
 import type { SyncOutcome } from '../_shared/sync/sync-account.ts';
-import { createSyncMailHandler } from './handler.ts';
+import { createSyncMailHandler, toSyncAccounts } from './handler.ts';
 
 const cursor = { since: '2026-09-01T04:00:00Z', next: null, maxSeen: null };
 const accounts: SyncAccount[] = [
@@ -33,4 +33,21 @@ Deno.test('one failing account does not stop the others', async () => {
       { accountId: 'b', status: 'ok', fetched: 2, parsed: 1, unparsed: 1 },
     ],
   });
+});
+
+Deno.test('a failing mark of an invalid-cursor row does not drop the valid accounts', async () => {
+  const valid = JSON.stringify(cursor);
+  const rows = [
+    { id: 'bad1', user_id: 'u1', provider: 'outlook' as const, sync_cursor: 'garbage' },
+    { id: 'a', user_id: 'u1', provider: 'outlook' as const, sync_cursor: valid },
+    { id: 'bad2', user_id: 'u2', provider: 'outlook' as const, sync_cursor: null },
+    { id: 'b', user_id: 'u2', provider: 'outlook' as const, sync_cursor: valid },
+  ];
+  const marked: string[] = [];
+  const result = await toSyncAccounts(rows, (id) => {
+    marked.push(id);
+    return id === 'bad1' ? Promise.reject(new Error('db down')) : Promise.resolve();
+  });
+  assertEquals(result.map((a) => a.id), ['a', 'b']);
+  assertEquals(marked, ['bad1', 'bad2']);
 });

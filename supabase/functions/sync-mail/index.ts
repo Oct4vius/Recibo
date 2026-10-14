@@ -1,11 +1,9 @@
 import { createServiceClient } from '../_shared/db.ts';
 import { providerFor } from '../_shared/mail/registry.ts';
-import { parseCursor } from '../_shared/mail/types.ts';
 import { parseEmail } from '../_shared/parsers/index.ts';
-import type { SyncAccount } from '../_shared/sync/repository.ts';
 import { syncAccount } from '../_shared/sync/sync-account.ts';
 import { createSupabaseRepository } from '../_shared/sync/supabase-repository.ts';
-import { createSyncMailHandler } from './handler.ts';
+import { createSyncMailHandler, toSyncAccounts } from './handler.ts';
 
 const MAX_PAGES_PER_RUN = 10;
 const db = createServiceClient();
@@ -20,13 +18,9 @@ Deno.serve(
     listActiveAccounts: async () => {
       const { data, error } = await db.from('linked_accounts').select('id, user_id, provider, sync_cursor').eq('status', 'active');
       if (error) throw new Error(error.message);
-      const accounts: SyncAccount[] = [];
-      for (const row of data) {
-        const cursor = parseCursor(row.sync_cursor);
-        if (cursor) accounts.push({ id: row.id, userId: row.user_id, provider: row.provider, cursor });
-        else await repo.markAccount(row.id, { status: 'error', lastError: 'Estado de sincronización inválido. Vuelve a vincular.', lastSyncAt: null });
-      }
-      return accounts;
+      return toSyncAccounts(data, (accountId) =>
+        repo.markAccount(accountId, { status: 'error', lastError: 'Estado de sincronización inválido. Vuelve a vincular.', lastSyncAt: null }),
+      );
     },
     syncOne: (account) => {
       const provider = providerFor(account.provider, { msClientId });
