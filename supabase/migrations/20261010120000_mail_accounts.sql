@@ -121,8 +121,8 @@ as $$
 declare
   v_secret uuid;
 begin
-  select a.vault_secret_id into v_secret from public.linked_accounts a where a.id = p_account_id;
-  if v_secret is null then
+  select a.vault_secret_id into v_secret from public.linked_accounts a where a.id = p_account_id for update;
+  if v_secret is null or not exists (select 1 from vault.secrets s where s.id = v_secret) then
     raise exception 'account has no secret' using errcode = 'P0002';
   end if;
   perform vault.update_secret(v_secret, p_token);
