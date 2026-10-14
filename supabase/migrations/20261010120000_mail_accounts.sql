@@ -1,9 +1,18 @@
 -- Cuentas de correo (Plan 3a). Vault no se expone por PostgREST: estas funciones son la única puerta,
 -- solo para service_role (Edge Functions). Los tokens nunca salen de Vault hacia la app.
 
--- pg_net fuera de public (advisor 0014). Nada lo usa todavía, así que se puede recrear.
-drop extension if exists pg_net;
-create extension if not exists pg_net with schema extensions;
+-- pg_net fuera de public (advisor 0014). Solo se recrea si vive en public (nada lo usa todavía);
+-- si ya está en extensions no se toca.
+do $$
+begin
+  if exists (select 1 from pg_extension where extname = 'pg_net' and extnamespace = 'public'::regnamespace) then
+    drop extension pg_net;
+  end if;
+  if not exists (select 1 from pg_extension where extname = 'pg_net') then
+    create extension pg_net with schema extensions;
+  end if;
+end
+$$;
 
 -- Cursor inicial: día 1 del mes anterior en la zona del perfil. Mismo formato que SyncCursor
 -- (supabase/functions/_shared/mail/types.ts).
@@ -46,19 +55,24 @@ begin
   for update;
 
   if found then
-    if v_account.vault_secret_id is not null then
+    if v_account.vault_secret_id is not null
+      and exists (select 1 from vault.secrets s where s.id = v_account.vault_secret_id) then
       perform vault.update_secret(v_account.vault_secret_id, p_refresh_token);
       v_secret := v_account.vault_secret_id;
     else
+      -- Sin secreto o con un id colgante: un secreto nuevo. Un huérfano con el mismo nombre (índice único) ya no
+      -- lo referencia nadie y se borra.
+      delete from vault.secrets s where s.name = 'mail-token-' || v_account.id::text;
       v_secret := vault.create_secret(p_refresh_token, 'mail-token-' || v_account.id::text, 'Refresh token de correo');
     end if;
+    -- El cursor solo se conserva en una cuenta activa: una revocada o en error vuelve a empezar (repara un cursor dañado).
     update public.linked_accounts
       set vault_secret_id = v_secret,
           status = 'active',
           last_error = null,
           sync_cursor = case
-            when v_account.status = 'revoked' or v_account.sync_cursor is null then public.initial_sync_cursor(p_user_id)
-            else v_account.sync_cursor
+            when v_account.status = 'active' and v_account.sync_cursor is not null then v_account.sync_cursor
+            else public.initial_sync_cursor(p_user_id)
           end
       where id = v_account.id;
     return v_account.id;

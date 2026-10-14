@@ -1,5 +1,5 @@
 begin;
-select plan(23);
+select plan(31);
 
 select has_function('public', 'ingest_transactions', 'ingest_transactions exists');
 select has_column('public', 'transactions', 'reviewed_at', 'transactions.reviewed_at exists');
@@ -132,6 +132,62 @@ select results_eq(
 select is((select reversed_by from public.transactions where message_id = '<c2>#0'),
   (select id from public.transactions where message_id = '<c3>#0'), 'the closest purchase gets paired');
 select is((select is_ignored from public.transactions where message_id = '<c1>#0'), false, 'the farther purchase still counts');
+
+-- Regresión (T3): la reversa llega en una página anterior a su compra ($search trae lo más nuevo primero)
+select results_eq(
+  $$select (r->>'unmatched')::int from (select public.ingest_transactions('aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa',
+      jsonb_build_array(pg_temp.mail_row('<r1>#0', 'card_reversal', 640.00, '2026-09-26T12:00:00-04:00', '8888'))) r) s$$,
+  $$values (1)$$,
+  'a reversal ingested before its purchase waits unmatched'
+);
+select results_eq(
+  $$select (r->>'inserted')::int, (r->>'paired')::int, (r->>'unmatched')::int from (select public.ingest_transactions('aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa',
+      jsonb_build_array(pg_temp.mail_row('<p1>#0', 'card_purchase', 640.00, '2026-09-26T11:00:00-04:00', '8888'))) r) s$$,
+  $$values (1, 1, 0)$$,
+  'regression: a purchase ingested after its reversal pairs with it'
+);
+select results_eq(
+  $$select is_ignored, ignored_reason::text, reversed_by = (select id from public.transactions where message_id = '<r1>#0')
+    from public.transactions where message_id = '<p1>#0'$$,
+  $$values (true, 'reversed'::text, true)$$,
+  'the late purchase is ignored and points at the earlier-ingested reversal'
+);
+select results_eq(
+  $$select is_ignored, ignored_reason::text, reversed_by is null from public.transactions where message_id = '<r1>#0'$$,
+  $$values (true, 'reversed'::text, true)$$,
+  'the earlier-ingested reversal is now reversed, no longer unmatched'
+);
+select results_eq(
+  $$select (r->>'paired')::int from (select public.ingest_transactions('aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa',
+      jsonb_build_array(pg_temp.mail_row('<p2>#0', 'card_purchase', 640.00, '2026-09-26T11:30:00-04:00', '8888'))) r) s$$,
+  $$values (0)$$,
+  'a reversal already paired is not paired again'
+);
+
+-- Regresión (fixtures reales) en el orden inverso: reversa 434.22 primero, compra 438.42 después
+do $$ begin perform public.ingest_transactions('aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa',
+  jsonb_build_array(pg_temp.mail_row('<n2>#0', 'card_reversal', 434.22, '2026-09-27T22:42:00-04:00', '4321'))); end $$;
+select results_eq(
+  $$select (r->>'paired')::int from (select public.ingest_transactions('aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa',
+      jsonb_build_array(pg_temp.mail_row('<n1>#0', 'card_purchase', 438.42, '2026-09-27T22:42:00-04:00', '4321'))) r) s$$,
+  $$values (0)$$,
+  'regression: an approximate amount never pairs when the reversal arrives first'
+);
+select results_eq(
+  $$select (select is_ignored from public.transactions where message_id = '<n1>#0'),
+           (select ignored_reason::text from public.transactions where message_id = '<n2>#0')$$,
+  $$values (false, 'unmatched_reversal'::text)$$,
+  'the late 438.42 purchase still counts and the 434.22 reversal still waits for review'
+);
+
+do $$ begin perform public.ingest_transactions('aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa',
+  jsonb_build_array(pg_temp.mail_row('<o2>#0', 'card_reversal', 150.00, '2026-09-28T10:00:00-04:00', '2468'))); end $$;
+select results_eq(
+  $$select (r->>'paired')::int from (select public.ingest_transactions('aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa',
+      jsonb_build_array(pg_temp.mail_row('<o1>#0', 'card_purchase', 150.00, '2026-09-28T11:00:00-04:00', '2468'))) r) s$$,
+  $$values (0)$$,
+  'a reversal that happened before the purchase is not a candidate'
+);
 
 set local role authenticated;
 set local request.jwt.claim.sub = '11111111-1111-1111-1111-111111111111';

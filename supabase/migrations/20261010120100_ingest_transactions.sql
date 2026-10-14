@@ -2,7 +2,8 @@
 alter table public.transactions add column reviewed_at timestamptz;
 
 -- Ingesta de una página de correos de una cuenta (Plan 3a), en una transacción:
--- inserta sin duplicar por (linked_account_id, message_id) y empareja reversas por monto EXACTO.
+-- inserta sin duplicar por (linked_account_id, message_id) y empareja reversas por monto EXACTO, en las dos
+-- direcciones (la reversa busca su compra y la compra busca una reversa que llegó antes).
 -- Un candado por cuenta evita que dos corridas del cron se pisen (la segunda devuelve 'skipped').
 create or replace function public.ingest_transactions(p_account_id uuid, p_rows jsonb)
 returns jsonb
@@ -15,6 +16,7 @@ declare
   r record;
   v_id uuid;
   v_purchase uuid;
+  v_reversal uuid;
   v_inserted integer := 0;
   v_duplicates integer := 0;
   v_paired integer := 0;
@@ -80,6 +82,31 @@ begin
         v_paired := v_paired + 1;
       else
         v_unmatched := v_unmatched + 1;
+      end if;
+    elsif r.type = 'card_purchase' then
+      -- Dirección inversa: $search trae lo más nuevo primero, así que la reversa pudo entrar en una página anterior.
+      -- Se busca una reversa sin emparejar de la misma tarjeta, monto EXACTO, en las 72 h siguientes a la compra.
+      v_reversal := null;
+      select t.id into v_reversal
+      from public.transactions t
+      where t.user_id = v_user
+        and t.type = 'card_reversal'
+        and t.ignored_reason = 'unmatched_reversal'
+        and t.bank_code = r.bank_code
+        and t.card_last4 = r.card_last4
+        and t.currency = r.currency
+        and t.amount = r.amount
+        and t.occurred_at >= r.occurred_at
+        and t.occurred_at <= r.occurred_at + interval '72 hours'
+        and not exists (select 1 from public.transactions p where p.reversed_by = t.id)
+      order by t.occurred_at asc, t.id asc
+      limit 1
+      for update;
+
+      if v_reversal is not null then
+        update public.transactions set ignored_reason = 'reversed' where id = v_reversal;
+        update public.transactions set is_ignored = true, ignored_reason = 'reversed', reversed_by = v_reversal where id = v_id;
+        v_paired := v_paired + 1;
       end if;
     end if;
   end loop;

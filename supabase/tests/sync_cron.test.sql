@@ -1,8 +1,9 @@
 begin;
-select plan(5);
+select plan(6);
 
 select has_function('public', 'invoke_sync_mail', 'invoke_sync_mail exists');
 select ok(not has_function_privilege('authenticated', 'public.invoke_sync_mail()', 'execute'), 'authenticated cannot trigger the sync');
+select ok(not has_function_privilege('anon', 'public.invoke_sync_mail()', 'execute'), 'anon cannot trigger the sync');
 select results_eq(
   $$select schedule, command from cron.job where jobname = 'sync-mail'$$,
   $$values ('*/15 * * * *'::text, 'select public.invoke_sync_mail()'::text)$$,

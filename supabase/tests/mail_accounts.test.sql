@@ -1,5 +1,5 @@
 begin;
-select plan(27);
+select plan(32);
 
 select is((select extnamespace::regnamespace::text from pg_extension where extname = 'pg_net'), 'extensions', 'pg_net lives in extensions');
 select has_function('public', 'initial_sync_cursor', 'initial_sync_cursor exists');
@@ -12,6 +12,8 @@ select ok(not has_function_privilege('authenticated', 'public.unlink_mail_accoun
 select ok(not has_function_privilege('authenticated', 'public.mail_account_token(uuid)', 'execute'), 'authenticated cannot read tokens');
 select ok(not has_function_privilege('authenticated', 'public.set_mail_account_token(uuid,text)', 'execute'), 'authenticated cannot write tokens');
 select ok(not has_function_privilege('anon', 'public.mail_account_token(uuid)', 'execute'), 'anon cannot read tokens');
+select ok(not has_function_privilege('anon', 'public.initial_sync_cursor(uuid)', 'execute'), 'anon cannot build cursors');
+select ok(not has_function_privilege('authenticated', 'public.initial_sync_cursor(uuid)', 'execute'), 'authenticated cannot build cursors');
 
 insert into auth.users (id, email) values ('11111111-1111-1111-1111-111111111111', 'owner@example.com');
 insert into auth.users (id, email) values ('22222222-2222-2222-2222-222222222222', 'other@example.com');
@@ -85,10 +87,35 @@ select results_eq(
   'a reactivated account is active, has the new token and a reset cursor'
 );
 
+-- Regresión: volver a vincular una cuenta en error repara un cursor dañado
+update public.linked_accounts set status = 'error', last_error = 'La sesión de Outlook expiró. Vuelve a vincular.', sync_cursor = 'garbage'
+  where id = (select id from acct);
+do $$ begin perform public.link_mail_account('11111111-1111-1111-1111-111111111111', 'outlook', 'owner@outlook.example', 'rt-4b'); end $$;
+select results_eq(
+  $$select status::text, last_error is null, sync_cursor = public.initial_sync_cursor('11111111-1111-1111-1111-111111111111')
+    from public.linked_accounts where id = (select id from acct)$$,
+  $$values ('active'::text, true, true)$$,
+  'regression: relinking an account in error resets its cursor'
+);
+
 update public.linked_accounts set vault_secret_id = gen_random_uuid() where id = (select id from acct);
 select throws_ok(
   $$select public.set_mail_account_token((select id from acct), 'rt-5')$$,
   'P0002', 'account has no secret', 'rotating fails when the Vault secret no longer exists'
+);
+
+-- Regresión: un vault_secret_id colgante (el secreto ya no existe) se repara al volver a vincular
+select lives_ok(
+  $$select public.link_mail_account('11111111-1111-1111-1111-111111111111', 'outlook', 'owner@outlook.example', 'rt-6')$$,
+  'regression: relinking with a dangling vault_secret_id does not fail'
+);
+select results_eq(
+  $$select public.mail_account_token(a.id),
+           exists (select 1 from vault.secrets s where s.id = a.vault_secret_id),
+           (select count(*)::int from vault.secrets s where s.name = 'mail-token-' || a.id::text)
+    from public.linked_accounts a where a.id = (select id from acct)$$,
+  $$values ('rt-6'::text, true, 1)$$,
+  'regression: the relinked token is readable from a single live secret'
 );
 
 select * from finish();
