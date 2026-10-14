@@ -55,19 +55,21 @@ el plan gratuito de Supabase.
 - Vincular una o varias cuentas Gmail y/o Outlook.
 - Flujo OAuth con PKCE desde la app (`expo-auth-session`). La app recibe solo el
   código de autorización y lo envía a la Edge Function `link-account`, que lo
-  intercambia por tokens usando el client secret y guarda el refresh token en
+  intercambia por tokens (Microsoft: cliente público + PKCE, sin client secret) y guarda el refresh token en
   **Supabase Vault**. El celular nunca almacena tokens de correo.
 - Scopes mínimos: `gmail.readonly` (Google) y `Mail.Read` + `offline_access`
   (Microsoft).
 - Pantalla de cuentas vinculadas: estado del último sync, último error,
-  desvincular (revoca token y borra el secreto).
+  desvincular (borra el secreto de Vault y marca la cuenta `revoked`; Microsoft no permite revocar el token de
+  una app en cuentas personales, así que la app indica account.live.com/consent).
 
 ### 3.3 Sync de correos (backend)
 - `pg_cron` cada 15 minutos invoca vía `pg_net` la Edge Function `sync-mail`.
 - Por cada cuenta vinculada activa:
   1. Refrescar access token desde Vault.
   2. Pedir solo correos nuevos de remitentes bancarios conocidos, usando el
-     cursor guardado (Gmail: `historyId`; Outlook: delta link).
+     cursor de fecha + filtro por remitente bancario (ids inmutables en Outlook), guardado como JSON en
+     `linked_accounts.sync_cursor`.
   3. Pasar cada correo por el parser del banco correspondiente.
   4. `upsert` de la transacción con `(linked_account_id, message_id)` como clave única
      (`UNIQUE` plano). Idempotente:
@@ -195,8 +197,9 @@ supabase/
       parsers/          # parsers por banco + fixtures + tests
       mail/             # clientes Gmail / Graph
     link-account/
+    unlink-account/
     sync-mail/
-    send-push/
+    send-push/          # llega en 4c
   seed.sql              # solo datos de desarrollo local; las categorías por defecto salen de una migración
 tests/
   unit/                 # Vitest (app)

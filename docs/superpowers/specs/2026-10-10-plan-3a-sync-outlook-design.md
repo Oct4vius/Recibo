@@ -56,7 +56,7 @@ desktop applications" para clientes nativos.
 2. **`transactions.reviewed_at timestamptz`** (null por defecto). El usuario la puede actualizar (política existente).
 3. **`ingest_transactions(p_account_id uuid, p_rows jsonb)`** — §3.2. Solo `service_role`.
 4. **Cron:** `pg_cron` cada 15 min llama a `sync-mail` con `pg_net`. URL y clave se leen de Vault: ninguna migración
-   contiene la clave (repo público). `seed.sql` pone los valores locales; los del remoto los pone el usuario a mano.
+   contiene la clave (repo público). En local no se configura el cron (el sync se dispara con `bun run dev:sync`); los valores del remoto los pone el usuario a mano.
 
 ### 2.3 App
 
@@ -201,3 +201,14 @@ Ya integrados en las secciones de arriba:
    `skipped` (§3.2).
 6. Ruta `app/auth/microsoft.tsx` para el retorno del login (§5).
 7. APK de prueba (`preview` de EAS) en el 3a para los otros dos usuarios (§5).
+
+### Decisiones durante la ejecución
+
+8. Las funciones de Vault y vinculación (`initial_sync_cursor`, `link_mail_account`, `unlink_mail_account`,
+   `mail_account_token`, `set_mail_account_token`) viven en `public`, no en un esquema privado: `supabase.rpc` solo
+   alcanza esquemas expuestos. La protección es `EXECUTE` solo para `service_role`; pgTAP falla si `anon` o
+   `authenticated` lo reciben. `set_mail_account_token` lanza P0002 si falta el secreto de Vault.
+9. El cron local no se siembra: `seed.sql` no pone valores de Vault y `invoke_sync_mail()` devuelve null sin
+   `sync_mail_url`/`sync_mail_secret`; en local el sync corre con `bun run dev:sync` (reemplaza la frase de §2.2.4).
+10. La ruta `skipped` del candado de `ingest_transactions` no tiene prueba pgTAP (requiere dos sesiones); la cubren el
+    diseño y los tests de `sync-account`.
