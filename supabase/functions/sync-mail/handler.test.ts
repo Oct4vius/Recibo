@@ -1,0 +1,36 @@
+import { assertEquals } from 'jsr:@std/assert@1';
+import type { SyncAccount } from '../_shared/sync/repository.ts';
+import type { SyncOutcome } from '../_shared/sync/sync-account.ts';
+import { createSyncMailHandler } from './handler.ts';
+
+const cursor = { since: '2026-09-01T04:00:00Z', next: null, maxSeen: null };
+const accounts: SyncAccount[] = [
+  { id: 'a', userId: 'u1', provider: 'outlook', cursor },
+  { id: 'b', userId: 'u2', provider: 'outlook', cursor },
+];
+const req = (token: string) => new Request('http://x/sync-mail', { method: 'POST', headers: { Authorization: `Bearer ${token}` } });
+
+Deno.test('only the cron secret can trigger a sync', async () => {
+  const handler = createSyncMailHandler({ secret: 's3cret', listActiveAccounts: () => Promise.resolve(accounts), syncOne: () => Promise.reject(new Error('unreachable')) });
+  assertEquals((await handler(req('wrong'))).status, 401);
+});
+
+Deno.test('one failing account does not stop the others', async () => {
+  const handler = createSyncMailHandler({
+    secret: 's3cret',
+    listActiveAccounts: () => Promise.resolve(accounts),
+    syncOne: (account) =>
+      account.id === 'a'
+        ? Promise.reject(new Error('boom'))
+        : Promise.resolve<SyncOutcome>({ status: 'ok', fetched: 2, parsed: 1, unparsed: 1, pages: 1 }),
+  });
+  const response = await handler(req('s3cret'));
+  assertEquals(response.status, 200);
+  assertEquals(await response.json(), {
+    accounts: 2,
+    outcomes: [
+      { accountId: 'a', status: 'error', fetched: 0, parsed: 0, unparsed: 0 },
+      { accountId: 'b', status: 'ok', fetched: 2, parsed: 1, unparsed: 1 },
+    ],
+  });
+});
