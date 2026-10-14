@@ -31,14 +31,15 @@ export function createSupabaseRepository(db: SupabaseClient<Database>): SyncRepo
       fail(error);
     },
     async advanceCursor(accountId, cursor) {
-      const { error } = await db.from('linked_accounts').update({ sync_cursor: JSON.stringify(cursor) }).eq('id', accountId);
+      const { error } = await db.from('linked_accounts').update({ sync_cursor: JSON.stringify(cursor) }).eq('id', accountId).neq('status', 'revoked');
       fail(error);
     },
     async markAccount(accountId, state) {
       const { error } = await db
         .from('linked_accounts')
         .update({ status: state.status, last_error: state.lastError, ...(state.lastSyncAt ? { last_sync_at: state.lastSyncAt } : {}) })
-        .eq('id', accountId);
+        .eq('id', accountId)
+        .neq('status', 'revoked');
       fail(error);
     },
     async logSync(log) {

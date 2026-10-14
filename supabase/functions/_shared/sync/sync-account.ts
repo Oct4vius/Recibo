@@ -34,7 +34,11 @@ export async function syncAccount(account: SyncAccount, deps: SyncDeps): Promise
     if (!stored) throw new MailAuthError('no token');
     const tokens = await provider.refreshToken(stored);
     // Microsoft rota el refresh token: se guarda antes de traer nada.
-    if (tokens.refreshToken !== stored) await repo.saveToken(account.id, tokens.refreshToken);
+    if (tokens.refreshToken !== stored) {
+      await repo.saveToken(account.id, tokens.refreshToken);
+      // El token guardado ahora es el de esta corrida: el chequeo de solapamiento solo debe detectar a otra corrida.
+      stored = tokens.refreshToken;
+    }
 
     let cursor = account.cursor;
     let hasMore = true;

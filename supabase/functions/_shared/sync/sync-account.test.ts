@@ -118,3 +118,32 @@ Deno.test('a transient provider error keeps the account active and the cursor in
   assertEquals(calls.some((c) => c.startsWith('mark:')), false);
   assertEquals(cursors, []);
 });
+
+Deno.test('regression — a rejected session after this run\'s own token rotation still marks the account', async () => {
+  const { repo, calls, logs } = fakeRepo();
+  let saved = 'rt-old';
+  repo.readToken = () => Promise.resolve(saved);
+  repo.saveToken = (_id, token) => {
+    saved = token;
+    return Promise.resolve();
+  };
+  const provider: MailProvider = {
+    refreshToken: () => Promise.resolve({ accessToken: 'at', refreshToken: 'rt-new' }),
+    fetchNew: () => Promise.reject(new MailAuthError('graph 401')),
+  };
+  const outcome = await syncAccount(account, { provider, repo, parse, maxPages: 10, now });
+  assertEquals(outcome.status, 'auth_error');
+  assertEquals(calls.includes('mark:error:kept'), true);
+  assertEquals(logs[0].error, EXPIRED_SESSION);
+});
+
+Deno.test('a failed saveToken stops the run before any fetch', async () => {
+  const { repo, calls, logs, cursors } = fakeRepo();
+  repo.saveToken = () => Promise.reject(new Error('vault down'));
+  const provider = fakeProvider([{ emails: [email('a')], cursor: cursor0, hasMore: false }], () => Promise.resolve({ accessToken: 'at', refreshToken: 'rt-new' }), calls);
+  const outcome = await syncAccount(account, { provider, repo, parse, maxPages: 10, now });
+  assertEquals(outcome.status, 'error');
+  assertEquals(calls.includes('fetch'), false);
+  assertEquals(cursors, []);
+  assertEquals(logs[0].error, 'vault down');
+});
