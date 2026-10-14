@@ -102,13 +102,13 @@ export async function setIgnored(id: string, ignored: boolean): Promise<void> {
   if (error) throw error;
 }
 
-/** Solo borra gastos manuales (la política RLS ya lo impide para los de correo). */
 /** Saca una reversa sin emparejar de "Revisar" sin cambiar si cuenta. */
 export async function markReviewed(id: string): Promise<void> {
   const { error } = await supabase.from('transactions').update({ reviewed_at: new Date().toISOString() }).eq('id', id);
   if (error) throw error;
 }
 
+/** Solo borra gastos manuales (la política RLS ya lo impide para los de correo). */
 export async function deleteExpense(id: string): Promise<void> {
   const { error } = await supabase.from('transactions').delete().eq('id', id).eq('source', 'manual');
   if (error) throw error;

@@ -14,6 +14,8 @@ export function syncedAgo(iso: string, now: Date): string {
 export function accountStatusText(account: LinkedAccount, now: Date): string {
   switch (account.status) {
     case 'active':
+      // Una corrida fallida deja la cuenta activa (se reintenta) con el aviso en last_error.
+      if (account.lastError) return `Activa · ${account.lastError}`;
       return account.lastSyncAt ? `Activa · sincronizada ${syncedAgo(account.lastSyncAt, now)}` : 'Esperando la primera sincronización';
     case 'error':
       return `Error · ${account.lastError ?? 'Vuelve a vincular la cuenta.'}`;

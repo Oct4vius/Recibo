@@ -24,4 +24,10 @@ describe('accountStatusText', () => {
     );
     expect(accountStatusText({ ...base, status: 'revoked' }, now)).toBe('Desvinculada');
   });
+
+  it('shows the last sync failure of an active account before the sync time', () => {
+    const failed = 'No se pudo sincronizar. Se reintentará en la próxima corrida.';
+    expect(accountStatusText({ ...base, lastError: failed }, now)).toBe(`Activa · ${failed}`);
+    expect(accountStatusText({ ...base, lastError: failed, lastSyncAt: '2026-10-10T11:54:00Z' }, now)).toBe(`Activa · ${failed}`);
+  });
 });
