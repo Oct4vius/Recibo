@@ -34,7 +34,6 @@ bun run db:reset                   # aplica migraciones + seed.sql en local
 bun run db:test                    # pgTAP (supabase/tests/*.test.sql)
 bun run check:db                   # db:reset + db:test — obligatorio si tocaste supabase/migrations
 bun run db:types                   # regenera supabase/functions/_shared/database.types.ts
-# Desde Plan 3: supabase functions serve
 bun run functions:serve            # Edge Functions locales con supabase/functions/.env (plantilla .env.example)
 bun run dev:link-outlook [--target local|remote]  # vincula una cuenta Outlook desde la terminal (dev)
 bun run dev:sync [--target local|remote]          # dispara sync-mail a mano (en local no hay cron)

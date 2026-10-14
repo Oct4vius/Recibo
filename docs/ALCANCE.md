@@ -64,22 +64,23 @@ el plan gratuito de Supabase.
   una app en cuentas personales, así que la app indica account.live.com/consent).
 
 ### 3.3 Sync de correos (backend)
-- `pg_cron` cada 15 minutos invoca vía `pg_net` la Edge Function `sync-mail`.
+- `pg_cron` cada 15 minutos invoca vía `pg_net` la Edge Function `sync-mail`
+  con `Authorization: Bearer <SYNC_MAIL_SECRET>`.
 - Por cada cuenta vinculada activa:
   1. Refrescar access token desde Vault.
   2. Pedir solo correos nuevos de remitentes bancarios conocidos, usando el
      cursor de fecha + filtro por remitente bancario (ids inmutables en Outlook), guardado como JSON en
      `linked_accounts.sync_cursor`.
   3. Pasar cada correo por el parser del banco correspondiente.
-  4. `upsert` de la transacción con `(linked_account_id, message_id)` como clave única
-     (`UNIQUE` plano). Idempotente:
+  4. Guardar las transacciones solo con `ingest_transactions` (SQL), con
+     `(linked_account_id, message_id)` como clave única (`UNIQUE` plano). Idempotente:
      reintentar nunca duplica.
   5. Correos de banco conocido sin plantilla que matchee → tabla
      `unparsed_emails` (asunto + fragmento) para escribir la plantilla después.
      **Nunca se adivina un monto.**
   6. Registrar resultado en `sync_logs`.
-- Al terminar, evaluar presupuestos y enviar push si se cruzó un umbral aún no
-  notificado.
+- La evaluación de presupuestos y el push por umbral cruzado aún no notificado
+  **no** forman parte de `sync-mail` en el 3a: llegan en el 4c.
 - La única deduplicación en v1 es por `message_id`. La dedup de autorización +
   liquidación queda **diferida** hasta que los correos reales muestren que
   algún banco envía dos correos por la misma compra.
