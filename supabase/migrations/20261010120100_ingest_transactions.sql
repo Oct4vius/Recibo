@@ -32,10 +32,10 @@ begin
   for r in
     select *
     from jsonb_to_recordset(p_rows) as x(
-      message_id text, bank_code public.bank_code, type public.tx_type, amount numeric, currency public.currency_code,
+      message_id text, bank_code public.bank_code, type public.tx_type, amount numeric(14,2), currency public.currency_code,
       merchant text, occurred_at timestamptz, card_last4 text, reference text, counterparty_last4 text, template_id text
     )
-    order by x.occurred_at, x.message_id
+    order by x.occurred_at, (x.type = 'card_reversal'), x.message_id
   loop
     v_id := null;
     insert into public.transactions as t (

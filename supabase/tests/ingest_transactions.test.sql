@@ -1,5 +1,5 @@
 begin;
-select plan(18);
+select plan(23);
 
 select has_function('public', 'ingest_transactions', 'ingest_transactions exists');
 select has_column('public', 'transactions', 'reviewed_at', 'transactions.reviewed_at exists');
@@ -104,6 +104,34 @@ select throws_ok(
   $$select public.ingest_transactions('bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb', '[]'::jsonb)$$,
   'P0002', null, 'a revoked account cannot ingest'
 );
+
+-- Regresión: misma hora (BHD reporta por minuto), la reversa ordena primero por message_id
+select results_eq(
+  $$select (r->>'paired')::int from (select public.ingest_transactions('aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa',
+      jsonb_build_array(pg_temp.mail_row('<a1>#0', 'card_reversal', 777.77, '2026-09-24T11:00:00-04:00', '5555'),
+                        pg_temp.mail_row('<z1>#0', 'card_purchase', 777.77, '2026-09-24T11:00:00-04:00', '5555'))) r) s$$,
+  $$values (1)$$,
+  'regression: a reversal in the same minute pairs even when its id sorts first'
+);
+select is(
+  (select reversed_by from public.transactions where message_id = '<z1>#0'),
+  (select id from public.transactions where message_id = '<a1>#0'),
+  'the same-minute purchase points at its reversal'
+);
+
+-- La compra más cercana gana
+do $$ begin perform public.ingest_transactions('aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa',
+  jsonb_build_array(pg_temp.mail_row('<c1>#0', 'card_purchase', 333.33, '2026-09-25T08:00:00-04:00', '6666'),
+                    pg_temp.mail_row('<c2>#0', 'card_purchase', 333.33, '2026-09-25T09:30:00-04:00', '6666'))); end $$;
+select results_eq(
+  $$select (r->>'paired')::int from (select public.ingest_transactions('aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa',
+      jsonb_build_array(pg_temp.mail_row('<c3>#0', 'card_reversal', 333.33, '2026-09-25T10:00:00-04:00', '6666'))) r) s$$,
+  $$values (1)$$,
+  'one reversal pairs once with two eligible purchases'
+);
+select is((select reversed_by from public.transactions where message_id = '<c2>#0'),
+  (select id from public.transactions where message_id = '<c3>#0'), 'the closest purchase gets paired');
+select is((select is_ignored from public.transactions where message_id = '<c1>#0'), false, 'the farther purchase still counts');
 
 set local role authenticated;
 set local request.jwt.claim.sub = '11111111-1111-1111-1111-111111111111';
