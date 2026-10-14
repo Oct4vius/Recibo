@@ -465,6 +465,17 @@ export type Database = {
           tx_count: number
         }[]
       }
+      initial_sync_cursor: { Args: { p_user_id: string }; Returns: string }
+      link_mail_account: {
+        Args: {
+          p_email: string
+          p_provider: Database["public"]["Enums"]["mail_provider"]
+          p_refresh_token: string
+          p_user_id: string
+        }
+        Returns: string
+      }
+      mail_account_token: { Args: { p_account_id: string }; Returns: string }
       match_category: {
         Args: {
           p_counterparty_last4: string
@@ -484,6 +495,14 @@ export type Database = {
           applied_count: number
           rule_id: string
         }[]
+      }
+      set_mail_account_token: {
+        Args: { p_account_id: string; p_token: string }
+        Returns: undefined
+      }
+      unlink_mail_account: {
+        Args: { p_account_id: string; p_user_id: string }
+        Returns: boolean
       }
     }
     Enums: {
