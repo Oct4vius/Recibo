@@ -17,7 +17,10 @@
     "db:test": "supabase test db",
     "db:types": "supabase gen types --lang typescript --local --schema public > supabase/functions/_shared/database.types.ts",
     "check:db": "bun run db:reset && bun run db:test",
-    "verify:bundle": "expo export --platform android --output-dir .expo-export-check && node -e \"require('fs').rmSync('.expo-export-check',{recursive:true,force:true})\""
+    "verify:bundle": "expo export --platform android --output-dir .expo-export-check && node -e \"require('fs').rmSync('.expo-export-check',{recursive:true,force:true})\"",
+    "functions:serve": "supabase functions serve --env-file supabase/functions/.env",
+    "dev:link-outlook": "bun scripts/dev-link-outlook.ts",
+    "dev:sync": "bun scripts/dev-sync.ts"
   },
   "devDependencies": {
     "@types/aes-js": "^3.1.4",
