@@ -24,7 +24,17 @@ Deno.test('one failing account does not stop the others', async () => {
         ? Promise.reject(new Error('boom'))
         : Promise.resolve<SyncOutcome>({ status: 'ok', fetched: 2, parsed: 1, unparsed: 1, pages: 1 }),
   });
-  const response = await handler(req('s3cret'));
+  const logged: unknown[][] = [];
+  const original = console.error;
+  console.error = (...args: unknown[]) => void logged.push(args);
+  let response: Response;
+  try {
+    response = await handler(req('s3cret'));
+  } finally {
+    console.error = original;
+  }
+  // Solo un texto fijo: ni el id de la cuenta ni el mensaje del error.
+  assertEquals(logged, [['sync-mail: an account sync failed unexpectedly']]);
   assertEquals(response.status, 200);
   assertEquals(await response.json(), {
     accounts: 2,

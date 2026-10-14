@@ -20,6 +20,8 @@ export function createSyncMailHandler(deps: SyncMailDeps): (request: Request) =>
       try {
         outcome = await deps.syncOne(account);
       } catch {
+        // Texto fijo: ni ids ni el mensaje del error (puede traer datos de la cuenta).
+        console.error('sync-mail: an account sync failed unexpectedly');
         outcome = { status: 'error', fetched: 0, parsed: 0, unparsed: 0, pages: 0 };
       }
       outcomes.push({ accountId: account.id, status: outcome.status, fetched: outcome.fetched, parsed: outcome.parsed, unparsed: outcome.unparsed });

@@ -14,3 +14,7 @@ Deno.test('parseCursor — rejects null, garbage and cursors without since', () 
   assertEquals(parseCursor('not json'), null);
   assertEquals(parseCursor('{"next":null}'), null);
 });
+
+Deno.test('regression — parseCursor rejects a since that is not a date', () => {
+  assertEquals(parseCursor('{"since":"garbage","next":null,"maxSeen":null}'), null);
+});

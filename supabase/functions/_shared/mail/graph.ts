@@ -72,7 +72,13 @@ export function createGraphProvider(config: {
       if (cursor.next) return fetchNew(accessToken, { since: cursor.since, next: null, maxSeen: null });
       throw new Error(`graph ${response.status}`);
     }
-    const json = (await response.json()) as { value?: GraphMessage[]; '@odata.nextLink'?: string };
+    let json: { value?: GraphMessage[]; '@odata.nextLink'?: string };
+    try {
+      json = await response.json();
+    } catch {
+      // Un 200 con cuerpo no JSON (proxy, respuesta cortada) se reintenta en la próxima corrida.
+      throw new MailTransientError('graph invalid body');
+    }
     const emails = (json.value ?? []).map(toRawEmail);
     const nextLink = json['@odata.nextLink'] ?? null;
     return { emails, cursor: nextCursor(cursor, emails, nextLink), hasMore: nextLink !== null };

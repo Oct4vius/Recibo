@@ -5,6 +5,7 @@ import { toIngestRows, toUnparsed, type IngestRow, type UnparsedEmail } from './
 
 export const EXPIRED_SESSION = 'La sesión de Outlook expiró. Vuelve a vincular.';
 export const TRANSIENT_ERROR = 'Error temporal del proveedor de correo.';
+export const SYNC_FAILED = 'No se pudo sincronizar. Se reintentará en la próxima corrida.';
 
 export interface SyncDeps {
   provider: MailProvider;
@@ -84,7 +85,9 @@ export async function syncAccount(account: SyncAccount, deps: SyncDeps): Promise
       error = TRANSIENT_ERROR;
     } else {
       outcome.status = 'error';
+      // El texto crudo solo va a sync_logs; la cuenta muestra un aviso fijo y sigue activa para reintentar.
       error = err instanceof Error ? err.message : 'unknown error';
+      await repo.markAccount(account.id, { status: 'active', lastError: SYNC_FAILED, lastSyncAt: null });
     }
   }
   await repo.logSync({

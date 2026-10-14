@@ -40,6 +40,7 @@ export interface UnparsedEmail {
   received_at: string;
 }
 
+/** En puntos de código, igual que `length()` de Postgres en el CHECK de `unparsed_emails.snippet`. */
 export const SNIPPET_LENGTH = 500;
 
 export function toUnparsed(email: RawEmail, bankCode: BankCode): UnparsedEmail {
@@ -47,7 +48,8 @@ export function toUnparsed(email: RawEmail, bankCode: BankCode): UnparsedEmail {
     message_id: email.messageId,
     bank_code: bankCode,
     subject: email.subject,
-    snippet: email.text.slice(0, SNIPPET_LENGTH),
+    // Por puntos de código: un emoji partido deja un surrogate suelto que Postgres rechaza en jsonb.
+    snippet: Array.from(email.text).slice(0, SNIPPET_LENGTH).join(''),
     received_at: email.receivedAt,
   };
 }

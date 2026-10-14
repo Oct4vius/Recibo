@@ -24,9 +24,15 @@ function graphFetch(responses: { status: number; body?: unknown }[], seen: { url
 
 Deno.test('firstPageUrl — searches bank senders since the cursor minus the overlap', () => {
   const url = new URL(firstPageUrl(['bhd.com.do'], cursor));
-  assertEquals(url.searchParams.get('$search'), '"(from:bhd.com.do) AND received>=2026-09-01"');
+  // 04:00Z − 10 min = 03:50Z del 1; la KQL arranca un día antes (zona del buzón).
+  assertEquals(url.searchParams.get('$search'), '"(from:bhd.com.do) AND received>=2026-08-31"');
   assertEquals(url.searchParams.get('$top'), '50');
   assertStringIncludes(url.searchParams.get('$select') ?? '', 'body');
+});
+
+Deno.test('regression — firstPageUrl keeps the evening of the previous local day', () => {
+  const url = new URL(firstPageUrl(['bhd.com.do'], { since: '2026-09-17T01:00:00Z', next: null, maxSeen: null }));
+  assertEquals(url.searchParams.get('$search'), '"(from:bhd.com.do) AND received>=2026-09-16"');
 });
 
 Deno.test('toRawEmail — maps a Graph message and converts the HTML body to text', () => {
@@ -79,4 +85,10 @@ Deno.test('fetchNew — 401 is auth, 429 and 5xx are transient', async () => {
   await assertRejects(() => make(401).fetchNew('at', cursor), MailAuthError);
   await assertRejects(() => make(429).fetchNew('at', cursor), MailTransientError);
   await assertRejects(() => make(503).fetchNew('at', cursor), MailTransientError);
+});
+
+Deno.test('regression — a 200 whose body is not JSON is transient, not a generic error', async () => {
+  const fetchImpl = (() => Promise.resolve(new Response('<html>gateway</html>', { status: 200 }))) as typeof fetch;
+  const provider = createGraphProvider({ clientId: 'c', domains: ['bhd.com.do'], fetchImpl });
+  await assertRejects(() => provider.fetchNew('at', cursor), MailTransientError);
 });

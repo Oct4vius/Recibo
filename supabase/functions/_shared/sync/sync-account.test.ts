@@ -2,7 +2,7 @@ import { assertEquals } from 'jsr:@std/assert@1';
 import type { ParseResult, RawEmail } from '../parsers/index.ts';
 import { MailAuthError, MailTransientError, type MailProvider, type Page, type SyncCursor } from '../mail/types.ts';
 import type { IngestResult, SyncAccount, SyncLog, SyncRepository } from './repository.ts';
-import { EXPIRED_SESSION, syncAccount } from './sync-account.ts';
+import { EXPIRED_SESSION, SYNC_FAILED, syncAccount } from './sync-account.ts';
 
 const cursor0: SyncCursor = { since: '2026-09-01T04:00:00Z', next: null, maxSeen: null };
 const account: SyncAccount = { id: 'acc', userId: 'u', provider: 'outlook', cursor: cursor0 };
@@ -16,16 +16,17 @@ function fakeRepo(ingestStatus: IngestResult['status'] = 'ok') {
   const calls: string[] = [];
   const logs: SyncLog[] = [];
   const cursors: SyncCursor[] = [];
+  const marks: Parameters<SyncRepository['markAccount']>[1][] = [];
   const repo: SyncRepository = {
     readToken: () => (calls.push('readToken'), Promise.resolve('rt-old')),
     saveToken: (_id, token) => (calls.push(`saveToken:${token}`), Promise.resolve()),
     ingest: (_id, rows) => (calls.push(`ingest:${rows.length}`), Promise.resolve({ status: ingestStatus, inserted: rows.length, duplicates: 0, paired: 0, unmatched: 0 })),
     saveUnparsed: (_a, emails) => (calls.push(`unparsed:${emails.length}`), Promise.resolve()),
     advanceCursor: (_id, cursor) => (cursors.push(cursor), Promise.resolve()),
-    markAccount: (_id, state) => (calls.push(`mark:${state.status}:${state.lastSyncAt ? 'synced' : 'kept'}`), Promise.resolve()),
+    markAccount: (_id, state) => (marks.push(state), calls.push(`mark:${state.status}:${state.lastSyncAt ? 'synced' : 'kept'}`), Promise.resolve()),
     logSync: (log) => (logs.push(log), Promise.resolve()),
   };
-  return { repo, calls, logs, cursors };
+  return { repo, calls, logs, cursors, marks };
 }
 
 function fakeProvider(pages: Page[], refresh: () => Promise<{ accessToken: string; refreshToken: string }>, calls?: string[]): MailProvider {
@@ -138,7 +139,7 @@ Deno.test('regression — a rejected session after this run\'s own token rotatio
 });
 
 Deno.test('a failed saveToken stops the run before any fetch', async () => {
-  const { repo, calls, logs, cursors } = fakeRepo();
+  const { repo, calls, logs, cursors, marks } = fakeRepo();
   repo.saveToken = () => Promise.reject(new Error('vault down'));
   const provider = fakeProvider([{ emails: [email('a')], cursor: cursor0, hasMore: false }], () => Promise.resolve({ accessToken: 'at', refreshToken: 'rt-new' }), calls);
   const outcome = await syncAccount(account, { provider, repo, parse, maxPages: 10, now });
@@ -146,4 +147,16 @@ Deno.test('a failed saveToken stops the run before any fetch', async () => {
   assertEquals(calls.includes('fetch'), false);
   assertEquals(cursors, []);
   assertEquals(logs[0].error, 'vault down');
+  assertEquals(marks, [{ status: 'active', lastError: SYNC_FAILED, lastSyncAt: null }]);
+});
+
+Deno.test('regression — a generic error shows on the account, keeps it active and keeps last_sync_at', async () => {
+  const { repo, logs, marks } = fakeRepo();
+  repo.ingest = () => Promise.reject(new Error('duplicate key value violates unique constraint'));
+  const provider = fakeProvider([{ emails: [email('a')], cursor: cursor0, hasMore: false }], () => Promise.resolve({ accessToken: 'at', refreshToken: 'rt-old' }));
+  const outcome = await syncAccount(account, { provider, repo, parse, maxPages: 10, now });
+  assertEquals(outcome.status, 'error');
+  assertEquals(marks, [{ status: 'active', lastError: SYNC_FAILED, lastSyncAt: null }]);
+  // El texto crudo solo queda en sync_logs, nunca en la cuenta que ve el usuario.
+  assertEquals(logs[0].error, 'duplicate key value violates unique constraint');
 });

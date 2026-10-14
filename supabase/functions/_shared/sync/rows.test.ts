@@ -21,3 +21,11 @@ Deno.test('toUnparsed — keeps the subject and the first 500 characters', () =>
   assertEquals(unparsed.snippet.length, 500);
   assertEquals(unparsed.subject, 'Asunto');
 });
+
+Deno.test('regression — the snippet never splits an emoji (UTF-16 surrogate pair)', () => {
+  const text = `${'a'.repeat(499)}😀${'b'.repeat(50)}`;
+  const { snippet } = toUnparsed({ ...email, text }, 'bhd');
+  assertEquals(Array.from(snippet).length, 500);
+  assertEquals(snippet.endsWith('😀'), true);
+  assertEquals(snippet.isWellFormed(), true);
+});

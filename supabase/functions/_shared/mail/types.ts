@@ -42,7 +42,7 @@ export function parseCursor(raw: string | null): SyncCursor | null {
   if (!raw) return null;
   try {
     const value = JSON.parse(raw) as Partial<SyncCursor>;
-    if (typeof value.since !== 'string') return null;
+    if (typeof value.since !== 'string' || Number.isNaN(Date.parse(value.since))) return null;
     return {
       since: value.since,
       next: typeof value.next === 'string' ? value.next : null,
