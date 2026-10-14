@@ -1,6 +1,7 @@
 import { supabase } from '@/lib/supabase';
 import type { Currency } from '@/types/database';
 import { periodRange, type TransactionFilters } from './filters';
+import { keysetFilter, type PageCursor } from './keyset';
 import { toListItem, type TransactionListItem, type TransactionRow } from './mapping';
 
 export const PAGE_SIZE = 50;
@@ -9,30 +10,31 @@ const LIST_COLUMNS = 'id, amount, currency, merchant, occurred_at, category_id, 
 
 export interface TransactionPage {
   items: TransactionListItem[];
-  count: number;
+  /** Total que cumple los filtros; solo en la primera página (null en las siguientes). */
+  count: number | null;
 }
 
 export async function fetchTransactionPage(
   filters: TransactionFilters,
-  page: number,
+  cursor: PageCursor | null,
   now: Date,
   timeZone: string,
 ): Promise<TransactionPage> {
   const range = periodRange(filters.period, now, timeZone);
-  let query = supabase.from('transactions').select(LIST_COLUMNS, { count: 'exact' });
+  let query = supabase.from('transactions').select(LIST_COLUMNS, cursor ? undefined : { count: 'exact' });
   if (range.from) query = query.gte('occurred_at', range.from);
   if (range.to) query = query.lt('occurred_at', range.to);
   if (filters.categoryId) query = query.eq('category_id', filters.categoryId);
   if (filters.currency) query = query.eq('currency', filters.currency);
   if (filters.bankCode) query = query.eq('bank_code', filters.bankCode);
-  if (filters.review) query = query.eq('ignored_reason', 'unmatched_reversal');
-  const from = page * PAGE_SIZE;
+  if (filters.review) query = query.eq('ignored_reason', 'unmatched_reversal').is('reviewed_at', null);
+  if (cursor) query = query.or(keysetFilter(cursor));
   const { data, error, count } = await query
     .order('occurred_at', { ascending: false })
     .order('id', { ascending: false })
-    .range(from, from + PAGE_SIZE - 1);
+    .limit(PAGE_SIZE);
   if (error) throw error;
-  return { items: (data as TransactionRow[]).map(toListItem), count: count ?? 0 };
+  return { items: (data as TransactionRow[]).map(toListItem), count: cursor ? null : (count ?? 0) };
 }
 
 export async function fetchRecentTransactions(limit: number): Promise<TransactionListItem[]> {

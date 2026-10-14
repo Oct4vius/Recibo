@@ -15,6 +15,7 @@ import {
 } from './api';
 import type { TransactionFilters } from './filters';
 import { invalidateSpending } from './invalidate';
+import { nextPageCursor, type PageCursor } from './keyset';
 import { transactionKeys } from './keys';
 import type { TransactionListItem } from './mapping';
 
@@ -25,8 +26,8 @@ export function useTransactionList(filters: TransactionFilters) {
   return useInfiniteQuery({
     queryKey: transactionKeys.list(filters, timeZone),
     queryFn: ({ pageParam }) => fetchTransactionPage(filters, pageParam, new Date(), timeZone),
-    initialPageParam: 0,
-    getNextPageParam: (last, pages) => (pages.length * PAGE_SIZE < last.count ? pages.length : undefined),
+    initialPageParam: null as PageCursor | null,
+    getNextPageParam: (last) => nextPageCursor(last.items, PAGE_SIZE) ?? undefined,
   });
 }
 
