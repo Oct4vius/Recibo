@@ -7,6 +7,7 @@ import {
   deleteExpense,
   fetchRecentTransactions,
   fetchTransactionPage,
+  markReviewed,
   PAGE_SIZE,
   setIgnored,
   updateExpense,
@@ -56,6 +57,14 @@ export function useSetIgnored() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: ({ id, ignored }: { id: string; ignored: boolean }) => setIgnored(id, ignored),
+    onSuccess: () => invalidateSpending(queryClient),
+  });
+}
+
+export function useMarkReviewed() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => markReviewed(id),
     onSuccess: () => invalidateSpending(queryClient),
   });
 }

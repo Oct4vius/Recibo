@@ -13,6 +13,8 @@ const row = {
   bank_code: 'bhd' as const,
   type: 'transfer_out' as const,
   counterparty_last4: '0099',
+  ignored_reason: null,
+  reviewed_at: null,
   categories: { name: 'Transporte' },
 };
 
@@ -33,6 +35,8 @@ describe('toListItem', () => {
       bankCode: 'bhd',
       type: 'transfer_out',
       counterpartyLast4: '0099',
+      ignoredReason: null,
+      reviewedAt: null,
     });
   });
   it('handles a row without category', () => {
@@ -42,7 +46,7 @@ describe('toListItem', () => {
 
 describe('presentRow', () => {
   it('uses merchant and category', () => {
-    expect(presentRow(item())).toEqual({ title: 'UBER*RIDES', subtitle: 'Transporte', badge: undefined, muted: false });
+    expect(presentRow(item())).toEqual({ title: 'UBER*RIDES', subtitle: 'Transporte', badge: undefined, muted: false, amount: 275.72 });
   });
   it('falls back when merchant or category are missing', () => {
     expect(presentRow(item({ merchant: '  ', categoryName: null }))).toMatchObject({
@@ -55,5 +59,18 @@ describe('presentRow', () => {
   });
   it('mutes ignored transactions and says so (takes precedence over Manual)', () => {
     expect(presentRow(item({ source: 'manual', isIgnored: true }))).toMatchObject({ badge: 'Ignorado', muted: true });
+  });
+});
+
+describe('presentRow — reversals', () => {
+  it('marks a reversal and shows its amount as negative', () => {
+    const reversal = presentRow({
+      id: 'r', amount: 434.22, currency: 'DOP', merchant: null, occurredAt: '2026-09-17T02:42:00Z', categoryId: null, categoryName: null,
+      isIgnored: true, source: 'email', bankCode: 'bhd', type: 'card_reversal', counterpartyLast4: null,
+      ignoredReason: 'unmatched_reversal', reviewedAt: null,
+    });
+    expect(reversal.badge).toBe('Reversa');
+    expect(reversal.amount).toBe(-434.22);
+    expect(reversal.muted).toBe(true);
   });
 });

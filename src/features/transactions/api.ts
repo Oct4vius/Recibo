@@ -6,7 +6,7 @@ import { toListItem, type TransactionListItem, type TransactionRow } from './map
 
 export const PAGE_SIZE = 50;
 
-const LIST_COLUMNS = 'id, amount, currency, merchant, occurred_at, category_id, is_ignored, source, bank_code, type, counterparty_last4, categories(name)';
+const LIST_COLUMNS = 'id, amount, currency, merchant, occurred_at, category_id, is_ignored, source, bank_code, type, counterparty_last4, ignored_reason, reviewed_at, categories(name)';
 
 export interface TransactionPage {
   items: TransactionListItem[];
@@ -103,6 +103,12 @@ export async function setIgnored(id: string, ignored: boolean): Promise<void> {
 }
 
 /** Solo borra gastos manuales (la política RLS ya lo impide para los de correo). */
+/** Saca una reversa sin emparejar de "Revisar" sin cambiar si cuenta. */
+export async function markReviewed(id: string): Promise<void> {
+  const { error } = await supabase.from('transactions').update({ reviewed_at: new Date().toISOString() }).eq('id', id);
+  if (error) throw error;
+}
+
 export async function deleteExpense(id: string): Promise<void> {
   const { error } = await supabase.from('transactions').delete().eq('id', id).eq('source', 'manual');
   if (error) throw error;

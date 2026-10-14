@@ -9,6 +9,7 @@ export type BudgetPeriod = Enums<'budget_period'>;
 export type TxSource = Enums<'tx_source'>;
 export type TxType = Enums<'tx_type'>;
 export type AccountStatus = Enums<'account_status'>;
+export type IgnoredReason = Enums<'ignored_reason'>;
 export type MailProviderName = Enums<'mail_provider'>;
 
 export const CURRENCIES: readonly Currency[] = Constants.public.Enums.currency_code;
