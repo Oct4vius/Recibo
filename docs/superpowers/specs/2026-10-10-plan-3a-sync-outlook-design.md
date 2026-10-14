@@ -86,6 +86,8 @@ desktop applications" para clientes nativos.
 5. `sync_logs` (`fetched`, `parsed`, `unparsed`, `error`) y `linked_accounts` (`last_sync_at`, `status = 'active'`,
    `last_error = null`).
 6. Error transitorio de Graph (429/5xx/red): se registra, el cursor no avanza, la cuenta sigue `active`.
+7. Cualquier otro error: el texto crudo va solo a `sync_logs.error`; la cuenta sigue `active` (se reintenta) con
+   `last_error = 'No se pudo sincronizar. Se reintentará en la próxima corrida.'` y sin tocar `last_sync_at`.
 
 ### 3.2 `ingest_transactions` (una transacción)
 1. `pg_try_advisory_xact_lock` por cuenta; si no se obtiene → devuelve `skipped` sin tocar nada. El candado dura la
@@ -101,6 +103,10 @@ desktop applications" para clientes nativos.
      `ignored_reason = 'reversed'`, `reversed_by = <reversa>`.
    - No encontrada: reversa `is_ignored = true`, `ignored_reason = 'unmatched_reversal'`.
    - Nunca por monto aproximado.
+   Dirección inversa (la reversa pudo llegar en una página anterior): por cada compra insertada, busca y bloquea la
+   reversa `unmatched_reversal` del mismo usuario, `bank_code`, `card_last4`, `currency` y monto exacto, en las 72 h
+   siguientes a la compra y sin compra que la apunte; la más cercana. Encontrada: reversa `ignored_reason = 'reversed'`;
+   compra `is_ignored = true`, `ignored_reason = 'reversed'`, `reversed_by = <reversa>`.
 5. Devuelve `{ inserted, duplicates, paired, unmatched }` (o `skipped`).
 
 ## 4. Vincular, desvincular y seguridad
@@ -110,7 +116,8 @@ desktop applications" para clientes nativos.
 La app envía `{ provider: 'outlook', code, codeVerifier, redirectUri }` a `link-account` con su sesión.
 **Regla dura: la app nunca canjea el código ni recibe tokens.** `link-account` canjea como cliente público (sin
 secreto, misma `redirect_uri`), guarda el refresh token en Vault y crea la cuenta (o reactiva una `revoked`,
-reemplazando su secreto) con el cursor inicial. Errores de Microsoft (cancelado, consentimiento denegado, código
+reemplazando su secreto) con el cursor inicial. Volver a vincular conserva el cursor solo de una cuenta `active`; una
+`revoked` o en `error` vuelve al cursor inicial, y un secreto de Vault que ya no existe se crea de nuevo. Errores de Microsoft (cancelado, consentimiento denegado, código
 vencido) → mensajes en español. Nada de códigos ni tokens en errores ni logs.
 
 **Desvincular:** confirmación "¿Desvincular <correo>? Los movimientos ya importados se quedan."; verifica que la
@@ -131,7 +138,8 @@ Vault solo para service role. El `state` de `expo-auth-session` protege contra C
 
 **Cuentas vinculadas (`/accounts`, con `BackButton`):** en Ajustes, la fila "Gmail y Outlook · Próximamente" pasa a
 "Cuentas vinculadas". Cada cuenta es un `SkewRow`: correo y estado ("Activa · sincronizada hace 6 min",
-"Esperando la primera sincronización", "Error · <last_error>", "Desvinculada"). Tocar una activa abre un panel con
+"Activa · <last_error>" tras una corrida fallida, "Esperando la primera sincronización", "Error · <last_error>",
+"Desvinculada"). Tocar una activa abre un panel con
 "Desvincular" y la nota de account.live.com. Botón "Vincular Outlook" y fila atenuada "Gmail · próximamente". Texto
 relativo ("hace 6 min", "hace 2 h", "ayer") en una función pura con tests. TanStack Query con `accountKeys`;
 vincular/desvincular invalidan; tirar para recargar.
