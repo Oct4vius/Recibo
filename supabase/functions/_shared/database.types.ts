@@ -473,6 +473,7 @@ export type Database = {
         Returns: Json
       }
       initial_sync_cursor: { Args: { p_user_id: string }; Returns: string }
+      invoke_sync_mail: { Args: never; Returns: number }
       link_mail_account: {
         Args: {
           p_email: string
