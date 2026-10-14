@@ -28,6 +28,8 @@ export function RootStack() {
           <Stack.Screen name="(tabs)" />
           <Stack.Screen name="categories" />
           <Stack.Screen name="rules" />
+          <Stack.Screen name="accounts" />
+          <Stack.Screen name="auth/microsoft" />
         </Stack.Protected>
         <Stack.Protected guard={signedIn && __DEV__}>
           <Stack.Screen name="dev/gallery" />

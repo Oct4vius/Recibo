@@ -17,7 +17,8 @@
       "expo-secure-store",
       ["expo-splash-screen", { "backgroundColor": "#000000" }],
       "@react-native-community/datetimepicker",
-      "expo-localization"
+      "expo-localization",
+      "expo-web-browser"
     ]
   }
 }
