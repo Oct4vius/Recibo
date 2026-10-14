@@ -1,6 +1,6 @@
 # Plan 3a — Sincronización de correos con Outlook
 
-**Fecha:** 2026-10-10 · **Estado:** aprobado en brainstorming (secciones 1–5), pendiente de revisión del spec
+**Fecha:** 2026-10-10 · **Estado:** aprobado; cambios del plan aprobados el 2026-10-13 (§7)
 **Rama:** `dev` · **Depende de:** Plan 1 (`parseEmail`), Plan 2 (esquema, RLS, Vault), Plan 4b-2 (trigger de reglas
 `transactions_assign_category`, `profiles.timezone`). **Retoma:** el brainstorming del Plan 3 del 2026-10-05.
 
@@ -41,11 +41,11 @@ desktop applications" para clientes nativos.
 | `_shared/mail/sender-query.ts` | Construye la consulta por remitente desde `senderDomains` del registro de parsers y de `candidates.ts` (una sola fuente). La forma (KQL `$search` o `$filter`) la fija el spike (§6, paso 1) |
 | `_shared/mail/registry.ts` | `provider` de `linked_accounts` → `MailProvider`. Gmail (3b) se registra, no se ramifica |
 | `_shared/sync/sync-account.ts` | Orquesta una cuenta (§3). Recibe `MailProvider` y `SyncRepository` por parámetro; sin SQL ni regex |
-| `_shared/sync/repository.ts` | `SyncRepository`: `readToken`, `saveToken`, `ingest`, `saveUnparsed`, `advanceCursor`, `markAccount`, `logSync` |
+| `_shared/sync/repository.ts` | `SyncRepository` (reemplaza al `TransactionRepository` de CLAUDE.md): `readToken`, `saveToken`, `ingest`, `saveUnparsed`, `advanceCursor`, `markAccount`, `logSync` |
 | `_shared/sync/supabase-repository.ts` | Implementación con el service client y las RPC |
-| `link-account/` | Sesión del usuario requerida. Canjea el código (§4), guarda el refresh token en Vault, crea o reactiva la cuenta |
-| `unlink-account/` | Sesión del usuario requerida. Borra el secreto, `status = 'revoked'`, sin cursor |
-| `sync-mail/` | Solo service role. Recorre cuentas `active`; un error por cuenta no aborta las demás |
+| `link-account/` | Sesión del usuario requerida. Canjea el código (§4) y llama a `link_mail_account` (SQL: Vault + cuenta en una transacción) |
+| `unlink-account/` | Sesión del usuario requerida. Llama a `unlink_mail_account` (SQL: borra el secreto, `status = 'revoked'`, sin cursor) |
+| `sync-mail/` | Solo con `Authorization: Bearer <SYNC_MAIL_SECRET>` (§4). Recorre cuentas `active`; un error por cuenta no aborta las demás |
 
 `send-push` no se crea en 3a (llega en 4c dentro de la evaluación de presupuestos).
 
@@ -75,9 +75,11 @@ desktop applications" para clientes nativos.
 1. Lee el refresh token de Vault y lo renueva; **guarda el nuevo en Vault antes de seguir** (Microsoft lo rota).
    `invalid_grant` → `status = 'error'`, `last_error = 'La sesión de Outlook expiró. Vuelve a vincular.'`, se salta.
 2. Pide correos de remitentes bancarios recibidos desde `cursor − margen` (unos minutos), en orden ascendente, páginas
-   de 50, **máximo 10 páginas por corrida**; si hay más, sigue la próxima corrida. El cursor es la fecha de recepción
-   del último correo procesado (formato propio del proveedor, opaco para la app). Cursor inicial: día 1 del mes anterior
-   en la zona del perfil.
+   de 50, **máximo 10 páginas por corrida**; si hay más, sigue la próxima corrida. El cursor es un JSON común a todos
+   los proveedores, `SyncCursor { since, next, maxSeen }` en `linked_accounts.sync_cursor`: `since` = fecha desde la que
+   se consulta; `next` = página pendiente de la consulta en curso; `maxSeen` = correo más nuevo visto en ella, que pasa
+   a `since` al terminarla. Si `next` vence, se repite desde `since` (la ingesta no duplica). Cursor inicial (SQL,
+   `initial_sync_cursor`): día 1 del mes anterior en la zona del perfil.
 3. `parseEmail()` por correo: `parsed` → filas con `message_id = <id inmutable>#<rowIndex>`; `unparsed` →
    `unparsed_emails` (asunto + primeros 500 caracteres, sin duplicar); `unknown_sender` → se descarta.
 4. Una llamada a `ingest_transactions` por página; el cursor avanza después de cada página exitosa.
@@ -86,7 +88,10 @@ desktop applications" para clientes nativos.
 6. Error transitorio de Graph (429/5xx/red): se registra, el cursor no avanza, la cuenta sigue `active`.
 
 ### 3.2 `ingest_transactions` (una transacción)
-1. `pg_try_advisory_xact_lock` por cuenta; si no se obtiene → devuelve `skipped` sin tocar nada.
+1. `pg_try_advisory_xact_lock` por cuenta; si no se obtiene → devuelve `skipped` sin tocar nada. El candado dura la
+   transacción, o sea **una página** (inserción + emparejamiento), no la corrida entera. Para corridas solapadas,
+   `syncAccount` vuelve a leer el token ante un rechazo de Microsoft: si cambió desde el inicio de la corrida, otra
+   corrida lo rotó y esta termina `skipped` sin marcar la cuenta en error.
 2. Procesa las filas en orden de `occurred_at` (compra y reversa en la misma página se emparejan).
 3. `insert … on conflict (linked_account_id, message_id) do nothing`: lo ya importado o editado nunca se pisa. El
    trigger `transactions_assign_category` categoriza lo nuevo.
@@ -113,8 +118,12 @@ cuenta sea del usuario, borra el secreto, `status = 'revoked'`, `vault_secret_id
 no permite revocar un token de una app en cuentas personales: la pantalla indica "Para quitar también el permiso en
 Microsoft: account.live.com/consent". CLAUDE.md se corrige ("revocar token en el proveedor" no aplica a Outlook).
 
-**Seguridad:** `link-account`/`unlink-account` exigen sesión; `sync-mail` solo service role (el plan verifica si el
-proyecto usa la `service_role` JWT antigua o las claves nuevas). `client_id` de Microsoft es público:
+**Seguridad:** `link-account`/`unlink-account` exigen sesión; `sync-mail` exige `Authorization: Bearer
+<SYNC_MAIL_SECRET>`, un secreto propio en `supabase secrets` y en Vault (para el cron), en vez de la clave
+`service_role` (cuyo formato depende del tipo de claves del proyecto y que salta RLS). La función usa su cliente
+`service_role` por dentro; `[functions.sync-mail] verify_jwt = false` porque el gateway no valida ese secreto.
+Vincular y desvincular viven en SQL (`link_mail_account`, `unlink_mail_account`: Vault + `linked_accounts` en una
+transacción); las Edge Functions solo validan y llaman. `client_id` de Microsoft es público:
 `EXPO_PUBLIC_MS_CLIENT_ID` vía `env.ts` en la app y secreto de entorno en las funciones. Sin client secret. Funciones de
 Vault solo para service role. El `state` de `expo-auth-session` protege contra CSRF.
 
@@ -137,7 +146,12 @@ vincular/desvincular invalidan; tirar para recargar.
 
 **Build de desarrollo:** `expo-dev-client` + `eas.json`. El usuario corre `eas login` y
 `eas build --profile development --platform android` (con `!`) e instala el APK; desde entonces `bun run start` abre en
-esa build y las checklists de 3a se corren ahí, no en Expo Go.
+esa build y las checklists de 3a se corren ahí, no en Expo Go. Expo Router también recibe el deep link de retorno
+(`recibo://auth/microsoft?code=…`): la ruta `app/auth/microsoft.tsx` redirige a `/accounts` para no mostrar "ruta no
+encontrada".
+
+**APK de prueba:** perfil `preview` de EAS (APK independiente; variables públicas con `eas env`, no en el repo) para
+que los otros dos usuarios vinculen su Outlook sin la PC del desarrollador. El APK final sigue en el 4c.
 
 Movimiento: sin animaciones nuevas; se reutilizan `SkewRow`, `SlamSheet`, `SkewButton`, `BackButton`.
 
@@ -174,3 +188,16 @@ gratuito (acotado a 10 páginas por corrida); refresh tokens de Microsoft caduca
 mantiene); Supabase pausa tras 7 días sin actividad (el cron cuenta como actividad).
 
 **Fuera de 3a:** avisos push y registro de token (4c), Gmail (3b), tasa del BCRD (3c), "Sincronizar ahora".
+
+## 7. Cambios fijados por el plan (aprobados el 2026-10-13)
+
+Ya integrados en las secciones de arriba:
+
+1. `sync-mail` se autentica con `SYNC_MAIL_SECRET` propio, no con la clave `service_role` (§2.1, §4).
+2. Cursor JSON común `SyncCursor { since, next, maxSeen }`; lo crea SQL y lo avanza el proveedor; sirve para Gmail (§3.1).
+3. `SyncRepository` reemplaza a `TransactionRepository` (§2.1); CLAUDE.md se actualiza al final del 3a.
+4. Vincular/desvincular en SQL: `link_mail_account` y `unlink_mail_account` (§2.1, §4).
+5. El candado de `ingest_transactions` protege cada página; una corrida solapada que encuentra el token rotado termina
+   `skipped` (§3.2).
+6. Ruta `app/auth/microsoft.tsx` para el retorno del login (§5).
+7. APK de prueba (`preview` de EAS) en el 3a para los otros dos usuarios (§5).
