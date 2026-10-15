@@ -106,9 +106,14 @@ el plan gratuito de Supabase.
   enviada con el beneficiario como "comercio". Una transferencia a una cuenta
   propia genera el mismo correo; se excluye del gasto con la categoría
   "Transferencias propias" (ver 3.5), no en el parser.
-- **Retiros BHD:** según el usuario llegan en la misma tabla de transacciones
-  con `Tipo = Retiro`. Sin muestra real todavía; el parser lo cubre cuando
-  exista el `.eml`.
+- **Retiros BHD:** llegan en la misma tabla de transacciones con
+  `Tipo = Retiro de Efectivo` (`atm_withdrawal`).
+- **Holds BHD:** `Tipo = Reserva de Fondos (Hold)` aprobado cuenta como compra:
+  es el único aviso del gasto (suscripciones), nunca llega una "Compra" después.
+- **Pagos de servicios BHD:** asunto `Pago de Servicio e Impuestos`; se registra
+  como `transfer_out` con el proveedor como "comercio".
+- **Transferencias recibidas BHD:** son ingresos (fuera de alcance v1); se
+  ignoran sin guardarlas.
 - Monedas: DOP y USD. Se guarda la moneda original.
 - Funciones puras en TypeScript, sin APIs de Deno ni de React Native, en
   `supabase/functions/_shared/parsers/`.

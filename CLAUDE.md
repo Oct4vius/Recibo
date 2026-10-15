@@ -170,12 +170,19 @@ export interface BankParser {
   senderDomains: string[];                      // minúsculas, sin '@'
   senderAddresses: string[];                    // direcciones exactas que sync busca; vacía = no se busca
   templates: Template[];
+  ignored: IgnoredEmail[];                      // se evalúan antes que las plantillas
+}
+/** Correo conocido del banco que no es un gasto (p. ej. transferencia recibida). */
+export interface IgnoredEmail {
+  id: string;                                   // '<bank>/<name>'
+  matches(email: RawEmail): boolean;
 }
 
 // El registro (parsers/index.ts) es lo único que sync-mail importa:
 export type ParseResult =
   | { kind: 'parsed'; bankCode: BankCode; transactions: ParsedTransaction[] }
   | { kind: 'unparsed'; bankCode: BankCode }    // remitente de banco conocido o candidato, sin filas
+  | { kind: 'ignored'; bankCode: BankCode }     // correo conocido que no es gasto: se descarta sin guardar
   | { kind: 'unknown_sender' };                 // se descarta sin guardar
 export function parseEmail(email: RawEmail): ParseResult;
 ```
@@ -186,7 +193,7 @@ el correo completo cae en `unparsed_emails`. Nunca se guardan filas parciales.
 Fixtures derivadas: `parsers/<bank>/fixtures/<name>.json` con la forma exacta
 de `RawEmail` (texto ya normalizado por `htmlToText`), generadas desde
 `fixtures-raw/` con `bun run fixtures:build`.
-### BHD — dos plantillas verificadas con `.eml` reales
+### BHD — tres plantillas verificadas con `.eml` reales
 Remitente único `Alertas@bhd.com.do`. La plantilla se elige por **asunto**:
 
 **1. `bhd/transactions-table`** — asunto `BHD Notificación de Transacciones`.
@@ -199,8 +206,9 @@ es una transacción con `message_id = <messageId>#<rowIndex>`.
 Mapeo `Estado + Tipo`:
 - `Aprobada` + `Compra` → `card_purchase`.
 - `Reversada` + `Compra` → `card_reversal`, **comercio vacío** (`merchant: null`).
-- `Aprobada` + `Retiro` → `atm_withdrawal`. **Reportado por el usuario, sin
-  fixture aún**: no codificar hasta tener el `.eml`.
+- `Aprobada` + `Retiro de Efectivo` → `atm_withdrawal` (comercio tal cual, `BANCO BHD`).
+- `Aprobada` + `Reserva de Fondos (Hold)` → `card_purchase`: el hold es el único aviso de
+  ese gasto (suscripciones); en ~6 semanas de correo real nunca llegó una "Compra" después.
 - Cualquier otro valor → `parse()` devuelve `[]` → `unparsed_emails`.
 
 **2. `bhd/transfer`** — asunto `Transacciones entre productos BHD y a otros Bancos`.
@@ -215,6 +223,16 @@ confirmación`, `counterpartyLast4 = últimos 4 del producto destino`.
 Origen y destino pueden ser ambos BHD (`BCBH`): una transferencia a una cuenta
 propia también genera este correo. Se resuelve con categorías que no cuentan
 como gasto (ver Categorías), no en el parser.
+
+**3. `bhd/service-payment`** — asunto `Pago de Servicio e Impuestos`. Tabla clave-valor:
+`Monto` (`RD$ 200`, sin decimales), `Proveedor del servicio` (`ALTICE MOVIL`),
+`Número de confirmación`, `Fecha y hora de la transacción` (`04/09/2026 | 9:24 AM`:
+**fecha y hora en celdas separadas, con `|`**). → una `transfer_out` con
+`merchant = proveedor`, `reference = número de confirmación`, sin `counterpartyLast4` ni `cardLast4`.
+
+**Ignorado `bhd/transfer-in`** — mismo asunto que la plantilla 2, pero con `Producto destino`
+y **sin** `Producto origen` (transferencia recibida). Es un ingreso y v1 no los registra:
+`parseEmail` devuelve `ignored` y el correo no se guarda en ningún lado.
 
 Detalles técnicos comunes:
 - `multipart/related` o `multipart/mixed`; HTML en `quoted-printable` UTF-8.
