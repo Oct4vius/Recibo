@@ -89,10 +89,10 @@ export function parseAmount(raw: string): { amount: number; currency: Currency |
 
 /**
  * Fecha local dominicana sin zona → ISO con -04:00.
- * Acepta "16/09/2026 10:42 pm" y "16/09/2026 - 9:53 AM".
+ * Acepta "16/09/2026 10:42 pm", "16/09/2026 - 9:53 AM" y "04/09/2026 | 9:24 AM" (fecha y hora en celdas separadas).
  */
 export function parseLocalDate(raw: string): string | null {
-  const m = raw.trim().match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})\s*-?\s*(\d{1,2}):(\d{2})\s*([ap])\.?\s*m\.?$/i);
+  const m = raw.trim().match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})\s*[-|]?\s*(\d{1,2}):(\d{2})\s*([ap])\.?\s*m\.?$/i);
   if (!m) return null;
   const day = Number(m[1]);
   const month = Number(m[2]);
@@ -107,6 +107,22 @@ export function parseLocalDate(raw: string): string | null {
   const hour24 = (hour12 % 12) + (isPm ? 12 : 0);
   const pad = (n: number) => String(n).padStart(2, '0');
   return `${year}-${pad(month)}-${pad(day)}T${pad(hour24)}:${pad(minute)}:00-04:00`;
+}
+
+/**
+ * Valor de una fila clave-valor. Tolera dos formas que produce htmlToText:
+ *   "Monto: | RD$ 3,500.00"   → "RD$ 3,500.00"
+ *   "Monto:"  (valor vacío)   → ""
+ * Real HTML, tras la fusión de líneas de continuación de htmlToText, nunca deja
+ * el valor en la línea siguiente: no se adivina ahí.
+ */
+export function keyValue(lines: string[], label: RegExp): string | null {
+  const index = lines.findIndex((line) => label.test(line));
+  if (index === -1) return null;
+  const line = lines[index];
+  const pipe = line.indexOf('|');
+  if (pipe !== -1) return line.slice(pipe + 1).trim();
+  return line.replace(label, '').trim();
 }
 
 export function cleanMerchant(raw: string): string | null {

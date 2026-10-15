@@ -13,6 +13,9 @@ function mapType(status: string, kind: string): TxType | null {
   const k = kind.toLowerCase();
   if (k === 'compra' && s === 'aprobada') return 'card_purchase';
   if (k === 'compra' && s === 'reversada') return 'card_reversal';
+  // El hold es el único aviso de ese gasto (suscripciones): nunca llega una "Compra" después.
+  if (k === 'reserva de fondos (hold)' && s === 'aprobada') return 'card_purchase';
+  if (k === 'retiro de efectivo' && s === 'aprobada') return 'atm_withdrawal';
   return null;
 }
 

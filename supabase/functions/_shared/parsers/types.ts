@@ -46,6 +46,13 @@ export interface Template {
   parse(email: RawEmail): ParsedTransaction[];
 }
 
+/** Correo conocido del banco que no es un gasto (p. ej. una transferencia recibida): se descarta sin guardarlo. */
+export interface IgnoredEmail {
+  /** '<bank>/<name>' */
+  id: string;
+  matches(email: RawEmail): boolean;
+}
+
 export interface BankParser {
   code: BankCode;
   /** Dominios en minúsculas, sin '@'. Se aceptan subdominios. */
@@ -56,6 +63,8 @@ export interface BankParser {
    */
   senderAddresses: string[];
   templates: Template[];
+  /** Se evalúan antes que las plantillas (un correo ignorado puede compartir asunto con una plantilla). */
+  ignored: IgnoredEmail[];
 }
 
 /** Banco sin parser: solo se capturan sus correos en unparsed_emails. */
@@ -75,4 +84,5 @@ export interface CandidateBank {
 export type ParseResult =
   | { kind: 'parsed'; bankCode: BankCode; transactions: ParsedTransaction[] }
   | { kind: 'unparsed'; bankCode: BankCode }
+  | { kind: 'ignored'; bankCode: BankCode }
   | { kind: 'unknown_sender' };

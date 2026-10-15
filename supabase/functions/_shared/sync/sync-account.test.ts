@@ -67,6 +67,15 @@ Deno.test('ingests parsed rows, stores unparsed bank emails and advances the cur
   assertEquals(logs[0].error, null);
 });
 
+Deno.test('an ignored email is counted as fetched but neither ingested nor stored as unparsed', async () => {
+  const { repo, calls } = fakeRepo();
+  const provider = fakeProvider([{ emails: [email('a')], cursor: cursor0, hasMore: false }], () => Promise.resolve({ accessToken: 'at', refreshToken: 'rt-old' }));
+  const ignore = (): ParseResult => ({ kind: 'ignored', bankCode: 'bhd' });
+  const outcome = await syncAccount(account, { provider, repo, parse: ignore, maxPages: 10, now });
+  assertEquals(outcome, { status: 'ok', fetched: 1, parsed: 0, unparsed: 0, pages: 1 });
+  assertEquals(calls.some((c) => c.startsWith('ingest') || c.startsWith('unparsed')), false);
+});
+
 Deno.test('a run without new bank mail still records last_sync_at', async () => {
   const { repo, calls } = fakeRepo();
   const provider = fakeProvider([{ emails: [], cursor: cursor0, hasMore: false }], () => Promise.resolve({ accessToken: 'at', refreshToken: 'rt-old' }));

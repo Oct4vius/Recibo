@@ -42,6 +42,16 @@ Deno.test('parseEmail — BHD transfer → parsed with the transfer template', (
   if (result.kind === 'parsed') assertEquals(result.transactions[0].templateId, 'bhd/transfer');
 });
 
+Deno.test('parseEmail — BHD incoming transfer → ignored (income is not recorded)', () => {
+  assertEquals(parseEmail(loadFixture('bhd', 'transfer-in')), { kind: 'ignored', bankCode: 'bhd' });
+});
+
+Deno.test('parseEmail — BHD service payment → parsed with the service-payment template', () => {
+  const result = parseEmail(loadFixture('bhd', 'service-payment'));
+  assertEquals(result.kind, 'parsed');
+  if (result.kind === 'parsed') assertEquals(result.transactions[0].templateId, 'bhd/service-payment');
+});
+
 Deno.test('parseEmail — known bank, unknown subject → unparsed', () => {
   assertEquals(parseEmail({ ...EMPTY, from: 'Alertas@bhd.com.do', subject: 'Estado de cuenta' }), { kind: 'unparsed', bankCode: 'bhd' });
 });
@@ -77,6 +87,15 @@ Deno.test('contract — every registered bank and template honors the interface'
     for (const template of bank.templates) {
       assertEquals(template.id.startsWith(`${bank.code}/`), true, `${template.id} must be prefixed with ${bank.code}/`);
       assertEquals(template.parse(EMPTY), [], `${template.id} must return [] on empty input, never throw`);
+    }
+  }
+
+  for (const bank of banks) {
+    const ignoredIds = bank.ignored.map((i) => i.id);
+    assertEquals(new Set(ignoredIds).size, ignoredIds.length, `${bank.code} ignored ids must be unique`);
+    for (const rule of bank.ignored) {
+      assertEquals(rule.id.startsWith(`${bank.code}/`), true, `${rule.id} must be prefixed with ${bank.code}/`);
+      assertEquals(rule.matches(EMPTY), false, `${rule.id} must not match empty input, never throw`);
     }
   }
 

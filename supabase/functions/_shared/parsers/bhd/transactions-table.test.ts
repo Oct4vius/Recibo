@@ -132,3 +132,45 @@ Deno.test('bhd/transactions-table — missing card header still parses, without 
   const [tx] = transactionsTable.parse(email);
   assertEquals('cardLast4' in tx, false);
 });
+
+Deno.test('bhd/transactions-table — USD hold counts as a purchase (real fixture)', () => {
+  assertEquals(transactionsTable.parse(loadFixture('bhd', 'card-hold-usd')), [{
+    bankCode: 'bhd',
+    type: 'card_purchase',
+    amount: 15.16,
+    currency: 'USD',
+    merchant: 'AMAZON PRIME PMTS',
+    occurredAt: '2026-09-07T21:50:00-04:00',
+    cardLast4: '1234',
+    rowIndex: 0,
+    templateId: 'bhd/transactions-table',
+  }]);
+});
+
+Deno.test('bhd/transactions-table — DOP hold counts as a purchase (real fixture)', () => {
+  assertEquals(transactionsTable.parse(loadFixture('bhd', 'card-hold-dop')), [{
+    bankCode: 'bhd',
+    type: 'card_purchase',
+    amount: 189,
+    currency: 'DOP',
+    merchant: 'CRUNCHYROLL *DOP',
+    occurredAt: '2026-09-14T10:34:00-04:00',
+    cardLast4: '1234',
+    rowIndex: 0,
+    templateId: 'bhd/transactions-table',
+  }]);
+});
+
+Deno.test('bhd/transactions-table — cash withdrawal (real fixture)', () => {
+  assertEquals(transactionsTable.parse(loadFixture('bhd', 'atm-withdrawal')), [{
+    bankCode: 'bhd',
+    type: 'atm_withdrawal',
+    amount: 2500,
+    currency: 'DOP',
+    merchant: 'BANCO BHD',
+    occurredAt: '2026-09-17T18:11:00-04:00',
+    cardLast4: '1234',
+    rowIndex: 0,
+    templateId: 'bhd/transactions-table',
+  }]);
+});

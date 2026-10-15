@@ -1,0 +1,7 @@
+{
+  "messageId": "<16444888.32352081.1789154639430@utility-notify-component-nept-v1-8485d4cc96-9s7bs>",
+  "from": "Alertas@bhd.com.do",
+  "subject": "Pago de Servicio e Impuestos",
+  "text": "Estimado(a): JUAN PEREZ\nHas realizado exitosamente el pago de un servicio.\nLa información relacionada a esta transacción es:\nProducto origen: | DO09BCBH000000000XXXXXXX0099\nMonto: | RD$ 100\nNúmero de referencia: | 1000000000\nProveedor del servicio: | CLARO\nServicio: | 10000000000000\nDescripción:\nNúmero de confirmación: | M20-0000-1111-2222-3\nFecha y hora de la transacción: | 11/09/2026 | 3:23 PM\nTipo de transacción: | Pago de Servicio e Impuestos\nNota: Este correo electrónico es generado de manera automática por el sistema, por favor no responder a este mensaje.\nCordialmente,\nBanco BHD",
+  "receivedAt": "2026-09-11T19:23:59.000Z"
+}

@@ -1,0 +1,7 @@
+{
+  "messageId": "<323471075.30663691.1788528252874@utility-notify-component-nept-v1-8485d4cc96-q9rwp>",
+  "from": "Alertas@bhd.com.do",
+  "subject": "Pago de Servicio e Impuestos",
+  "text": "Estimado(a): JUAN PEREZ\nHas realizado exitosamente el pago de un servicio.\nLa información relacionada a esta transacción es:\nProducto origen: | DO09BCBH000000000XXXXXXX0099\nMonto: | RD$ 200\nNúmero de referencia: | 1000000000\nProveedor del servicio: | ALTICE MOVIL\nServicio: | 100000000000000\nDescripción:\nNúmero de confirmación: | M20-0000-1111-2222-3\nFecha y hora de la transacción: | 04/09/2026 | 9:24 AM\nTipo de transacción: | Pago de Servicio e Impuestos\nNota: Este correo electrónico es generado de manera automática por el sistema, por favor no responder a este mensaje.\nCordialmente,\nBanco BHD",
+  "receivedAt": "2026-09-04T13:24:12.000Z"
+}
