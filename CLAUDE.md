@@ -168,6 +168,7 @@ export interface Template {
 export interface BankParser {
   code: BankCode;
   senderDomains: string[];                      // minúsculas, sin '@'
+  senderAddresses: string[];                    // direcciones exactas que sync busca; vacía = no se busca
   templates: Template[];
 }
 
@@ -269,7 +270,8 @@ inventar un parser sin correo real.**
 **Estado de los bancos:**
 - `bhd`: parser en v1. Único correo verificado.
 - `banreservas`, `popular`, `apap`: **candidatos sin parser**. Solo se registran
-  sus dominios probables en `parsers/candidates.ts` con `status: 'candidate'`
+  sus dominios probables y, si se conoce, la dirección exacta del remitente (`senderAddresses`; sin dirección no se
+  busca; APAP: `noreply@apap.com.do` visto) en `parsers/candidates.ts` con `status: 'candidate'`
   para que sus correos caigan en `unparsed_emails` y sirvan de muestra. No
   escribir `parse()` para ellos hasta tener un correo real en `fixtures/`.
 - Fixtures transcritas de una captura de pantalla llevan sufijo
@@ -286,7 +288,7 @@ inventar un parser sin correo real.**
 3. Implementar la plantilla. Los montos dominicanos vienen como `RD$ 1,234.56`
    o `US$ 12.00`; usar `parseAmount()` de `_shared/parsers/normalize.ts`, no
    regex ad hoc.
-4. Si el banco es nuevo: agregar `senderDomains` y registrarlo en `parsers/index.ts`.
+4. Si el banco es nuevo: agregar `senderDomains` y `senderAddresses` y registrarlo en `parsers/index.ts`.
 5. Correr `bun run test:deno`.
 6. Si el banco cambió su plantilla: **agregar** fixture nueva, no editar la vieja.
    Las dos deben seguir pasando.
@@ -297,7 +299,7 @@ inventar un parser sin correo real.**
   En local `seed.sql` no configura el cron (`invoke_sync_mail()` devuelve null sin esos valores): el sync se
   dispara con `bun run dev:sync`.
 - Por cuenta (`syncAccount`): refresh token (el rotado se guarda **antes** de seguir; el chequeo de solape solo
-  salta la corrida si otra corrida cambió el token) → búsqueda por remitente bancario desde el cursor de fecha
+  salta la corrida si otra corrida cambió el token) → `$filter` por direcciones exactas (`senderAddresses`) ordenado por `receivedDateTime` ascendente desde el cursor de fecha (KQL `$search` descartado: Graph ignora ahí el id inmutable)
   (`SyncCursor` JSON `{ since, next, maxSeen }` en `linked_accounts.sync_cursor`; lo crea `initial_sync_cursor` y lo
   avanza el proveedor; margen de 10 min, máx. 10 páginas por corrida, ids inmutables de Graph) → `parseEmail` →
   `ingest_transactions` (una transacción por página: inserta sin duplicar, empareja reversas por monto exacto,

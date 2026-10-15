@@ -6,7 +6,7 @@ export const MS_AUTHORIZE_URL = 'https://login.microsoftonline.com/common/oauth2
 export const MS_TOKEN_URL = 'https://login.microsoftonline.com/common/oauth2/v2.0/token';
 export const MS_SCOPES = 'openid email offline_access Mail.Read';
 export const LOOPBACK_PORT = 53682;
-/** Microsoft ignora el puerto en URIs de localhost: se registra `http://localhost/callback`. */
+/** En cuentas personales Microsoft NO ignora el puerto: se registra `http://localhost:53682/callback` en Entra. */
 export const LOOPBACK_REDIRECT = `http://localhost:${LOOPBACK_PORT}/callback`;
 
 export function base64Url(bytes: Uint8Array): string {

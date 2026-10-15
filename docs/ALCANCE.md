@@ -122,7 +122,8 @@ el plan gratuito de Supabase.
   logo va como adjunto; se ignora.
 - **Bancos candidatos (sin muestra real):** Banreservas, Popular y APAP no
   tienen parser en v1. Se registran solo sus dominios probables de remitente
-  como *candidatos*; cualquier correo de esos dominios cae en `unparsed_emails`
+  como *candidatos* (solo las direcciones exactas conocidas se piden al buzón; los dominios solo clasifican);
+  cualquier correo de esos dominios cae en `unparsed_emails`
   con asunto y fragmento. Cuando la pareja o el amigo vinculen su correo, esas
   filas son la muestra para escribir el parser. Nunca se escribe un parser sin
   correo real.

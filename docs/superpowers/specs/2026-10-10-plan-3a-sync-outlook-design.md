@@ -13,7 +13,7 @@ la app y sus consumos de BHD aparecen solos, categorizados por sus reglas.
 | Tema | Decisión |
 |---|---|
 | Proveedor | Outlook (Microsoft Graph). Gmail en 3b: solo agrega su `MailProvider` |
-| Qué se descarga | Solo correos de remitentes bancarios (dominios del registro de parsers y de candidatos), desde un **cursor de fecha**. Nunca otros correos. Reemplaza el "delta link" de CLAUDE.md/ALCANCE |
+| Qué se descarga | Solo correos de remitentes bancarios (direcciones exactas `senderAddresses` del registro de parsers y de candidatos, no dominios), desde un **cursor de fecha**. Nunca otros correos. Reemplaza el "delta link" de CLAUDE.md/ALCANCE |
 | Id de correo | Inmutable (`Prefer: IdType="ImmutableId"`): no cambia al mover el correo de carpeta |
 | Frecuencia | `pg_cron` cada 15 min. Sin botón "Sincronizar ahora" |
 | Primera importación | Desde el día 1 del mes anterior (zona del perfil) |
@@ -26,8 +26,9 @@ la app y sus consumos de BHD aparecen solos, categorizados por sus reglas.
 
 Hechos verificados en la documentación de Microsoft (2026-10-09): el id de un mensaje cambia al moverlo salvo con el
 header de id inmutable; `/me/messages` incluye Eliminados; `$filter` + `$orderby` exige las mismas propiedades en el
-mismo orden (si no, `InefficientFilter`); páginas de 1 a 1000 con `@odata.nextLink`; las URI `http://localhost`
-ignoran el puerto; las apps con cuentas personales no admiten parámetros en la URI de retorno; plataforma "Mobile and
+mismo orden (si no, `InefficientFilter`); páginas de 1 a 1000 con `@odata.nextLink`; con cuentas personales la URI de loopback
+se registra con su puerto exacto (`http://localhost:53682/callback`); `$search` ignora el header de id inmutable
+(verificado por el spike); las apps con cuentas personales no admiten parámetros en la URI de retorno; plataforma "Mobile and
 desktop applications" para clientes nativos.
 
 ## 2. Componentes
@@ -38,7 +39,7 @@ desktop applications" para clientes nativos.
 |---|---|
 | `_shared/mail/types.ts` | `MailProvider` con solo `fetchNew(cursor)` y `refreshToken()`; `Page<RawEmail>` con el cursor siguiente |
 | `_shared/mail/graph.ts` | Proveedor Outlook: ids inmutables, cuerpo HTML → `RawEmail` (el texto lo normaliza `htmlToText`), refresh que devuelve el refresh token rotado |
-| `_shared/mail/sender-query.ts` | Construye la consulta por remitente desde `senderDomains` del registro de parsers y de `candidates.ts` (una sola fuente). La forma (KQL `$search` o `$filter`) la fija el spike (§6, paso 1) |
+| `_shared/mail/sender-query.ts` | Construye el `$filter` por remitente desde `senderAddresses` del registro de parsers y de `candidates.ts` (una sola fuente) |
 | `_shared/mail/registry.ts` | `provider` de `linked_accounts` → `MailProvider`. Gmail (3b) se registra, no se ramifica |
 | `_shared/sync/sync-account.ts` | Orquesta una cuenta (§3). Recibe `MailProvider` y `SyncRepository` por parámetro; sin SQL ni regex |
 | `_shared/sync/repository.ts` | `SyncRepository` (reemplaza al `TransactionRepository` de CLAUDE.md): `readToken`, `saveToken`, `ingest`, `saveUnparsed`, `advanceCursor`, `markAccount`, `logSync` |
@@ -66,7 +67,7 @@ desktop applications" para clientes nativos.
 
 ### 2.4 Herramientas
 
-`bun run dev:link-outlook`: login de Microsoft en el navegador, código recibido en `http://localhost/callback`, llamada a
+`bun run dev:link-outlook`: login de Microsoft en el navegador, código recibido en `http://localhost:53682/callback`, llamada a
 `link-account` real (local o remoto). No guarda tokens.
 
 ## 3. Flujo de sincronización
@@ -189,7 +190,7 @@ Movimiento: sin animaciones nuevas; se reutilizan `SkewRow`, `SlamSheet`, `SkewB
 9. Remoto con aprobación del usuario: migraciones, `supabase functions deploy`, secretos, valores del cron en Vault.
 
 **Pasos del usuario:** registro en Microsoft Entra (plataforma "Mobile and desktop applications", cuentas personales y
-de trabajo, URIs `recibo://auth/microsoft` y `http://localhost/callback`); `eas login` y la build; aprobar el paso al remoto.
+de trabajo, URIs `recibo://auth/microsoft` y `http://localhost:53682/callback`); `eas login` y la build; aprobar el paso al remoto.
 
 **Riesgos:** límites de la búsqueda de Graph (los resuelve el spike); tiempo de las Edge Functions en el plan
 gratuito (acotado a 10 páginas por corrida); refresh tokens de Microsoft caducan tras ~90 días sin uso (el cron los
@@ -220,3 +221,7 @@ Ya integrados en las secciones de arriba:
    `sync_mail_url`/`sync_mail_secret`; en local el sync corre con `bun run dev:sync` (reemplaza la frase de §2.2.4).
 10. La ruta `skipped` del candado de `ingest_transactions` no tiene prueba pgTAP (requiere dos sesiones); la cubren el
     diseño y los tests de `sync-account`.
+11. Spike (2026-10-15, buzón personal real): el KQL cubría todas las alertas pero no venía en orden ascendente y Graph
+    ignoró `IdType="ImmutableId"` en `$search` (al mover un correo cambiaba su id). `$filter` + `$orderby asc` conserva el id
+    inmutable. No existe filtro por dominio (`endswith` → 400). Direcciones buscadas: `alertas@bhd.com.do` y
+    `noreply@apap.com.do`; Junk no tenía más correo de BHD; las cuentas personales exigen registrar el puerto del loopback.
