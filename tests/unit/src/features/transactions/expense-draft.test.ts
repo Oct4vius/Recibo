@@ -27,6 +27,8 @@ const item: TransactionListItem = {
   bankCode: null,
   type: 'card_purchase',
   counterpartyLast4: null,
+  ignoredReason: null,
+  reviewedAt: null,
 };
 
 describe('emptyDraft', () => {

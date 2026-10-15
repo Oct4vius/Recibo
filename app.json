@@ -2,6 +2,7 @@
   "expo": {
     "name": "Recibo",
     "slug": "recibo",
+    "owner": "oct4vius",
     "scheme": "recibo",
     "version": "0.1.0",
     "orientation": "portrait",
@@ -9,15 +10,18 @@
     "backgroundColor": "#000000",
     "platforms": ["android"],
     "android": {
-      "package": "com.oct4vius.recibo",
-      "edgeToEdgeEnabled": true
+      "package": "com.oct4vius.recibo"
     },
     "plugins": [
       "expo-router",
       "expo-secure-store",
-      ["expo-splash-screen", { "backgroundColor": "#000000" }],
+      ["expo-splash-screen", { "backgroundColor": "#000000", "image": "./assets/splash-icon.png", "imageWidth": 200 }],
       "@react-native-community/datetimepicker",
-      "expo-localization"
-    ]
+      "expo-localization",
+      "expo-web-browser"
+    ],
+    "extra": {
+      "eas": { "projectId": "e81c1d8a-1157-4dc6-9e0c-630671969de3" }
+    }
   }
 }

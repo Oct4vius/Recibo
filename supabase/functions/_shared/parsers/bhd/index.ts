@@ -5,5 +5,6 @@ import { transfer } from './transfer.ts';
 export const bhd: BankParser = {
   code: 'bhd',
   senderDomains: ['bhd.com.do'],
+  senderAddresses: ['alertas@bhd.com.do'],
   templates: [transactionsTable, transfer],
 };

@@ -34,8 +34,12 @@ bun run db:reset                   # aplica migraciones + seed.sql en local
 bun run db:test                    # pgTAP (supabase/tests/*.test.sql)
 bun run check:db                   # db:reset + db:test — obligatorio si tocaste supabase/migrations
 bun run db:types                   # regenera supabase/functions/_shared/database.types.ts
-# Desde Plan 3: supabase functions serve
-bun run start                      # Expo (abrir con Expo Go en Android); requiere .env.local con EXPO_PUBLIC_*
+bun run functions:serve            # Edge Functions locales con supabase/functions/.env (plantilla .env.example)
+bun run dev:link-outlook [--target local|remote]  # vincula una cuenta Outlook desde la terminal (dev)
+bun run dev:sync [--target local|remote]          # dispara sync-mail a mano (en local no hay cron)
+bun run start                      # Expo; requiere .env.local con EXPO_PUBLIC_*. Desde el 3a se prueba en la build
+                                   #   de desarrollo (Expo Go ya no sirve para vincular: el retorno OAuth usa el esquema propio)
+bunx eas-cli build --profile development --platform android   # APK de desarrollo; --profile preview = APK de prueba
 bun run verify:bundle              # empaqueta Android sin dispositivo (verificación de Metro/Babel/NativeWind)
 ```
 Pins por compatibilidad (no "actualizar" a ciegas): TypeScript `~6.0` (typescript-eslint, que usa
@@ -68,11 +72,15 @@ supabase/
       database.types.ts    # generado por db:types; NO editar a mano
       parsers/             # types.ts, normalize.ts, index.ts (registro), candidates.ts,
                            #   <bank>/index.ts + <bank>/<template>.ts + <bank>/fixtures/*.json
-      mail/                # gmail.ts, graph.ts (fetch de correos, refresh de tokens)
+      mail/                # types.ts (contrato MailProvider + SyncCursor), graph.ts, microsoft-auth.ts,
+                           #   sender-query.ts, registry.ts (gmail.ts llega en 3b)
+      sync/                # sync-account.ts (orquestación), repository.ts + supabase-repository.ts, rows.ts
       db.ts                # service client
-    link-account/          # intercambia código OAuth → guarda refresh token en Vault
-    sync-mail/             # invocada por pg_cron; lee correos, parsea, upsert, alertas
-    send-push/             # envía a Expo Push Service
+      http.ts              # respuestas JSON y errores comunes de las funciones
+    link-account/          # intercambia código OAuth (PKCE) → refresh token a Vault; handler.ts + index.ts
+    unlink-account/        # desvincula (secreto de Vault borrado, status = 'revoked')
+    sync-mail/             # invocada por pg_cron; lee correos, parsea, ingesta, registra (alertas y push: 4c)
+                           #   (cada función: handler.ts testeable con dependencias inyectadas + index.ts delgado)
 tests/unit/                # Vitest para src/ (espeja la ruta)
 fixtures-raw/<bank>/       # .eml reales anonimizados, SOLO locales (gitignored); fuente de las fixtures
 docs/
@@ -80,7 +88,7 @@ docs/
 
 ## Variables de entorno
 La app solo ve variables `EXPO_PUBLIC_*` y **todas** pasan por el schema de
-`src/lib/env.ts` (zod). Nunca leer `process.env` fuera de ese archivo.
+`src/lib/env.ts` (zod; `EXPO_PUBLIC_MS_CLIENT_ID` se valida con `z.guid()`). Nunca leer `process.env` fuera de ese archivo.
 ```ts
 // CORRECTO
 import { env } from '@/lib/env';
@@ -89,9 +97,12 @@ createClient(env.EXPO_PUBLIC_SUPABASE_URL, env.EXPO_PUBLIC_SUPABASE_ANON_KEY);
 // INCORRECTO
 process.env.EXPO_PUBLIC_SUPABASE_URL   // ← NO usar directo
 ```
-Secretos (client secrets de Google/Microsoft, service role key, Expo access
-token) viven **solo** en Edge Functions vía `Deno.env.get(...)` y en
+Secretos (client secret de Google, service role key, Expo access
+token, `SYNC_MAIL_SECRET`) viven **solo** en Edge Functions vía `Deno.env.get(...)` y en
 `supabase secrets set`. Si un secreto aparece en `app/` o `src/`, es un bug.
+Las funciones del 3a usan `MS_CLIENT_ID` y `SYNC_MAIL_SECRET` (local en `supabase/functions/.env`, plantilla
+`.env.example`; gitignored). Microsoft es cliente público + PKCE: **sin** client secret. `EXPO_PUBLIC_MS_CLIENT_ID`
+es el mismo id, público.
 
 ## Seguridad — reglas duras
 - **Tokens de correo nunca tocan el dispositivo.** La app recibe solo el
@@ -109,9 +120,14 @@ token) viven **solo** en Edge Functions vía `Deno.env.get(...)` y en
   sin RLS = migración incompleta.
 - La app usa **anon key**; las Edge Functions usan **service role**. Jamás al revés.
 - Scopes OAuth mínimos y de solo lectura: `gmail.readonly`; `Mail.Read offline_access`.
-- Desvincular una cuenta = revocar token en el proveedor + `vault` secret
-  borrado + `linked_accounts.status = 'revoked'`. Las transacciones ya
-  importadas se conservan.
+- La app envía `{ code, codeVerifier, redirectUri }` a `link-account` y **nunca** canjea el código.
+- Desvincular una cuenta = `unlink_mail_account` (borra el secreto de Vault y pone
+  `linked_accounts.status = 'revoked'`). Microsoft no permite revocar el token de una app en cuentas personales:
+  la app indica revocar el acceso en account.live.com/consent. Las transacciones ya importadas se conservan.
+- Las funciones SQL de Vault y vinculación (`initial_sync_cursor`, `link_mail_account`, `unlink_mail_account`,
+  `mail_account_token`, `set_mail_account_token`) viven en `public` porque `supabase.rpc` solo alcanza esquemas
+  expuestos. La protección es `EXECUTE` solo para `service_role` (pgTAP falla si `anon`/`authenticated` lo reciben).
+  `set_mail_account_token` lanza P0002 si falta el secreto de Vault.
 
 ## Parsers de correos bancarios
 Funciones puras en `supabase/functions/_shared/parsers/`. **Sin** APIs de Deno,
@@ -152,6 +168,7 @@ export interface Template {
 export interface BankParser {
   code: BankCode;
   senderDomains: string[];                      // minúsculas, sin '@'
+  senderAddresses: string[];                    // direcciones exactas que sync busca; vacía = no se busca
   templates: Template[];
 }
 
@@ -207,6 +224,12 @@ Detalles técnicos comunes:
 - El logo llega como adjunto (`cid:img1`) y se ignora.
 
 ### Reversas en `sync-mail`
+El emparejamiento vive en SQL, en `ingest_transactions` (no en TypeScript). Procesa las filas por `occurred_at`
+(compras antes que reversas con la misma marca de tiempo) y luego `message_id`; monto exacto; empareja con la compra
+más cercana dentro de las 72 h. Funciona en las dos direcciones: una compra que llega después (otra página) busca la
+reversa `unmatched_reversal` más cercana de las 72 h siguientes, con el mismo monto exacto. "Marcar como revisado" pone `transactions.reviewed_at` y saca la fila de "Revisar"
+sin cambiar `ignored_reason` ni los totales.
+
 Caso real: compra `Aprobada $438.42` y `Reversada $434.22` en el mismo minuto,
 misma tarjeta. **Los montos no coinciden** (fixtures
 `card-purchase-approved-near-reversal.eml` y `card-purchase-reversed.eml`).
@@ -247,7 +270,8 @@ inventar un parser sin correo real.**
 **Estado de los bancos:**
 - `bhd`: parser en v1. Único correo verificado.
 - `banreservas`, `popular`, `apap`: **candidatos sin parser**. Solo se registran
-  sus dominios probables en `parsers/candidates.ts` con `status: 'candidate'`
+  sus dominios probables y, si se conoce, la dirección exacta del remitente (`senderAddresses`; sin dirección no se
+  busca; APAP: `noreply@apap.com.do` visto) en `parsers/candidates.ts` con `status: 'candidate'`
   para que sus correos caigan en `unparsed_emails` y sirvan de muestra. No
   escribir `parse()` para ellos hasta tener un correo real en `fixtures/`.
 - Fixtures transcritas de una captura de pantalla llevan sufijo
@@ -264,28 +288,33 @@ inventar un parser sin correo real.**
 3. Implementar la plantilla. Los montos dominicanos vienen como `RD$ 1,234.56`
    o `US$ 12.00`; usar `parseAmount()` de `_shared/parsers/normalize.ts`, no
    regex ad hoc.
-4. Si el banco es nuevo: agregar `senderDomains` y registrarlo en `parsers/index.ts`.
+4. Si el banco es nuevo: agregar `senderDomains` y `senderAddresses` y registrarlo en `parsers/index.ts`.
 5. Correr `bun run test:deno`.
 6. Si el banco cambió su plantilla: **agregar** fixture nueva, no editar la vieja.
    Las dos deben seguir pasando.
 
 ## Sync (`sync-mail`)
-- Disparado por `pg_cron` cada 15 min vía `pg_net` con header
-  `Authorization: Bearer <service_role>`. Rechazar cualquier otro caller.
-- Por cuenta: refresh token → fetch incremental con cursor
-  (`linked_accounts.sync_cursor`: Gmail `historyId`, Outlook `@odata.deltaLink`)
-  → parse → `upsert` en `transactions` con `onConflict: 'linked_account_id,message_id'`.
-  La clave es un `UNIQUE` plano (`transactions_account_message_key`), no un índice
-  parcial: `supabase-js` lo infiere y los gastos manuales (NULL/NULL) nunca chocan.
+- Disparado por `pg_cron` cada 15 min (`invoke_sync_mail()`; URL y secreto en Vault: `sync_mail_url`,
+  `sync_mail_secret`) con `Authorization: Bearer <SYNC_MAIL_SECRET>`. Rechazar cualquier otro caller.
+  En local `seed.sql` no configura el cron (`invoke_sync_mail()` devuelve null sin esos valores): el sync se
+  dispara con `bun run dev:sync`.
+- Por cuenta (`syncAccount`): refresh token (el rotado se guarda **antes** de seguir; el chequeo de solape solo
+  salta la corrida si otra corrida cambió el token) → `$filter` por direcciones exactas (`senderAddresses`) ordenado por `receivedDateTime` ascendente desde el cursor de fecha (KQL `$search` descartado: Graph ignora ahí el id inmutable)
+  (`SyncCursor` JSON `{ since, next, maxSeen }` en `linked_accounts.sync_cursor`; lo crea `initial_sync_cursor` y lo
+  avanza el proveedor; margen de 10 min, máx. 10 páginas por corrida, ids inmutables de Graph) → `parseEmail` →
+  `ingest_transactions` (una transacción por página: inserta sin duplicar, empareja reversas por monto exacto,
+  candado advisory por cuenta y página) → `unparsed_emails` → `sync_logs`. Primera importación: día 1 del mes anterior.
+  El adaptador nunca escribe sobre una cuenta `revoked`.
+- `transactions` se escribe solo por `ingest_transactions`; la clave es el `UNIQUE` plano
+  `transactions_account_message_key` (`linked_account_id, message_id`): los gastos manuales (NULL/NULL) nunca chocan.
 - **Idempotente siempre.** Reintentar una corrida no puede duplicar ni alterar
-  transacciones editadas por el usuario: el upsert usa `ignoreDuplicates: true`
-  y solo escribe si la fila no existe.
+  transacciones editadas por el usuario: solo se inserta si la fila no existe.
 - La única dedup en v1 es por `message_id`. **No** implementar dedup
   autorización/liquidación hasta que una fixture real lo demuestre necesario.
 - Cada corrida escribe una fila en `sync_logs` (`fetched`, `parsed`, `unparsed`,
   `error`). Un error en una cuenta **no** aborta las demás.
-- Al final evalúa presupuestos: umbrales 80 y 100 %; `budget_alerts` evita
-  re-notificar el mismo `(budget_id, period_start, threshold)`.
+- La evaluación de presupuestos (umbrales 80 y 100 %; `budget_alerts` evita re-notificar el mismo
+  `(budget_id, period_start, threshold)`) y el push (`send-push`) llegan en 4c, no en `sync-mail` del 3a.
 
 ## Supabase / Postgres — reglas
 - **Dinero**: `numeric(14,2)`, nunca `float`. Las sumas se hacen en SQL, no en JS.
@@ -296,7 +325,7 @@ inventar un parser sin correo real.**
   en el cliente. Ej.: `get_spending_summary(period, ref_date)`,
   `get_history(granularity, from, to)`.
 - **PostgREST recorta a 1000 filas** silenciosamente. Listados de
-  `transactions` siempre paginados con `.range()` + `count: 'exact'`.
+  `transactions` siempre paginados (`.range()` + `count: 'exact'`; Movimientos usa keyset, ver Convenciones de la app).
   Nunca asumir que `.select('*')` devuelve todo.
 - Tipos generados: `bun run db:types` después de cada migración →
   `supabase/functions/_shared/database.types.ts` (única fuente; la app lo
@@ -348,14 +377,14 @@ Se aplican en app, Edge Functions y SQL. Así se traducen a este proyecto:
   ramifican.
 - **L — todo parser y todo proveedor es intercambiable.** Cumplen el mismo
   contrato (`parse(RawEmail): ParsedTransaction[]`,
-  `MailProvider.fetchNew(cursor): Page<RawEmail>`) y el orquestador no sabe
+  `MailProvider.fetchNew(accessToken, cursor): Page`) y el orquestador no sabe
   cuál tiene enfrente. Un test genérico recorre todos los parsers registrados
   y valida el contrato.
 - **I — interfaces pequeñas.** `MailProvider` expone solo `fetchNew` y
-  `refreshToken`; `TransactionRepository` solo `upsertMany`, `findReversalMatch`,
-  `logSync`. Nada de pasar el cliente de Supabase entero a quien solo inserta.
-- **D — depender de abstracciones.** `sync-mail` recibe `MailProvider` y
-  `TransactionRepository` por parámetro (inyección simple en el handler); los
+  `refreshToken`; `SyncRepository` solo `readToken`, `saveToken`, `ingest`, `saveUnparsed`,
+  `advanceCursor`, `markAccount`, `logSync`. Nada de pasar el cliente de Supabase entero a quien solo inserta.
+- **D — depender de abstracciones.** `syncAccount` recibe `MailProvider` y
+  `SyncRepository` por parámetro (inyección simple en el handler); los
   tests le pasan implementaciones en memoria. Ni Gmail ni Supabase se importan
   dentro de la lógica de negocio.
 - **DRY — una sola fuente para cada regla.** Montos: `parseAmount()` y
@@ -389,6 +418,8 @@ Se aplican en app, Edge Functions y SQL. Así se traducen a este proyecto:
 - Componentes nuevos se revisan primero en la galería (`/dev/gallery`).
 - Sesión: `useSession()` / `useUserId()` de `src/features/auth/hooks.ts` (contexto de `SessionProvider`);
   nunca `supabase.auth.getSession()` dentro de pantallas. Al cerrar sesión se borra la caché de TanStack Query.
+- Movimientos pagina por `(occurred_at, id)` con `keysetFilter` (`src/features/transactions/keyset.ts`); nunca offset:
+  el sync inserta filas mientras el usuario baja.
 - Listas largas en `ListScreen` (un `FlatList` real, título como cabecera); `Screen` solo para contenido corto.
   Nunca un `FlatList` dentro de un `ScrollView`.
 - Montos que escribe el usuario: `src/features/transactions/amount-input.ts` en centavos enteros; se envían

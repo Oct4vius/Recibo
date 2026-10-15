@@ -3,6 +3,7 @@ import { z } from 'zod';
 const schema = z.object({
   EXPO_PUBLIC_SUPABASE_URL: z.url(),
   EXPO_PUBLIC_SUPABASE_ANON_KEY: z.string().min(20),
+  EXPO_PUBLIC_MS_CLIENT_ID: z.guid(),
 });
 
 export type Env = z.infer<typeof schema>;

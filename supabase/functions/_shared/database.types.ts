@@ -304,6 +304,7 @@ export type Database = {
           raw_snippet: string | null
           reference: string | null
           reversed_by: string | null
+          reviewed_at: string | null
           source: Database["public"]["Enums"]["tx_source"]
           template_id: string | null
           type: Database["public"]["Enums"]["tx_type"]
@@ -328,6 +329,7 @@ export type Database = {
           raw_snippet?: string | null
           reference?: string | null
           reversed_by?: string | null
+          reviewed_at?: string | null
           source?: Database["public"]["Enums"]["tx_source"]
           template_id?: string | null
           type: Database["public"]["Enums"]["tx_type"]
@@ -352,6 +354,7 @@ export type Database = {
           raw_snippet?: string | null
           reference?: string | null
           reversed_by?: string | null
+          reviewed_at?: string | null
           source?: Database["public"]["Enums"]["tx_source"]
           template_id?: string | null
           type?: Database["public"]["Enums"]["tx_type"]
@@ -465,6 +468,22 @@ export type Database = {
           tx_count: number
         }[]
       }
+      ingest_transactions: {
+        Args: { p_account_id: string; p_rows: Json }
+        Returns: Json
+      }
+      initial_sync_cursor: { Args: { p_user_id: string }; Returns: string }
+      invoke_sync_mail: { Args: never; Returns: number }
+      link_mail_account: {
+        Args: {
+          p_email: string
+          p_provider: Database["public"]["Enums"]["mail_provider"]
+          p_refresh_token: string
+          p_user_id: string
+        }
+        Returns: string
+      }
+      mail_account_token: { Args: { p_account_id: string }; Returns: string }
       match_category: {
         Args: {
           p_counterparty_last4: string
@@ -484,6 +503,14 @@ export type Database = {
           applied_count: number
           rule_id: string
         }[]
+      }
+      set_mail_account_token: {
+        Args: { p_account_id: string; p_token: string }
+        Returns: undefined
+      }
+      unlink_mail_account: {
+        Args: { p_account_id: string; p_user_id: string }
+        Returns: boolean
       }
     }
     Enums: {

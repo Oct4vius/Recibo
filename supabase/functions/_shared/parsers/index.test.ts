@@ -86,6 +86,22 @@ Deno.test('contract — every registered bank and template honors the interface'
   }
 });
 
+Deno.test('contract — sender addresses are lowercase, unique, resolve to their own bank, and every parser is searched', () => {
+  const all = [...banks, ...candidateBanks];
+  const addresses = all.flatMap((b) => b.senderAddresses);
+  assertEquals(new Set(addresses).size, addresses.length, 'sender addresses must not repeat across banks');
+  for (const entry of all) {
+    for (const address of entry.senderAddresses) {
+      assertEquals(address, address.toLowerCase(), 'addresses in lowercase');
+      assertEquals(/^[^@\s']+@[^@\s']+$/.test(address), true, `${address} must look like an address`);
+      const found = findBank(address);
+      const code = found?.kind === 'bank' ? found.bank.code : found?.candidate.code;
+      assertEquals(code, entry.code, `${address} must resolve to ${entry.code}`);
+    }
+  }
+  for (const bank of banks) assertNotEquals(bank.senderAddresses.length, 0, `${bank.code} needs a searched address`);
+});
+
 Deno.test('contract — every registered template has at least one real fixture that parses to a non-empty list', () => {
   for (const bank of banks) {
     const fixturesDir = new URL(`./${bank.code}/fixtures/`, import.meta.url);

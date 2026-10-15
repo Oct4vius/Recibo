@@ -16,7 +16,7 @@ export const TransactionRow = memo(function TransactionRow({ item, onPress }: Pr
       subtitle={row.subtitle}
       badge={row.badge}
       muted={row.muted}
-      amount={{ value: item.amount, currency: item.currency }}
+      amount={{ value: row.amount, currency: item.currency }}
       onPress={() => onPress(item)}
     />
   );
