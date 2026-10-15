@@ -20,8 +20,10 @@ async function main(): Promise<void> {
 
   const { verifier, challenge } = createPkce();
   const state = randomUUID();
-  console.log('Abriendo el inicio de sesión de Microsoft en el navegador…');
-  openBrowser(authorizeUrl(clientId, challenge, state));
+  const loginUrl = authorizeUrl(clientId, challenge, state);
+  // La URL no lleva secretos (el challenge es un hash del verifier); sirve si el navegador no se abre solo.
+  console.log(`Abriendo el inicio de sesión de Microsoft en el navegador… Si no se abre, abre esta URL:\n${loginUrl}`);
+  openBrowser(loginUrl);
   const code = await waitForCode(state);
 
   const response = await fetch(`${url}/functions/v1/link-account`, {
