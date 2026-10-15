@@ -2,6 +2,7 @@
   "expo": {
     "name": "Recibo",
     "slug": "recibo",
+    "owner": "oct4vius",
     "scheme": "recibo",
     "version": "0.1.0",
     "orientation": "portrait",
@@ -19,6 +20,9 @@
       "@react-native-community/datetimepicker",
       "expo-localization",
       "expo-web-browser"
-    ]
+    ],
+    "extra": {
+      "eas": { "projectId": "e81c1d8a-1157-4dc6-9e0c-630671969de3" }
+    }
   }
 }
