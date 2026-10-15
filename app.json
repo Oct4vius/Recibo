@@ -8,9 +8,15 @@
     "orientation": "portrait",
     "userInterfaceStyle": "dark",
     "backgroundColor": "#000000",
+    "icon": "./assets/icon.png",
     "platforms": ["android"],
     "android": {
-      "package": "com.oct4vius.recibo"
+      "package": "com.oct4vius.recibo",
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "monochromeImage": "./assets/adaptive-icon-monochrome.png",
+        "backgroundColor": "#000000"
+      }
     },
     "plugins": [
       "expo-router",
