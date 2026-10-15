@@ -1,7 +1,7 @@
 import { htmlToText } from '../parsers/normalize.ts';
 import type { RawEmail } from '../parsers/index.ts';
 import { refreshTokens } from './microsoft-auth.ts';
-import { bankSenderDomains, senderSearch } from './sender-query.ts';
+import { bankSenderAddresses, senderFilter } from './sender-query.ts';
 import { MailAuthError, MailTransientError, type MailProvider, type Page, type SyncCursor } from './types.ts';
 
 const GRAPH_MESSAGES = 'https://graph.microsoft.com/v1.0/me/messages';
@@ -28,10 +28,11 @@ export function toRawEmail(message: GraphMessage): RawEmail {
   };
 }
 
-export function firstPageUrl(domains: readonly string[], cursor: SyncCursor): string {
+export function firstPageUrl(addresses: readonly string[], cursor: SyncCursor): string {
   const since = new Date(Date.parse(cursor.since) - OVERLAP_MS).toISOString();
   const params = new URLSearchParams({
-    $search: `"${senderSearch(domains, since)}"`,
+    $filter: senderFilter(addresses, since),
+    $orderby: 'receivedDateTime asc',
     $select: 'id,subject,from,receivedDateTime,body',
     $top: String(PAGE_SIZE),
   });
@@ -51,14 +52,14 @@ export function nextCursor(cursor: SyncCursor, emails: readonly RawEmail[], next
 
 export function createGraphProvider(config: {
   clientId: string;
-  domains?: readonly string[];
+  addresses?: readonly string[];
   fetchImpl?: typeof fetch;
 }): MailProvider {
   const fetchImpl = config.fetchImpl ?? fetch;
-  const domains = config.domains ?? bankSenderDomains();
+  const addresses = config.addresses ?? bankSenderAddresses();
 
   async function fetchNew(accessToken: string, cursor: SyncCursor): Promise<Page> {
-    const url = cursor.next ?? firstPageUrl(domains, cursor);
+    const url = cursor.next ?? firstPageUrl(addresses, cursor);
     let response: Response;
     try {
       response = await fetchImpl(url, { headers: { Authorization: `Bearer ${accessToken}`, Prefer: 'IdType="ImmutableId"' } });

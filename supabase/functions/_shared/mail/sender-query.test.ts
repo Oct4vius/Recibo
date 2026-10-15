@@ -1,21 +1,28 @@
-import { assertEquals } from 'jsr:@std/assert@1';
-import { bankSenderDomains, senderSearch } from './sender-query.ts';
+import { assertEquals, assertThrows } from 'jsr:@std/assert@1';
+import { bankSenderAddresses, senderFilter } from './sender-query.ts';
 
-Deno.test('bankSenderDomains — every registered and candidate bank domain, once, sorted', () => {
-  const domains = bankSenderDomains();
-  assertEquals(domains.includes('bhd.com.do'), true);
-  assertEquals(domains.includes('apap.com.do'), true);
-  assertEquals(domains, [...new Set(domains)].sort());
+Deno.test('bankSenderAddresses — every searched bank address, once, sorted', () => {
+  const addresses = bankSenderAddresses();
+  assertEquals(addresses.includes('alertas@bhd.com.do'), true);
+  assertEquals(addresses.includes('noreply@apap.com.do'), true);
+  assertEquals(addresses, [...new Set(addresses)].sort());
 });
 
-Deno.test('senderSearch — KQL by sender domain since the day before the UTC date of since', () => {
+Deno.test('senderFilter — exact sender addresses since the given instant', () => {
   assertEquals(
-    senderSearch(['bhd.com.do', 'apap.com.do'], '2026-09-01T03:50:00.000Z'),
-    '(from:bhd.com.do OR from:apap.com.do) AND received>=2026-08-31',
+    senderFilter(['alertas@bhd.com.do', 'noreply@apap.com.do'], '2026-09-01T03:50:00.000Z'),
+    "receivedDateTime ge 2026-09-01T03:50:00Z and (from/emailAddress/address eq 'alertas@bhd.com.do' or from/emailAddress/address eq 'noreply@apap.com.do')",
   );
 });
 
-Deno.test('regression — the KQL day never skips evening mail when Graph reads the date in the mailbox zone', () => {
-  // 01:00Z del 17 = 21:00 del 16 en Santo Domingo: el día 16 debe seguir dentro de la búsqueda.
-  assertEquals(senderSearch(['bhd.com.do'], '2026-09-17T01:00:00Z'), '(from:bhd.com.do) AND received>=2026-09-16');
+Deno.test('senderFilter — milliseconds are truncated, never rounded up', () => {
+  assertEquals(senderFilter(['a@x.do'], '2026-09-01T03:50:00.999Z').startsWith('receivedDateTime ge 2026-09-01T03:50:00Z and'), true);
+});
+
+Deno.test('senderFilter — doubles single quotes (OData escaping)', () => {
+  assertEquals(senderFilter(["o'neil@x.do"], '2026-09-01T03:50:00Z').includes("eq 'o''neil@x.do'"), true);
+});
+
+Deno.test('senderFilter — an empty address list throws', () => {
+  assertThrows(() => senderFilter([], '2026-09-01T03:50:00Z'), Error, 'no sender addresses');
 });

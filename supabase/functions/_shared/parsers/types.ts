@@ -50,6 +50,11 @@ export interface BankParser {
   code: BankCode;
   /** Dominios en minúsculas, sin '@'. Se aceptan subdominios. */
   senderDomains: string[];
+  /**
+   * Direcciones exactas (minúsculas) que sync-mail pide al proveedor. Graph no filtra por dominio y `$search` ignora
+   * el id inmutable: solo se buscan estas. Cada una pertenece a `senderDomains`. Vacía = aún no se busca.
+   */
+  senderAddresses: string[];
   templates: Template[];
 }
 
@@ -57,6 +62,11 @@ export interface BankParser {
 export interface CandidateBank {
   code: BankCode;
   senderDomains: string[];
+  /**
+   * Direcciones exactas (minúsculas) que sync-mail pide al proveedor. Graph no filtra por dominio y `$search` ignora
+   * el id inmutable: solo se buscan estas. Cada una pertenece a `senderDomains`. Vacía = aún no se busca.
+   */
+  senderAddresses: string[];
   status: 'candidate';
   /** Por qué es candidato y qué falta. */
   note: string;
