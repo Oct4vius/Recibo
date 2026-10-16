@@ -3,7 +3,6 @@ import { MailAuthError, MailTransientError, type MailProvider } from '../mail/ty
 import type { SyncAccount, SyncRepository } from './repository.ts';
 import { toIngestRows, toUnparsed, type IngestRow, type UnparsedEmail } from './rows.ts';
 
-export const EXPIRED_SESSION = 'La sesión de Outlook expiró. Vuelve a vincular.';
 export const TRANSIENT_ERROR = 'Error temporal del proveedor de correo.';
 export const SYNC_FAILED = 'No se pudo sincronizar. Se reintentará en la próxima corrida.';
 
@@ -13,6 +12,8 @@ export interface SyncDeps {
   parse: (email: RawEmail) => ParseResult;
   maxPages: number;
   now: () => Date;
+  /** Texto de "sesión expirada" del proveedor de esta cuenta (lo da el registro). */
+  expiredSession: string;
 }
 
 export interface SyncOutcome {
@@ -78,8 +79,8 @@ export async function syncAccount(account: SyncAccount, deps: SyncDeps): Promise
       outcome.status = 'skipped';
     } else if (err instanceof MailAuthError) {
       outcome.status = 'auth_error';
-      error = EXPIRED_SESSION;
-      await repo.markAccount(account.id, { status: 'error', lastError: EXPIRED_SESSION, lastSyncAt: null });
+      error = deps.expiredSession;
+      await repo.markAccount(account.id, { status: 'error', lastError: deps.expiredSession, lastSyncAt: null });
     } else if (err instanceof MailTransientError) {
       outcome.status = 'transient_error';
       error = TRANSIENT_ERROR;
