@@ -22,6 +22,7 @@
     "dev:link-outlook": "bun scripts/dev-link-outlook.ts",
     "dev:link-gmail": "bun scripts/dev-link-gmail.ts",
     "dev:sync": "bun scripts/dev-sync.ts",
+    "dev:download-eml": "bun scripts/dev-download-eml.ts",
     "eml:anonymize": "bun scripts/anonymize-eml.ts"
   },
   "devDependencies": {
