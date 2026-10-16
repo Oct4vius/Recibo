@@ -1,5 +1,12 @@
 import { describe, expect, it } from 'vitest';
-import { conversionAccessibilityText, conversionText, type DopEquivalent, formatRate, rateDateLabel } from '@/features/rates/text';
+import {
+  conversionAccessibilityText,
+  conversionText,
+  type DopEquivalent,
+  formatRate,
+  latestRateText,
+  rateDateLabel,
+} from '@/features/rates/text';
 
 const bcrd: DopEquivalent = { amountDop: 896.26, rate: 59.12, rateDate: '2026-09-07', origin: 'bcrd' };
 const manual: DopEquivalent = { amountDop: 900, rate: 60, rateDate: null, origin: 'manual' };
@@ -23,5 +30,14 @@ describe('rate text', () => {
   });
   it('conversionAccessibilityText reads the amount in words', () => {
     expect(conversionAccessibilityText(bcrd)).toBe('aproximadamente 896.26 pesos, tasa BCRD del 7 sep: 59.12');
+  });
+});
+
+describe('latestRateText', () => {
+  it('shows the latest BCRD rate and its date', () => {
+    expect(latestRateText({ date: '2026-09-07', sell: 59.12 })).toBe('Última tasa BCRD: 59.12 (7 sep).');
+  });
+  it('says the fallback is in use when there is no BCRD rate yet', () => {
+    expect(latestRateText(null)).toBe('Aún no hay tasas del BCRD: se usa la de respaldo.');
   });
 });

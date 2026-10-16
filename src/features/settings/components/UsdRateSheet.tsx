@@ -9,7 +9,7 @@ interface Props {
 
 export function UsdRateSheet({ visible, rate, onClose }: Props) {
   return (
-    <SlamSheet visible={visible} onClose={onClose} title="TASA DEL DÓLAR">
+    <SlamSheet visible={visible} onClose={onClose} title="TASA DE RESPALDO">
       <UsdRateForm rate={rate} onDone={onClose} />
     </SlamSheet>
   );

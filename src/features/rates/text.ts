@@ -1,6 +1,7 @@
 import { approxAccessibilityLabel, formatApprox } from '@/lib/money';
 import { monthAbbreviation, parseIsoDate } from '@/lib/dates';
 import type { UsdRateOrigin } from '@/types/database';
+import type { LatestUsdRate } from './api';
 
 /** Equivalente en pesos de un gasto en USD con la tasa que usó la base de datos. */
 export interface DopEquivalent {
@@ -36,4 +37,10 @@ export function conversionText(eq: DopEquivalent): string {
 
 export function conversionAccessibilityText(eq: DopEquivalent): string {
   return `${approxAccessibilityLabel(eq.amountDop, 'DOP')}, ${rateClause(eq)}`;
+}
+
+/** Línea informativa de Ajustes con la última tasa del BCRD guardada. */
+export function latestRateText(latest: LatestUsdRate | null): string {
+  if (!latest) return 'Aún no hay tasas del BCRD: se usa la de respaldo.';
+  return `Última tasa BCRD: ${formatRate(latest.sell)} (${rateDateLabel(latest.date)}).`;
 }
