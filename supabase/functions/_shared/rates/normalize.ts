@@ -6,7 +6,10 @@ const RATE_TEXT = /^\d{1,3}([.,]\d{1,4})?$/;
 export function parseRate(raw: string | number): number | null {
   let value: number;
   if (typeof raw === 'number') {
-    value = Math.round(raw * 10_000) / 10_000;
+    // Una celda numérica solo vale con a lo sumo 4 decimales reales (el ruido de coma flotante se tolera): si no, falla.
+    const scaled = raw * 10_000;
+    if (!Number.isFinite(scaled) || Math.abs(scaled - Math.round(scaled)) >= 1e-6) return null;
+    value = Math.round(scaled) / 10_000;
   } else {
     const text = raw.trim();
     if (!RATE_TEXT.test(text)) return null;

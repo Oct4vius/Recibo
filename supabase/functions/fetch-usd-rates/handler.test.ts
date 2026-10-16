@@ -92,7 +92,7 @@ Deno.test('a source failure saves nothing and keeps the stored rates', async () 
   assertEquals(await result.json(), { error: 'Fuente de tasas no disponible' });
   assertEquals(saved, []);
   assertEquals(Object.fromEntries(store), { '2026-09-11': 59.4 });
-  assertEquals(logged, [['fetch-usd-rates: the rate source failed']]);
+  assertEquals(logged, [['fetch-usd-rates: the rate source failed', 'maintenance page']]);
 });
 
 Deno.test('a database failure answers 500 with a fixed log line', async () => {
@@ -113,4 +113,12 @@ Deno.test('a failing window lookup also answers 500 and never calls the source',
   assertEquals(result.status, 500);
   assertEquals(logged, [['fetch-usd-rates: the database call failed']]);
   assertEquals(calls, []);
+});
+
+Deno.test('an unexpected source error is logged without its message', async () => {
+  const { repo } = fakeRepo({ from: '2026-10-01', to: '2026-10-15' });
+  const { source } = fakeSource(new Error('token abc in message'));
+  const { result, logged } = await captureErrors(() => createFetchUsdRatesHandler({ secret: 's3cret', source, repo })(req('s3cret')));
+  assertEquals(result.status, 502);
+  assertEquals(logged, [['fetch-usd-rates: the rate source failed', 'unexpected error']]);
 });

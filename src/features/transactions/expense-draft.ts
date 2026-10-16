@@ -37,6 +37,14 @@ export function draftFromItem(item: TransactionListItem, now: Date, timeZone: st
   };
 }
 
+/** La tasa y el equivalente en pesos guardados solo valen mientras el monto, la moneda y la fecha sigan siendo los originales. */
+export function keepsSavedRate(draft: ExpenseDraft, original: ExpenseDraft): boolean {
+  const sameDate =
+    draft.date.kind === original.date.kind &&
+    (draft.date.kind !== 'other' || (original.date.kind === 'other' && isSameDate(draft.date.date, original.date.date)));
+  return draft.amountText === original.amountText && draft.currency === original.currency && sameDate;
+}
+
 export function canSave(draft: ExpenseDraft): boolean {
   return textToCents(draft.amountText) > 0;
 }

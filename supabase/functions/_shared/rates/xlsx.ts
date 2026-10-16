@@ -7,10 +7,22 @@ import { RateSourceError } from './types.ts';
 const EOCD_SIGNATURE = 0x06054b50;
 const CENTRAL_SIGNATURE = 0x02014b50;
 const LOCAL_SIGNATURE = 0x04034b50;
-const MAX_ENTRY_BYTES = 64 * 1024 * 1024;
+export const MAX_ENTRY_BYTES = 64 * 1024 * 1024;
 
-/** Contenido de cada archivo del zip, por nombre. */
-export function readZipEntries(bytes: Uint8Array): Map<string, Uint8Array> {
+/** Lector de zip perezoso: lee el directorio central y solo descomprime los archivos que se piden. */
+export interface ZipReader {
+  /** Contenido de un archivo, o undefined si no existe. Lanza si está corrupto o supera `maxBytes`. */
+  read(name: string, maxBytes?: number): Uint8Array | undefined;
+}
+
+interface ZipEntry {
+  method: number;
+  compressedSize: number;
+  uncompressedSize: number;
+  localOffset: number;
+}
+
+export function openZip(bytes: Uint8Array): ZipReader {
   const view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
   let eocd = -1;
   for (let i = bytes.length - 22; i >= Math.max(0, bytes.length - 22 - 0xffff); i--) {
@@ -22,40 +34,51 @@ export function readZipEntries(bytes: Uint8Array): Map<string, Uint8Array> {
   if (eocd < 0) throw new RateSourceError('the document is not a zip file');
   const count = view.getUint16(eocd + 10, true);
   let offset = view.getUint32(eocd + 16, true);
-  const entries = new Map<string, Uint8Array>();
+  const entries = new Map<string, ZipEntry>();
   for (let n = 0; n < count; n++) {
     if (offset + 46 > bytes.length || view.getUint32(offset, true) !== CENTRAL_SIGNATURE) {
       throw new RateSourceError('the zip directory is corrupted');
     }
-    const method = view.getUint16(offset + 10, true);
-    const compressedSize = view.getUint32(offset + 20, true);
-    const uncompressedSize = view.getUint32(offset + 24, true);
     const nameLength = view.getUint16(offset + 28, true);
     const extraLength = view.getUint16(offset + 30, true);
     const commentLength = view.getUint16(offset + 32, true);
-    const localOffset = view.getUint32(offset + 42, true);
     const name = new TextDecoder().decode(bytes.subarray(offset + 46, offset + 46 + nameLength));
+    entries.set(name, {
+      method: view.getUint16(offset + 10, true),
+      compressedSize: view.getUint32(offset + 20, true),
+      uncompressedSize: view.getUint32(offset + 24, true),
+      localOffset: view.getUint32(offset + 42, true),
+    });
     offset += 46 + nameLength + extraLength + commentLength;
-    if (uncompressedSize > MAX_ENTRY_BYTES) throw new RateSourceError('a zip entry is too large');
-    if (localOffset + 30 > bytes.length || view.getUint32(localOffset, true) !== LOCAL_SIGNATURE) {
-      throw new RateSourceError('the zip is corrupted');
-    }
-    const dataStart = localOffset + 30 + view.getUint16(localOffset + 26, true) + view.getUint16(localOffset + 28, true);
-    const raw = bytes.subarray(dataStart, dataStart + compressedSize);
-    if (raw.length !== compressedSize) throw new RateSourceError('the zip is truncated');
-    if (method === 0) {
-      entries.set(name, raw);
-    } else if (method === 8) {
-      try {
-        entries.set(name, inflateRawSync(raw) as unknown as Uint8Array);
-      } catch {
-        throw new RateSourceError('a zip entry could not be decompressed');
-      }
-    } else {
-      throw new RateSourceError('unsupported zip compression');
-    }
   }
-  return entries;
+  return {
+    read(name, maxBytes = MAX_ENTRY_BYTES) {
+      const entry = entries.get(name);
+      if (!entry) return undefined;
+      const { localOffset, compressedSize, uncompressedSize, method } = entry;
+      if (uncompressedSize > maxBytes) throw new RateSourceError('a zip entry is too large');
+      if (localOffset + 30 > bytes.length || view.getUint32(localOffset, true) !== LOCAL_SIGNATURE) {
+        throw new RateSourceError('the zip is corrupted');
+      }
+      const dataStart = localOffset + 30 + view.getUint16(localOffset + 26, true) + view.getUint16(localOffset + 28, true);
+      const raw = bytes.subarray(dataStart, dataStart + compressedSize);
+      if (raw.length !== compressedSize) throw new RateSourceError('the zip is truncated');
+      if (method === 0) {
+        if (raw.length > maxBytes) throw new RateSourceError('a zip entry is too large');
+        return raw;
+      }
+      if (method !== 8) throw new RateSourceError('unsupported zip compression');
+      let inflated: Uint8Array;
+      try {
+        // maxOutputLength corta la descompresión donde el runtime lo respeta; la declaración y el chequeo final cubren el resto.
+        inflated = inflateRawSync(raw, { maxOutputLength: maxBytes }) as unknown as Uint8Array;
+      } catch {
+        throw new RateSourceError('a zip entry could not be decompressed or is too large');
+      }
+      if (inflated.length > maxBytes) throw new RateSourceError('a zip entry is too large');
+      return inflated;
+    },
+  };
 }
 
 const ENTITIES: Record<string, string> = { amp: '&', lt: '<', gt: '>', quot: '"', apos: "'" };
@@ -94,16 +117,16 @@ export type SheetRow = Map<string, string | number>;
 
 /** Filas de la hoja con ese nombre, en orden. */
 export function readSheetRows(bytes: Uint8Array, sheetName: string): SheetRow[] {
-  const entries = readZipEntries(bytes);
-  const workbook = requireText(entries.get('xl/workbook.xml'), 'workbook.xml');
+  const zip = openZip(bytes);
+  const workbook = requireText(zip.read('xl/workbook.xml'), 'workbook.xml');
   const sheetTag = [...workbook.matchAll(/<sheet\b[^>]*>/g)].map((m) => attributes(m[0])).find((a) => a.name === sheetName);
   if (!sheetTag) throw new RateSourceError(`the workbook has no sheet ${sheetName}`);
-  const rels = requireText(entries.get('xl/_rels/workbook.xml.rels'), 'workbook rels');
+  const rels = requireText(zip.read('xl/_rels/workbook.xml.rels'), 'workbook rels');
   const target = [...rels.matchAll(/<Relationship\b[^>]*>/g)].map((m) => attributes(m[0])).find((a) => a.Id === sheetTag['r:id'])?.Target;
   if (!target) throw new RateSourceError(`the sheet ${sheetName} has no file`);
-  const stringsXml = entries.get('xl/sharedStrings.xml');
+  const stringsXml = zip.read('xl/sharedStrings.xml');
   const strings = stringsXml ? sharedStrings(new TextDecoder().decode(stringsXml)) : [];
-  const sheet = requireText(entries.get(`xl/${target.replace(/^\/?(xl\/)?/, '')}`), `sheet ${sheetName}`);
+  const sheet = requireText(zip.read(`xl/${target.replace(/^\/?(xl\/)?/, '')}`), `sheet ${sheetName}`);
 
   const rows: SheetRow[] = [];
   for (const rowMatch of sheet.matchAll(/<row\b[^>]*>([\s\S]*?)<\/row>/g)) {

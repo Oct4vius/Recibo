@@ -13,6 +13,12 @@ Deno.test('parseRate removes float noise from numeric cells', () => {
   assertEquals(parseRate(59.123400000001), 59.1234);
 });
 
+Deno.test('regression — parseRate rejects numeric cells with more than 4 real decimals', () => {
+  assertEquals(parseRate(59.12345), null);
+  assertEquals(parseRate(59.123456), null);
+  assertEquals(parseRate(61.114899999999999), 61.1149);
+});
+
 Deno.test('parseRate rejects anything it would have to guess', () => {
   for (const bad of ['59.12345', '1,234.56', '59.12.34', '', 'abc', '0', '-5', '1000']) assertEquals(parseRate(bad), null, bad);
   for (const bad of [0, -5, Number.NaN, Number.POSITIVE_INFINITY, 1000]) assertEquals(parseRate(bad), null, String(bad));

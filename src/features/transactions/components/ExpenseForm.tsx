@@ -16,7 +16,7 @@ import { formatDayLabel, toLocalDate } from '@/lib/dates';
 import { colors, fonts, typeScale } from '@/theme/tokens';
 import { CURRENCIES } from '@/types/database';
 import { pressKey, type AmountKey } from '../amount-input';
-import { canSave, draftFromItem, draftToChanges, draftToNewExpense, emptyDraft, type ExpenseDraft } from '../expense-draft';
+import { canSave, draftFromItem, draftToChanges, draftToNewExpense, emptyDraft, keepsSavedRate, type ExpenseDraft } from '../expense-draft';
 import { CURRENCY_LABELS } from '../filters';
 import { useCreateExpense, useUpdateExpense } from '../hooks';
 import type { TransactionListItem } from '../mapping';
@@ -60,11 +60,9 @@ export function ExpenseForm({ item, onDone }: Props) {
   // La moneda y la fecha de un movimiento importado por correo son datos del banco: no se editan.
   const bankData = item !== undefined && item.source !== 'manual';
   const ready = canSave(draft);
-  // Mientras el borrador conserve el monto y la moneda originales, la tasa y el equivalente siguen siendo ciertos.
+  // Mientras el borrador conserve monto, moneda y fecha originales, la tasa y el equivalente siguen siendo ciertos.
   const conversion =
-    item?.dopEquivalent && draft.amountText === original.amountText && draft.currency === original.currency
-      ? item.dopEquivalent
-      : null;
+    item?.dopEquivalent && keepsSavedRate(draft, original) ? item.dopEquivalent : null;
 
   // El botón Atrás de Android oculta el teclado sin quitar el foco del campo: sin esto el teclado propio no vuelve.
   useEffect(() => {

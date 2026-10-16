@@ -1,6 +1,6 @@
 import { bearerToken, json, UNAUTHORIZED } from '../_shared/http.ts';
 import type { UsdRatesRepository } from '../_shared/rates/repository.ts';
-import type { RateSource } from '../_shared/rates/types.ts';
+import { type RateSource, RateSourceError } from '../_shared/rates/types.ts';
 
 export interface FetchUsdRatesDeps {
   secret: string;
@@ -28,8 +28,9 @@ export function createFetchUsdRatesHandler(deps: FetchUsdRatesDeps): (request: R
     let rates;
     try {
       rates = await deps.source.fetchRates(window.from, window.to);
-    } catch {
-      console.error('fetch-usd-rates: the rate source failed');
+    } catch (error) {
+      // RateSourceError lleva textos fijos nuestros (sin secretos ni datos personales): sirven para diagnosticar.
+      console.error('fetch-usd-rates: the rate source failed', error instanceof RateSourceError ? error.message : 'unexpected error');
       return json({ error: 'Fuente de tasas no disponible' }, 502);
     }
 
