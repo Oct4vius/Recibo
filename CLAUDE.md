@@ -61,6 +61,7 @@ src/
   lib/                     # supabase.ts, queryClient.ts, env.ts, money.ts, dates.ts
   theme/                   # tokens.ts + colors.json (paleta única), motion*, ransom, shapes, progress, backdrops
                            #   (progress.ts calcula el % de presupuesto en centavos enteros)
+  features/rates/          # texto de tasas (`≈ RD$ …`, última tasa) y consulta de la última tasa del BCRD
   types/                   # tipos compartidos; database.ts re-exporta _shared/database.types.ts (Plan 4)
 supabase/
   migrations/              # SQL versionado, una migración por cambio
@@ -75,11 +76,14 @@ supabase/
       mail/                # types.ts (contrato MailProvider + SyncCursor), graph.ts, microsoft-auth.ts,
                            #   sender-query.ts, registry.ts (gmail.ts llega en 3b)
       sync/                # sync-account.ts (orquestación), repository.ts + supabase-repository.ts, rows.ts
+      rates/               # types.ts, normalize.ts (parseRate/toUsdRates), bcrd.ts (lector) + xlsx.ts (zip/XML mínimo),
+                           #   repository.ts + supabase-repository.ts, fixtures/ (archivo real del BCRD)
       db.ts                # service client
       http.ts              # respuestas JSON y errores comunes de las funciones
     link-account/          # intercambia código OAuth (PKCE) → refresh token a Vault; handler.ts + index.ts
     unlink-account/        # desvincula (secreto de Vault borrado, status = 'revoked')
     sync-mail/             # invocada por pg_cron; lee correos, parsea, ingesta, registra (alertas y push: 4c)
+    fetch-usd-rates/       # invocada por pg_cron; lee la tasa de venta del BCRD y la guarda en usd_rates
                            #   (cada función: handler.ts testeable con dependencias inyectadas + index.ts delgado)
 tests/unit/                # Vitest para src/ (espeja la ruta)
 fixtures-raw/<bank>/       # .eml reales anonimizados, SOLO locales (gitignored); fuente de las fixtures
@@ -98,11 +102,12 @@ createClient(env.EXPO_PUBLIC_SUPABASE_URL, env.EXPO_PUBLIC_SUPABASE_ANON_KEY);
 process.env.EXPO_PUBLIC_SUPABASE_URL   // ← NO usar directo
 ```
 Secretos (client secret de Google, service role key, Expo access
-token, `SYNC_MAIL_SECRET`) viven **solo** en Edge Functions vía `Deno.env.get(...)` y en
+token, `SYNC_MAIL_SECRET`, `FETCH_USD_RATES_SECRET`) viven **solo** en Edge Functions vía `Deno.env.get(...)` y en
 `supabase secrets set`. Si un secreto aparece en `app/` o `src/`, es un bug.
 Las funciones del 3a usan `MS_CLIENT_ID` y `SYNC_MAIL_SECRET` (local en `supabase/functions/.env`, plantilla
 `.env.example`; gitignored). Microsoft es cliente público + PKCE: **sin** client secret. `EXPO_PUBLIC_MS_CLIENT_ID`
-es el mismo id, público.
+es el mismo id, público. `fetch-usd-rates` usa `FETCH_USD_RATES_SECRET` (propio, no el de `sync-mail`); la fuente del BCRD
+es pública y no necesita token.
 
 ## Seguridad — reglas duras
 - **Tokens de correo nunca tocan el dispositivo.** La app recibe solo el
@@ -334,6 +339,20 @@ inventar un parser sin correo real.**
 - La evaluación de presupuestos (umbrales 80 y 100 %; `budget_alerts` evita re-notificar el mismo
   `(budget_id, period_start, threshold)`) y el push (`send-push`) llegan en 4c, no en `sync-mail` del 3a.
 
+## Tasa del dólar (`fetch-usd-rates`)
+- Fuente (spike del Plan 3c): el archivo histórico público del BCRD "Tasas de cambio del dólar de referencia del mercado
+  spot" (`.../mercado-cambiario/documents/TASA_DOLAR_REFERENCIA_MC.xlsx`, hoja `Diaria`, columna **Venta**). GET anónimo,
+  sin token. El lector (`_shared/rates/bcrd.ts`) abre el xlsx sin dependencias (`xlsx.ts`: zip + XML) y **lanza** en
+  vez de adivinar: formato desconocido, fecha imposible, tasa ilegible o dos tasas distintas para un día. Si cambió el
+  formato: 502 y no se escribe nada; las tasas guardadas siguen.
+- Cron `fetch-usd-rates` `'0 13,23 * * *'` (09:00 y 19:00 hora dominicana: el archivo se actualiza hacia las 17:50) con
+  `invoke_fetch_usd_rates()`; URL y secreto en Vault (`fetch_usd_rates_url`, `fetch_usd_rates_secret`),
+  `Authorization: Bearer <FETCH_USD_RATES_SECRET>`. En local no hay cron (se invoca la función a mano).
+- Ventana: `usd_rates_fetch_window()` la decide en SQL. Si el historial guardado no llega al día 1 del mes anterior al
+  gasto en USD más viejo, se rellena desde ahí; si ya llega, se pide desde la última tasa guardada menos 7 días (una
+  racha de corridas fallidas no deja huecos). El handler guarda con upsert por `rate_date` solo las fechas de la
+  ventana, así que reintentar es idempotente.
+
 ## Supabase / Postgres — reglas
 - **Dinero**: `numeric(14,2)`, nunca `float`. Las sumas se hacen en SQL, no en JS.
 - **Fechas**: `timestamptz`. Los límites de semana/mes se calculan en la zona
@@ -354,8 +373,12 @@ inventar un parser sin correo real.**
   usuario (puede crear las suyas).
 - Qué cuenta como gasto se define UNA vez en la vista
   `public.spending_transactions`; las RPC la usan. No repetir el filtro en la app.
-- La conversión USD→DOP para totales vive en `spending_transactions.amount_dop`
-  (una sola fórmula); las RPC suman esa columna.
+- **Conversión USD→DOP (Plan 3c).** `public.usd_rate_on(user, at)` es la única regla de tasa: fecha local del gasto en
+  la zona del perfil, última tasa del BCRD en o antes de esa fecha (fines de semana, feriados, hoy sin publicar) y, si
+  no hay ninguna, el respaldo `profiles.usd_rate`. `public.transactions_with_rate` es la única fórmula
+  `round(amount * rate, 2)`; `spending_transactions` y la lista de Movimientos/Inicio leen de ella. Las RPC suman
+  `amount_dop`. `usd_rates` es una tabla de referencia **sin `user_id`** (excepción a la regla de RLS por `user_id`,
+  como las categorías por defecto): `select` para `authenticated`, escribe solo `service_role`.
 - `transactions`: las columnas de identidad (`user_id`, `source`, `message_id`,
   `linked_account_id`, `bank_code`, `template_id`) son inmutables; un trigger
   `before update` lanza 42501 (migración `transactions_immutable_columns`). Los
@@ -420,9 +443,9 @@ Se aplican en app, Edge Functions y SQL. Así se traducen a este proyecto:
   `src/features/<dominio>/keys.ts`. Mutaciones invalidan sus keys; no se
   actualiza estado local a mano.
 - Montos se muestran con `formatMoney(amount, currency)` de `src/lib/money.ts`
-  (`RD$ 1,234.56`, `US$ 12.00`). USD se convierte a DOP con
-  `profiles.usd_rate` **solo** para totales consolidados; la transacción
-  conserva su moneda.
+  (`RD$ 1,234.56`, `US$ 12.00`). La transacción conserva su moneda. Movimientos e Inicio leen la vista
+  `transactions_with_rate`: la app **nunca multiplica**; la fila en USD muestra `≈ RD$ …` (`formatApprox`) y el panel la
+  tasa usada. `profiles.usd_rate` es solo la tasa de respaldo (rótulo "Tasa de respaldo" en Ajustes).
 - Textos de UI en español, sin i18n. Sin `console.log` en código de producción.
 - Componentes funcionales, hooks, sin clases. Un componente por archivo.
 - Estilo visual: spec `docs/superpowers/specs/2026-10-06-plan-4-ui-design.md`. Colores solo desde
@@ -492,7 +515,7 @@ SQL nace con tests. Las pantallas no se testean en v1.
 - **Fuera de alcance v1** (no implementar aunque parezca fácil): iOS, registro
   público, dedup autorización/liquidación, tests de UI, IMAP, parseo con LLM,
   ingresos, versión web, multi-idioma. (La tasa automática del BCRD entró al
-  alcance el 2026-10-09 como tarea del Plan 3; ver `docs/ALCANCE.md` §3.)
+  alcance el 2026-10-09 como tarea del Plan 3 y quedó implementada en el Plan 3c; ver `docs/ALCANCE.md` §3.)
 - **No bloquear v2**: presupuesto compartido en pareja. `budgets` y
   `transactions` se relacionan por `user_id`; una futura `budget_members` debe
   poder agregarse sin migrar datos. No diseñar nada que lo impida.
