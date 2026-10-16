@@ -4,6 +4,7 @@ import {
   currencyFromCode,
   decodeEntities,
   htmlToText,
+  keyValue,
   parseAmount,
   parseLocalDate,
   splitCells,
@@ -88,6 +89,19 @@ Deno.test('parseLocalDate — BHD table format (lowercase am/pm)', () => {
 
 Deno.test('parseLocalDate — BHD transfer format (dash, uppercase AM/PM, no leading zero)', () => {
   assertEquals(parseLocalDate('16/09/2026 - 9:53 AM'), '2026-09-16T09:53:00-04:00');
+});
+
+Deno.test('parseLocalDate — pipe between date and time (separate cells)', () => {
+  assertEquals(parseLocalDate('04/09/2026 | 9:24 AM'), '2026-09-04T09:24:00-04:00');
+  assertEquals(parseLocalDate('11/09/2026 | 3:23 PM'), '2026-09-11T15:23:00-04:00');
+});
+
+Deno.test('keyValue — value after the pipe, empty value, missing label', () => {
+  const lines = ['Monto: | RD$ 200', 'Descripción:', 'Fecha: | 04/09/2026 | 9:24 AM'];
+  assertEquals(keyValue(lines, /^Monto:/i), 'RD$ 200');
+  assertEquals(keyValue(lines, /^Descripci[oó]n:/i), '');
+  assertEquals(keyValue(lines, /^Fecha:/i), '04/09/2026 | 9:24 AM');
+  assertEquals(keyValue(lines, /^Beneficiario:/i), null);
 });
 
 Deno.test('parseLocalDate — rejects invalid', () => {

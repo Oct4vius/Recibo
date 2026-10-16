@@ -2,7 +2,7 @@ import type { BankParser, CandidateBank, ParseResult, RawEmail } from './types.t
 import { bhd } from './bhd/index.ts';
 import { candidateBanks } from './candidates.ts';
 
-export type { BankCode, BankParser, CandidateBank, Currency, ParsedTransaction, ParseResult, RawEmail, Template, TxType } from './types.ts';
+export type { BankCode, BankParser, CandidateBank, Currency, IgnoredEmail, ParsedTransaction, ParseResult, RawEmail, Template, TxType } from './types.ts';
 export { candidateBanks };
 
 /** Agregar un banco = crear su carpeta con un BankParser y sumarlo aquí. Nada más cambia. */
@@ -42,6 +42,7 @@ export function parseEmail(email: RawEmail): ParseResult {
   if (lookup.kind === 'candidate') return { kind: 'unparsed', bankCode: lookup.candidate.code };
 
   const { bank } = lookup;
+  if (bank.ignored.some((rule) => rule.matches(email))) return { kind: 'ignored', bankCode: bank.code };
   const template = bank.templates.find((t) => t.matches(email));
   if (!template) return { kind: 'unparsed', bankCode: bank.code };
 
