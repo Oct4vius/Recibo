@@ -18,6 +18,7 @@ export type Database = {
           threshold: number
           user_id: string
         }
+        ComputedFields: never
         Insert: {
           budget_id: string
           id?: string
@@ -55,6 +56,7 @@ export type Database = {
           updated_at: string
           user_id: string
         }
+        ComputedFields: never
         Insert: {
           created_at?: string
           currency?: Database["public"]["Enums"]["currency_code"]
@@ -87,6 +89,7 @@ export type Database = {
           name: string
           user_id: string | null
         }
+        ComputedFields: never
         Insert: {
           color?: string | null
           counts_as_spending?: boolean
@@ -121,6 +124,7 @@ export type Database = {
           user_id: string
           vault_secret_id: string | null
         }
+        ComputedFields: never
         Insert: {
           created_at?: string
           email: string
@@ -159,6 +163,7 @@ export type Database = {
           priority: number
           user_id: string
         }
+        ComputedFields: never
         Insert: {
           category_id: string
           created_at?: string
@@ -197,6 +202,7 @@ export type Database = {
           usd_rate: number
           user_id: string
         }
+        ComputedFields: never
         Insert: {
           alert_thresholds?: number[]
           created_at?: string
@@ -225,6 +231,7 @@ export type Database = {
           updated_at: string
           user_id: string
         }
+        ComputedFields: never
         Insert: {
           expo_token: string
           id?: string
@@ -253,6 +260,7 @@ export type Database = {
           unparsed: number
           user_id: string
         }
+        ComputedFields: never
         Insert: {
           error?: string | null
           fetched?: number
@@ -311,6 +319,7 @@ export type Database = {
           updated_at: string
           user_id: string
         }
+        ComputedFields: never
         Insert: {
           amount: number
           bank_code?: Database["public"]["Enums"]["bank_code"] | null
@@ -383,6 +392,13 @@ export type Database = {
             referencedRelation: "transactions"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "transactions_reversed_by_fkey"
+            columns: ["reversed_by"]
+            isOneToOne: false
+            referencedRelation: "transactions_with_rate"
+            referencedColumns: ["id"]
+          },
         ]
       }
       unparsed_emails: {
@@ -398,6 +414,7 @@ export type Database = {
           subject: string | null
           user_id: string
         }
+        ComputedFields: never
         Insert: {
           bank_code?: Database["public"]["Enums"]["bank_code"] | null
           created_at?: string
@@ -432,6 +449,28 @@ export type Database = {
           },
         ]
       }
+      usd_rates: {
+        Row: {
+          fetched_at: string
+          rate_date: string
+          sell: number
+          source: string
+        }
+        ComputedFields: never
+        Insert: {
+          fetched_at?: string
+          rate_date: string
+          sell: number
+          source: string
+        }
+        Update: {
+          fetched_at?: string
+          rate_date?: string
+          sell?: number
+          source?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       spending_transactions: {
@@ -442,7 +481,70 @@ export type Database = {
           occurred_at: string | null
           user_id: string | null
         }
+        ComputedFields: never
         Relationships: []
+      }
+      transactions_with_rate: {
+        Row: {
+          amount: number | null
+          amount_dop: number | null
+          bank_code: Database["public"]["Enums"]["bank_code"] | null
+          card_last4: string | null
+          category_id: string | null
+          counterparty_last4: string | null
+          created_at: string | null
+          currency: Database["public"]["Enums"]["currency_code"] | null
+          id: string | null
+          ignored_reason: Database["public"]["Enums"]["ignored_reason"] | null
+          is_ignored: boolean | null
+          linked_account_id: string | null
+          merchant: string | null
+          message_id: string | null
+          occurred_at: string | null
+          raw_snippet: string | null
+          reference: string | null
+          reversed_by: string | null
+          reviewed_at: string | null
+          source: Database["public"]["Enums"]["tx_source"] | null
+          template_id: string | null
+          type: Database["public"]["Enums"]["tx_type"] | null
+          updated_at: string | null
+          usd_rate: number | null
+          usd_rate_date: string | null
+          usd_rate_origin: Database["public"]["Enums"]["usd_rate_origin"] | null
+          user_id: string | null
+        }
+        ComputedFields: never
+        Relationships: [
+          {
+            foreignKeyName: "transactions_category_id_fkey"
+            columns: ["category_id"]
+            isOneToOne: false
+            referencedRelation: "categories"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "transactions_linked_account_id_fkey"
+            columns: ["linked_account_id"]
+            isOneToOne: false
+            referencedRelation: "linked_accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "transactions_reversed_by_fkey"
+            columns: ["reversed_by"]
+            isOneToOne: false
+            referencedRelation: "transactions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "transactions_reversed_by_fkey"
+            columns: ["reversed_by"]
+            isOneToOne: false
+            referencedRelation: "transactions_with_rate"
+            referencedColumns: ["id"]
+          },
+        ]
       }
     }
     Functions: {
@@ -473,7 +575,7 @@ export type Database = {
         Returns: Json
       }
       initial_sync_cursor: { Args: { p_user_id: string }; Returns: string }
-      invoke_sync_mail: { Args: never; Returns: number }
+      invoke_sync_mail: { Args: Record<PropertyKey, never>; Returns: number }
       link_mail_account: {
         Args: {
           p_email: string
@@ -512,6 +614,21 @@ export type Database = {
         Args: { p_account_id: string; p_user_id: string }
         Returns: boolean
       }
+      usd_rate_on: {
+        Args: { p_at: string; p_user: string }
+        Returns: {
+          origin: Database["public"]["Enums"]["usd_rate_origin"]
+          rate: number
+          rate_date: string
+        }[]
+      }
+      usd_rates_fetch_window: {
+        Args: { p_today?: string }
+        Returns: {
+          from_date: string
+          to_date: string
+        }[]
+      }
     }
     Enums: {
       account_status: "active" | "error" | "revoked" | "paused"
@@ -522,10 +639,8 @@ export type Database = {
       mail_provider: "gmail" | "outlook"
       tx_source: "email" | "manual"
       tx_type:
-        | "card_purchase"
-        | "card_reversal"
-        | "atm_withdrawal"
-        | "transfer_out"
+        "card_purchase" | "card_reversal" | "atm_withdrawal" | "transfer_out"
+      usd_rate_origin: "bcrd" | "manual"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -568,8 +683,7 @@ export type Tables<
 
 export type TablesInsert<
   DefaultSchemaTableNameOrOptions extends
-    | keyof DefaultSchema["Tables"]
-    | { schema: keyof DatabaseWithoutInternals },
+    keyof DefaultSchema["Tables"] | { schema: keyof DatabaseWithoutInternals },
   TableName extends (DefaultSchemaTableNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
@@ -593,8 +707,7 @@ export type TablesInsert<
 
 export type TablesUpdate<
   DefaultSchemaTableNameOrOptions extends
-    | keyof DefaultSchema["Tables"]
-    | { schema: keyof DatabaseWithoutInternals },
+    keyof DefaultSchema["Tables"] | { schema: keyof DatabaseWithoutInternals },
   TableName extends (DefaultSchemaTableNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
@@ -618,8 +731,7 @@ export type TablesUpdate<
 
 export type Enums<
   DefaultSchemaEnumNameOrOptions extends
-    | keyof DefaultSchema["Enums"]
-    | { schema: keyof DatabaseWithoutInternals },
+    keyof DefaultSchema["Enums"] | { schema: keyof DatabaseWithoutInternals },
   EnumName extends (DefaultSchemaEnumNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
@@ -666,7 +778,7 @@ export const Constants = {
         "atm_withdrawal",
         "transfer_out",
       ],
+      usd_rate_origin: ["bcrd", "manual"],
     },
   },
 } as const
-
