@@ -3,7 +3,7 @@ import * as WebBrowser from 'expo-web-browser';
 import { useEffect, useRef } from 'react';
 import { SkewButton } from '@/components/SkewButton';
 import { env } from '@/lib/env';
-import { useLinkOutlook } from '../hooks';
+import { useLinkAccount } from '../hooks';
 import { MS_DISCOVERY, MS_REDIRECT_URI, MS_SCOPES } from '../microsoft';
 
 WebBrowser.maybeCompleteAuthSession();
@@ -13,7 +13,7 @@ const AUTH_DENIED = 'Microsoft no permitió vincular la cuenta. Intenta de nuevo
 /** Abre el login de Microsoft (PKCE) y entrega el código a link-account. */
 export function LinkOutlookButton({ onMessage }: { onMessage: (message: string | null) => void }) {
   // `mutate` es estable; el objeto de la mutación cambia en cada render y re-dispararía el efecto.
-  const { mutate, isPending } = useLinkOutlook();
+  const { mutate, isPending } = useLinkAccount();
   const [request, response, promptAsync] = useAuthRequest(
     {
       clientId: env.EXPO_PUBLIC_MS_CLIENT_ID,
@@ -39,7 +39,7 @@ export function LinkOutlookButton({ onMessage }: { onMessage: (message: string |
     const code = response.params.code;
     if (!code || !request.codeVerifier) return;
     mutate(
-      { code, codeVerifier: request.codeVerifier, redirectUri: MS_REDIRECT_URI },
+      { provider: 'outlook', code, codeVerifier: request.codeVerifier, redirectUri: MS_REDIRECT_URI },
       { onError: (error) => onMessage(error.message) },
     );
   }, [response, request, mutate, onMessage]);

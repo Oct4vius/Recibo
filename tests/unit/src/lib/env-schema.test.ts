@@ -5,6 +5,7 @@ const valid = {
   EXPO_PUBLIC_SUPABASE_URL: 'https://abc.supabase.co',
   EXPO_PUBLIC_SUPABASE_ANON_KEY: 'sb_publishable_0123456789abcdef',
   EXPO_PUBLIC_MS_CLIENT_ID: '11111111-2222-3333-4444-555555555555',
+  EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID: '123456789012-abc123def456.apps.googleusercontent.com',
 };
 
 describe('parseEnv', () => {
@@ -12,7 +13,7 @@ describe('parseEnv', () => {
     expect(parseEnv(valid)).toEqual(valid);
   });
   it('names every missing variable in the error', () => {
-    expect(() => parseEnv({})).toThrow(/EXPO_PUBLIC_SUPABASE_URL.*EXPO_PUBLIC_SUPABASE_ANON_KEY.*EXPO_PUBLIC_MS_CLIENT_ID/);
+    expect(() => parseEnv({})).toThrow(/EXPO_PUBLIC_SUPABASE_URL.*EXPO_PUBLIC_SUPABASE_ANON_KEY.*EXPO_PUBLIC_MS_CLIENT_ID.*EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID/);
   });
   it('rejects a URL that is not a URL', () => {
     expect(() => parseEnv({ ...valid, EXPO_PUBLIC_SUPABASE_URL: 'not-a-url' })).toThrow(/EXPO_PUBLIC_SUPABASE_URL/);
@@ -22,5 +23,8 @@ describe('parseEnv', () => {
   });
   it('rejects a Microsoft client id that is not a GUID', () => {
     expect(() => parseEnv({ ...valid, EXPO_PUBLIC_MS_CLIENT_ID: 'recibo' })).toThrow(/EXPO_PUBLIC_MS_CLIENT_ID/);
+  });
+  it('rejects a Google web client id that is not a googleusercontent id', () => {
+    expect(() => parseEnv({ ...valid, EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID: 'recibo' })).toThrow(/EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID/);
   });
 });
