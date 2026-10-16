@@ -575,6 +575,10 @@ export type Database = {
         Returns: Json
       }
       initial_sync_cursor: { Args: { p_user_id: string }; Returns: string }
+      invoke_fetch_usd_rates: {
+        Args: Record<PropertyKey, never>
+        Returns: number
+      }
       invoke_sync_mail: { Args: Record<PropertyKey, never>; Returns: number }
       link_mail_account: {
         Args: {

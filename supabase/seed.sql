@@ -2,3 +2,4 @@
 -- deba existir en producción van en migraciones, no aquí.
 -- El cron del sync NO se configura en local: sin los secretos de Vault `sync_mail_url`/`sync_mail_secret`,
 -- invoke_sync_mail() devuelve null. En local el sync se dispara con `bun run dev:sync`.
+-- Tampoco el cron de tasas: sin `fetch_usd_rates_url`/`fetch_usd_rates_secret`, invoke_fetch_usd_rates() devuelve null.
