@@ -6,7 +6,7 @@ const RAW_DIR = 'fixtures-raw';
 const PARSERS_DIR = join('supabase', 'functions', '_shared', 'parsers');
 
 async function main(): Promise<void> {
-  const banks = (await readdir(RAW_DIR, { withFileTypes: true })).filter((d) => d.isDirectory());
+  const banks = (await readdir(RAW_DIR, { withFileTypes: true })).filter((d) => d.isDirectory() && !d.name.startsWith('_'));
   let written = 0;
   for (const bank of banks) {
     const rawBankDir = join(RAW_DIR, bank.name);

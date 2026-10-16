@@ -16,7 +16,8 @@ parezca fácil.
 - **Datos en la app**: TanStack Query + `@supabase/supabase-js`; sesión en `expo-secure-store`
 - **Backend**: Supabase — Postgres (RLS), Auth (email + password), Edge Functions (Deno), `pg_cron` + `pg_net`, Vault
 - **Push**: `expo-notifications` + Expo Push Service (gratis)
-- **OAuth correo**: `expo-auth-session` (PKCE) → Edge Function intercambia el código
+- **OAuth correo**: Outlook con `expo-auth-session` (PKCE); Gmail con `@react-native-google-signin/google-signin`
+  (`serverAuthCode`) → `link-account` intercambia el código en el servidor
 - **Idioma**: UI en español, código/variables/commits en inglés
 - **Costo**: todo dentro del plan gratuito de Supabase y Expo. No agregar servicios pagos sin discutirlo.
 
@@ -36,7 +37,10 @@ bun run check:db                   # db:reset + db:test — obligatorio si tocas
 bun run db:types                   # regenera supabase/functions/_shared/database.types.ts
 bun run functions:serve            # Edge Functions locales con supabase/functions/.env (plantilla .env.example)
 bun run dev:link-outlook [--target local|remote]  # vincula una cuenta Outlook desde la terminal (dev)
+bun run dev:link-gmail [--target local|remote]    # vincula una cuenta Gmail desde la terminal (dev)
 bun run dev:sync [--target local|remote]          # dispara sync-mail a mano (en local no hay cron)
+bun run dev:download-eml --account <correo> [--target local|remote] [--all]  # baja el MIME de los correos sin procesar
+bun run eml:anonymize <entrada.eml> <salida.eml>  # anonimiza un .eml (config local gitignored); ver docs/agregar-banco.md
 bun run start                      # Expo; requiere .env.local con EXPO_PUBLIC_*. Desde el 3a se prueba en la build
                                    #   de desarrollo (Expo Go ya no sirve para vincular: el retorno OAuth usa el esquema propio)
 bunx eas-cli build --profile development --platform android   # APK de desarrollo; --profile preview = APK de prueba
@@ -72,18 +76,19 @@ supabase/
       database.types.ts    # generado por db:types; NO editar a mano
       parsers/             # types.ts, normalize.ts, index.ts (registro), candidates.ts,
                            #   <bank>/index.ts + <bank>/<template>.ts + <bank>/fixtures/*.json
-      mail/                # types.ts (contrato MailProvider + SyncCursor), graph.ts, microsoft-auth.ts,
-                           #   sender-query.ts, registry.ts (gmail.ts llega en 3b)
+      mail/                # types.ts (contrato MailProvider + SyncCursor), oauth.ts, cursor.ts, graph.ts,
+                           #   microsoft-auth.ts, gmail.ts, google-auth.ts, base64url.ts, sender-query.ts, registry.ts
       sync/                # sync-account.ts (orquestación), repository.ts + supabase-repository.ts, rows.ts
       db.ts                # service client
       http.ts              # respuestas JSON y errores comunes de las funciones
-    link-account/          # intercambia código OAuth (PKCE) → refresh token a Vault; handler.ts + index.ts
+    link-account/          # intercambia el código OAuth → refresh token a Vault; handler.ts + exchangers.ts (uno por proveedor) + index.ts
     unlink-account/        # desvincula (secreto de Vault borrado, status = 'revoked')
     sync-mail/             # invocada por pg_cron; lee correos, parsea, ingesta, registra (alertas y push: 4c)
                            #   (cada función: handler.ts testeable con dependencias inyectadas + index.ts delgado)
+scripts/                   # herramientas de desarrollo (Bun); scripts/lib/{loopback,google-login,dev-session,anonymize,raw-mail}.ts
 tests/unit/                # Vitest para src/ (espeja la ruta)
 fixtures-raw/<bank>/       # .eml reales anonimizados, SOLO locales (gitignored); fuente de las fixtures
-docs/
+docs/                      # ALCANCE.md, agregar-banco.md (receta para bancos y plantillas nuevos)
 ```
 
 ## Variables de entorno
@@ -100,9 +105,11 @@ process.env.EXPO_PUBLIC_SUPABASE_URL   // ← NO usar directo
 Secretos (client secret de Google, service role key, Expo access
 token, `SYNC_MAIL_SECRET`) viven **solo** en Edge Functions vía `Deno.env.get(...)` y en
 `supabase secrets set`. Si un secreto aparece en `app/` o `src/`, es un bug.
-Las funciones del 3a usan `MS_CLIENT_ID` y `SYNC_MAIL_SECRET` (local en `supabase/functions/.env`, plantilla
-`.env.example`; gitignored). Microsoft es cliente público + PKCE: **sin** client secret. `EXPO_PUBLIC_MS_CLIENT_ID`
-es el mismo id, público.
+Las funciones usan `MS_CLIENT_ID`, `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET` y `SYNC_MAIL_SECRET` (local en
+`supabase/functions/.env`, plantilla `.env.example`; gitignored). Microsoft es cliente público + PKCE: **sin** client
+secret. `EXPO_PUBLIC_MS_CLIENT_ID` es el mismo id, público. Google: `GOOGLE_CLIENT_ID`/`GOOGLE_CLIENT_SECRET` son del
+cliente **Web** de Google Cloud; `EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID` (público, en el schema) es ese mismo id. Los scripts
+de desarrollo leen los secretos de `supabase/functions/.env` (`functionsEnv()`).
 
 ## Seguridad — reglas duras
 - **Tokens de correo nunca tocan el dispositivo.** La app recibe solo el
@@ -120,10 +127,15 @@ es el mismo id, público.
   sin RLS = migración incompleta.
 - La app usa **anon key**; las Edge Functions usan **service role**. Jamás al revés.
 - Scopes OAuth mínimos y de solo lectura: `gmail.readonly`; `Mail.Read offline_access`.
-- La app envía `{ code, codeVerifier, redirectUri }` a `link-account` y **nunca** canjea el código.
+- La app envía a `link-account` `{ provider: 'outlook', code, codeVerifier, redirectUri }` o `{ provider: 'gmail', code }` y
+  **nunca** canjea el código. En Gmail la app solo lee `serverAuthCode` de `signIn()`: sin `getTokens`, sin `idToken`, sin
+  `revokeAccess` (revocaría el permiso del servidor); `signOut` antes (selector de cuenta) y después de entregar el código.
+  Un consentimiento sin `gmail.readonly` se rechaza al vincular (mensaje claro, la cuenta no queda activa).
 - Desvincular una cuenta = `unlink_mail_account` (borra el secreto de Vault y pone
   `linked_accounts.status = 'revoked'`). Microsoft no permite revocar el token de una app en cuentas personales:
-  la app indica revocar el acceso en account.live.com/consent. Las transacciones ya importadas se conservan.
+  la app indica revocar el acceso en account.live.com/consent. Google sí lo permite: `unlink-account` verifica que la
+  cuenta es del usuario, lee el token y lo revoca en Google (best effort, con timeout; si falla igual desvincula) antes de
+  `unlink_mail_account`. Las transacciones ya importadas se conservan.
 - Las funciones SQL de Vault y vinculación (`initial_sync_cursor`, `link_mail_account`, `unlink_mail_account`,
   `mail_account_token`, `set_mail_account_token`) viven en `public` porque `supabase.rpc` solo alcanza esquemas
   expuestos. La protección es `EXECUTE` solo para `service_role` (pgTAP falla si `anon`/`authenticated` lo reciben).
@@ -311,6 +323,8 @@ inventar un parser sin correo real.**
 6. Si el banco cambió su plantilla: **agregar** fixture nueva, no editar la vieja.
    Las dos deben seguir pasando.
 
+Receta completa con herramientas (descargar sin procesar, anonimizar, desplegar y reprocesar): `docs/agregar-banco.md`.
+
 ## Sync (`sync-mail`)
 - Disparado por `pg_cron` cada 15 min (`invoke_sync_mail()`; URL y secreto en Vault: `sync_mail_url`,
   `sync_mail_secret`) con `Authorization: Bearer <SYNC_MAIL_SECRET>`. Rechazar cualquier otro caller.
@@ -323,6 +337,12 @@ inventar un parser sin correo real.**
   `ingest_transactions` (una transacción por página: inserta sin duplicar, empareja reversas por monto exacto,
   candado advisory por cuenta y página) → `unparsed_emails` → `sync_logs`. Primera importación: día 1 del mes anterior.
   El adaptador nunca escribe sobre una cuenta `revoked`.
+- **Gmail** (`mail/gmail.ts`, mismo contrato `MailProvider`): `messages.list` con `q = from:(…) after:<epoch>` (las mismas
+  `senderAddresses`, vía `bankSenderAddresses()`) e `includeSpamTrash=true`, luego `messages.get` `format=full` por id y la
+  parte `text/html` (recorrido recursivo, charset del `Content-Type`, UTF-8 si no se conoce). Los ids de Gmail son estables
+  (cambiar de etiqueta no duplica). Devuelve lo más nuevo primero: el cursor lo tolera (`since` fijo mientras hay `next`).
+  403 `insufficientPermissions` → `MailAuthError` (volver a vincular); 403 de límite de tasa, 429 y 5xx → transitorio; un 404
+  entre list y get se salta. El texto de "sesión expirada" lo da el registro por proveedor (`registry.ts`).
 - `transactions` se escribe solo por `ingest_transactions`; la clave es el `UNIQUE` plano
   `transactions_account_message_key` (`linked_account_id, message_id`): los gastos manuales (NULL/NULL) nunca chocan.
 - **Idempotente siempre.** Reintentar una corrida no puede duplicar ni alterar
