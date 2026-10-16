@@ -55,3 +55,9 @@ export function parseCursor(raw: string | null): SyncCursor | null {
     return null;
   }
 }
+
+/** El canje del código no trajo refresh token (Google solo lo entrega en el primer consentimiento). */
+export class NoRefreshTokenError extends Error {}
+
+/** El usuario no concedió el permiso de lectura de correo. */
+export class MissingScopeError extends Error {}

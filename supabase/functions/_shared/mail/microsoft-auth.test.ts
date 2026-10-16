@@ -1,6 +1,6 @@
 import { assertEquals, assertRejects, assertStringIncludes } from 'jsr:@std/assert@1';
 import { exchangeCode, MS_SCOPES, MS_TOKEN_URL, refreshTokens } from './microsoft-auth.ts';
-import { MailAuthError, MailTransientError } from './types.ts';
+import { MailAuthError, MailTransientError, NoRefreshTokenError } from './types.ts';
 
 function idToken(claims: Record<string, unknown>): string {
   const b64 = (o: unknown) => btoa(JSON.stringify(o)).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
@@ -53,4 +53,11 @@ Deno.test('refreshTokens — returns the rotated refresh token, or keeps the old
 Deno.test('refreshTokens — 503 is transient, invalid_grant is auth', async () => {
   await assertRejects(() => refreshTokens('c', 'rt', fakeFetch(503, {})), MailTransientError);
   await assertRejects(() => refreshTokens('c', 'rt', fakeFetch(400, { error: 'invalid_grant' })), MailAuthError);
+});
+
+Deno.test('exchangeCode — a response without refresh token is a NoRefreshTokenError', async () => {
+  await assertRejects(
+    () => exchangeCode({ clientId: 'c', code: 'k', codeVerifier: 'v', redirectUri: 'r' }, fakeFetch(200, { id_token: idToken({ email: 'a@b.example' }) })),
+    NoRefreshTokenError,
+  );
 });
