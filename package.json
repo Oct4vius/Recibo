@@ -20,6 +20,7 @@
     "verify:bundle": "expo export --platform android --output-dir .expo-export-check && node -e \"require('fs').rmSync('.expo-export-check',{recursive:true,force:true})\"",
     "functions:serve": "supabase functions serve --env-file supabase/functions/.env",
     "dev:link-outlook": "bun scripts/dev-link-outlook.ts",
+    "dev:link-gmail": "bun scripts/dev-link-gmail.ts",
     "dev:sync": "bun scripts/dev-sync.ts"
   },
   "devDependencies": {
