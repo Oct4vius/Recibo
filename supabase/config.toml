@@ -424,3 +424,7 @@ verify_jwt = true
 # El cron llama con SYNC_MAIL_SECRET (no es un JWT): la función lo valida.
 [functions.sync-mail]
 verify_jwt = false
+
+# El cron llama con FETCH_USD_RATES_SECRET (no es un JWT): la función lo valida.
+[functions.fetch-usd-rates]
+verify_jwt = false

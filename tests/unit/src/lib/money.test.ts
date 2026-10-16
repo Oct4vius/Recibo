@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { currencySymbol, formatMoney, moneyAccessibilityLabel, toCents } from '@/lib/money';
+import { approxAccessibilityLabel, currencySymbol, formatApprox, formatMoney, moneyAccessibilityLabel, toCents } from '@/lib/money';
 
 describe('formatMoney', () => {
   it('formats DOP with the RD$ prefix, thousands separator and 2 decimals', () => {
@@ -45,5 +45,18 @@ describe('toCents', () => {
     expect(toCents(275.72)).toBe(27572);
     expect(toCents(60.1234)).toBe(6012);
     expect(toCents(0.29)).toBe(29);
+  });
+});
+
+describe('formatApprox', () => {
+  it('prefixes the formatted amount with ≈', () => {
+    expect(formatApprox(896.26, 'DOP')).toBe('≈ RD$ 896.26');
+    expect(formatApprox(-896.26, 'DOP')).toBe('≈ -RD$ 896.26');
+  });
+});
+
+describe('approxAccessibilityLabel', () => {
+  it('reads aproximadamente before the spoken amount', () => {
+    expect(approxAccessibilityLabel(896.26, 'DOP')).toBe('aproximadamente 896.26 pesos');
   });
 });

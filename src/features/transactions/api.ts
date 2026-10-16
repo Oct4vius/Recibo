@@ -6,7 +6,9 @@ import { toListItem, type TransactionListItem, type TransactionRow } from './map
 
 export const PAGE_SIZE = 50;
 
-const LIST_COLUMNS = 'id, amount, currency, merchant, occurred_at, category_id, is_ignored, source, bank_code, type, counterparty_last4, ignored_reason, reviewed_at, categories(name)';
+/** La lista lee la vista con la tasa de cada gasto en USD; las mutaciones siguen sobre `transactions`. */
+const LIST_SOURCE = 'transactions_with_rate';
+const LIST_COLUMNS = 'id, amount, currency, merchant, occurred_at, category_id, is_ignored, source, bank_code, type, counterparty_last4, ignored_reason, reviewed_at, amount_dop, usd_rate, usd_rate_date, usd_rate_origin, categories(name)';
 
 export interface TransactionPage {
   items: TransactionListItem[];
@@ -21,7 +23,7 @@ export async function fetchTransactionPage(
   timeZone: string,
 ): Promise<TransactionPage> {
   const range = periodRange(filters.period, now, timeZone);
-  let query = supabase.from('transactions').select(LIST_COLUMNS, cursor ? undefined : { count: 'exact' });
+  let query = supabase.from(LIST_SOURCE).select(LIST_COLUMNS, cursor ? undefined : { count: 'exact' });
   if (range.from) query = query.gte('occurred_at', range.from);
   if (range.to) query = query.lt('occurred_at', range.to);
   if (filters.categoryId) query = query.eq('category_id', filters.categoryId);
@@ -39,7 +41,7 @@ export async function fetchTransactionPage(
 
 export async function fetchRecentTransactions(limit: number): Promise<TransactionListItem[]> {
   const { data, error } = await supabase
-    .from('transactions')
+    .from(LIST_SOURCE)
     .select(LIST_COLUMNS)
     .order('occurred_at', { ascending: false })
     .order('id', { ascending: false })

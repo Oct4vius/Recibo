@@ -2,7 +2,7 @@ import { memo } from 'react';
 import { Pressable, Text, View } from 'react-native';
 import Animated, { useAnimatedStyle } from 'react-native-reanimated';
 import { tapFeedback } from '@/lib/haptics';
-import { moneyAccessibilityLabel } from '@/lib/money';
+import { approxAccessibilityLabel, formatApprox, moneyAccessibilityLabel } from '@/lib/money';
 import { angles, colors, fonts, MIN_TOUCH, typeScale } from '@/theme/tokens';
 import { usePressNudge } from '@/theme/use-press-nudge';
 import type { Currency } from '@/types/database';
@@ -12,6 +12,8 @@ interface Props {
   title: string;
   subtitle?: string;
   amount?: { value: number; currency: Currency };
+  /** Equivalente aproximado bajo el monto (p. ej. pesos de un gasto en USD). Sin animación. */
+  approx?: { value: number; currency: Currency };
   /** Etiqueta corta junto al subtítulo (p. ej. "Manual", "Ignorado"). */
   badge?: string;
   /** Atenuado: no suma (ignorado). Título y monto en `ash`. */
@@ -22,13 +24,19 @@ interface Props {
 }
 
 /** Tira de lista inclinada -8°. El contenido (y sobre todo el monto) queda derecho. */
-export const SkewRow = memo(function SkewRow({ title, subtitle, amount, badge, muted = false, selected = false, onPress }: Props) {
+export const SkewRow = memo(function SkewRow({ title, subtitle, amount, approx, badge, muted = false, selected = false, onPress }: Props) {
   const { pressed, onPressIn, onPressOut } = usePressNudge();
   const style = useAnimatedStyle(() => ({
     transform: [{ skewX: `${angles.row}deg` }, { translateX: pressed.value * 6 }],
   }));
   const fg = selected ? 'void' : muted ? 'ash' : 'paper';
-  const label = [title, subtitle, badge, amount && moneyAccessibilityLabel(amount.value, amount.currency)]
+  const label = [
+    title,
+    subtitle,
+    badge,
+    amount && moneyAccessibilityLabel(amount.value, amount.currency),
+    approx && approxAccessibilityLabel(approx.value, approx.currency),
+  ]
     .filter(Boolean)
     .join(', ');
 
@@ -81,8 +89,21 @@ export const SkewRow = memo(function SkewRow({ title, subtitle, amount, badge, m
         ) : null}
       </View>
       {amount ? (
-        <View style={{ marginLeft: 12, transform: [{ skewX: `${-angles.row}deg` }] }}>
+        <View style={{ marginLeft: 12, alignItems: 'flex-end', transform: [{ skewX: `${-angles.row}deg` }] }}>
           <Amount value={amount.value} currency={amount.currency} tone={fg} />
+          {approx ? (
+            <Text
+              style={{
+                fontFamily: fonts.amount,
+                fontSize: typeScale.caption,
+                fontVariant: ['tabular-nums'],
+                color: selected ? colors.void : colors.ash,
+                textAlign: 'right',
+              }}
+            >
+              {formatApprox(approx.value, approx.currency)}
+            </Text>
+          ) : null}
         </View>
       ) : null}
     </Animated.View>

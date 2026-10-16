@@ -8,6 +8,7 @@ import { SkewChip } from '@/components/SkewChip';
 import { TextField } from '@/components/TextField';
 import { useCategories } from '@/features/categories/hooks';
 import { useProfile, useTimeZone } from '@/features/profile/hooks';
+import { conversionAccessibilityText, conversionText } from '@/features/rates/text';
 import { useSaveRule } from '@/features/rules/hooks';
 import { RULE_SAVE_FAILED, ruleNotice, ruleOffer, ruleOfferLabel } from '@/features/rules/offer';
 import { rulePatternError } from '@/features/rules/presentation';
@@ -15,7 +16,7 @@ import { formatDayLabel, toLocalDate } from '@/lib/dates';
 import { colors, fonts, typeScale } from '@/theme/tokens';
 import { CURRENCIES } from '@/types/database';
 import { pressKey, type AmountKey } from '../amount-input';
-import { canSave, draftFromItem, draftToChanges, draftToNewExpense, emptyDraft, type ExpenseDraft } from '../expense-draft';
+import { canSave, draftFromItem, draftToChanges, draftToNewExpense, emptyDraft, keepsSavedRate, type ExpenseDraft } from '../expense-draft';
 import { CURRENCY_LABELS } from '../filters';
 import { useCreateExpense, useUpdateExpense } from '../hooks';
 import type { TransactionListItem } from '../mapping';
@@ -59,6 +60,9 @@ export function ExpenseForm({ item, onDone }: Props) {
   // La moneda y la fecha de un movimiento importado por correo son datos del banco: no se editan.
   const bankData = item !== undefined && item.source !== 'manual';
   const ready = canSave(draft);
+  // Mientras el borrador conserve monto, moneda y fecha originales, la tasa y el equivalente siguen siendo ciertos.
+  const conversion =
+    item?.dopEquivalent && keepsSavedRate(draft, original) ? item.dopEquivalent : null;
 
   // El botón Atrás de Android oculta el teclado sin quitar el foco del campo: sin esto el teclado propio no vuelve.
   useEffect(() => {
@@ -111,6 +115,20 @@ export function ExpenseForm({ item, onDone }: Props) {
         active={!typingMerchant}
         onPress={() => Keyboard.dismiss()}
       />
+      {conversion ? (
+        <Text
+          accessibilityLabel={conversionAccessibilityText(conversion)}
+          style={{
+            fontFamily: fonts.body,
+            fontSize: typeScale.caption,
+            fontVariant: ['tabular-nums'],
+            color: colors.ash,
+            marginBottom: 12,
+          }}
+        >
+          {conversionText(conversion)}
+        </Text>
+      ) : null}
       {bankData ? null : (
         <>
           <FieldLabel text="Moneda" />
