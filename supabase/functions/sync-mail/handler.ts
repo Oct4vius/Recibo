@@ -1,5 +1,5 @@
 import { bearerToken, json, UNAUTHORIZED } from '../_shared/http.ts';
-import { parseCursor } from '../_shared/mail/types.ts';
+import { type MailProviderName, parseCursor } from '../_shared/mail/types.ts';
 import type { SyncAccount } from '../_shared/sync/repository.ts';
 import type { SyncOutcome } from '../_shared/sync/sync-account.ts';
 
@@ -33,7 +33,7 @@ export function createSyncMailHandler(deps: SyncMailDeps): (request: Request) =>
 export interface ActiveAccountRow {
   id: string;
   user_id: string;
-  provider: 'gmail' | 'outlook';
+  provider: MailProviderName;
   sync_cursor: string | null;
 }
 

@@ -1,10 +1,10 @@
-import type { SyncCursor } from '../mail/types.ts';
+import type { MailProviderName, SyncCursor } from '../mail/types.ts';
 import type { IngestRow, UnparsedEmail } from './rows.ts';
 
 export interface SyncAccount {
   id: string;
   userId: string;
-  provider: 'gmail' | 'outlook';
+  provider: MailProviderName;
   cursor: SyncCursor;
 }
 

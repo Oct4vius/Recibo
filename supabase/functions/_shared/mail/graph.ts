@@ -1,13 +1,12 @@
 import { htmlToText } from '../parsers/normalize.ts';
 import type { RawEmail } from '../parsers/index.ts';
+import { nextCursor, OVERLAP_MS, PAGE_SIZE } from './cursor.ts';
 import { refreshTokens } from './microsoft-auth.ts';
 import { bankSenderAddresses, senderFilter } from './sender-query.ts';
 import { MailAuthError, MailTransientError, type MailProvider, type Page, type SyncCursor } from './types.ts';
 
 const GRAPH_MESSAGES = 'https://graph.microsoft.com/v1.0/me/messages';
-export const PAGE_SIZE = 50;
-/** Margen hacia atrás en cada consulta, por correos con la misma hora. La ingesta no duplica. */
-export const OVERLAP_MS = 10 * 60_000;
+export { OVERLAP_MS, PAGE_SIZE } from './cursor.ts';
 
 interface GraphMessage {
   id: string;
@@ -38,16 +37,6 @@ export function firstPageUrl(addresses: readonly string[], cursor: SyncCursor): 
   });
   // URLSearchParams codifica `$` como %24; Graph documenta las opciones OData con `$` literal.
   return `${GRAPH_MESSAGES}?${params.toString().replaceAll('%24', '$')}`;
-}
-
-function newest(a: string | null, b: string): string {
-  return a === null || Date.parse(b) > Date.parse(a) ? b : a;
-}
-
-export function nextCursor(cursor: SyncCursor, emails: readonly RawEmail[], nextLink: string | null): SyncCursor {
-  const maxSeen = emails.reduce<string | null>((max, email) => newest(max, email.receivedAt), cursor.maxSeen);
-  if (nextLink) return { since: cursor.since, next: nextLink, maxSeen };
-  return { since: maxSeen === null ? cursor.since : newest(cursor.since, maxSeen), next: null, maxSeen: null };
 }
 
 export function createGraphProvider(config: {

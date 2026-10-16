@@ -1,4 +1,7 @@
+import type { Enums } from '../database.types.ts';
 import type { RawEmail } from '../parsers/index.ts';
+
+export type MailProviderName = Enums<'mail_provider'>;
 
 /**
  * Cursor de sincronización, igual para todos los proveedores. Se guarda como JSON en
