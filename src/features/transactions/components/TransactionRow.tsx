@@ -17,6 +17,7 @@ export const TransactionRow = memo(function TransactionRow({ item, onPress }: Pr
       badge={row.badge}
       muted={row.muted}
       amount={{ value: row.amount, currency: item.currency }}
+      approx={row.approxDop === undefined ? undefined : { value: row.approxDop, currency: 'DOP' }}
       onPress={() => onPress(item)}
     />
   );

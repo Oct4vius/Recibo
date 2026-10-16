@@ -8,6 +8,7 @@ import { SkewChip } from '@/components/SkewChip';
 import { TextField } from '@/components/TextField';
 import { useCategories } from '@/features/categories/hooks';
 import { useProfile, useTimeZone } from '@/features/profile/hooks';
+import { conversionAccessibilityText, conversionText } from '@/features/rates/text';
 import { useSaveRule } from '@/features/rules/hooks';
 import { RULE_SAVE_FAILED, ruleNotice, ruleOffer, ruleOfferLabel } from '@/features/rules/offer';
 import { rulePatternError } from '@/features/rules/presentation';
@@ -59,6 +60,11 @@ export function ExpenseForm({ item, onDone }: Props) {
   // La moneda y la fecha de un movimiento importado por correo son datos del banco: no se editan.
   const bankData = item !== undefined && item.source !== 'manual';
   const ready = canSave(draft);
+  // Mientras el borrador conserve el monto y la moneda originales, la tasa y el equivalente siguen siendo ciertos.
+  const conversion =
+    item?.dopEquivalent && draft.amountText === original.amountText && draft.currency === original.currency
+      ? item.dopEquivalent
+      : null;
 
   // El botón Atrás de Android oculta el teclado sin quitar el foco del campo: sin esto el teclado propio no vuelve.
   useEffect(() => {
@@ -111,6 +117,20 @@ export function ExpenseForm({ item, onDone }: Props) {
         active={!typingMerchant}
         onPress={() => Keyboard.dismiss()}
       />
+      {conversion ? (
+        <Text
+          accessibilityLabel={conversionAccessibilityText(conversion)}
+          style={{
+            fontFamily: fonts.body,
+            fontSize: typeScale.caption,
+            fontVariant: ['tabular-nums'],
+            color: colors.ash,
+            marginBottom: 12,
+          }}
+        >
+          {conversionText(conversion)}
+        </Text>
+      ) : null}
       {bankData ? null : (
         <>
           <FieldLabel text="Moneda" />

@@ -26,6 +26,16 @@ export function moneyAccessibilityLabel(amount: number, currency: Currency): str
   return `${sign}${digits(amount)} ${SPOKEN[currency]}`;
 }
 
+/** Equivalente aproximado en pesos para mostrar junto a un monto en otra moneda: `≈ RD$ 896.26`. */
+export function formatApprox(amount: number, currency: Currency): string {
+  return `≈ ${formatMoney(amount, currency)}`;
+}
+
+/** Texto para lectores de pantalla del equivalente: `aproximadamente 896.26 pesos`. */
+export function approxAccessibilityLabel(amount: number, currency: Currency): string {
+  return `aproximadamente ${moneyAccessibilityLabel(amount, currency)}`;
+}
+
 /** Monto → centavos enteros (toda la lógica de dinero del cliente trabaja en centavos). */
 export function toCents(amount: number): number {
   return Math.round(amount * 100);
