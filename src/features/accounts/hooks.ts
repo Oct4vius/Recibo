@@ -1,15 +1,15 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { fetchLinkedAccounts, linkOutlook, unlinkAccount, type LinkOutlookInput } from './api';
+import { fetchLinkedAccounts, linkAccount, unlinkAccount, type LinkAccountInput } from './api';
 import { accountKeys } from './keys';
 
 export function useLinkedAccounts() {
   return useQuery({ queryKey: accountKeys.list(), queryFn: fetchLinkedAccounts });
 }
 
-export function useLinkOutlook() {
+export function useLinkAccount() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: (input: LinkOutlookInput) => linkOutlook(input),
+    mutationFn: (input: LinkAccountInput) => linkAccount(input),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: accountKeys.all }),
   });
 }

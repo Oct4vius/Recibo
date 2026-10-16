@@ -1,5 +1,5 @@
 import { assertEquals, assertThrows } from 'jsr:@std/assert@1';
-import { bankSenderAddresses, senderFilter } from './sender-query.ts';
+import { bankSenderAddresses, gmailQuery, senderFilter } from './sender-query.ts';
 
 Deno.test('bankSenderAddresses — every searched bank address, once, sorted', () => {
   const addresses = bankSenderAddresses();
@@ -25,4 +25,12 @@ Deno.test('senderFilter — doubles single quotes (OData escaping)', () => {
 
 Deno.test('senderFilter — an empty address list throws', () => {
   assertThrows(() => senderFilter([], '2026-09-01T03:50:00Z'), Error, 'no sender addresses');
+});
+
+Deno.test('gmailQuery — exact senders after the given instant in whole epoch seconds', () => {
+  assertEquals(
+    gmailQuery(['alertas@bhd.com.do', 'noreply@apap.com.do'], '2026-09-01T03:50:00.999Z'),
+    'from:(alertas@bhd.com.do OR noreply@apap.com.do) after:1788234600',
+  );
+  assertThrows(() => gmailQuery([], '2026-09-01T03:50:00Z'), Error, 'no sender addresses');
 });

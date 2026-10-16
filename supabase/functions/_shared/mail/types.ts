@@ -1,4 +1,7 @@
+import type { Enums } from '../database.types.ts';
 import type { RawEmail } from '../parsers/index.ts';
+
+export type MailProviderName = Enums<'mail_provider'>;
 
 /**
  * Cursor de sincronización, igual para todos los proveedores. Se guarda como JSON en
@@ -33,7 +36,12 @@ export interface MailProvider {
 }
 
 /** El proveedor rechazó la sesión (refresh token inválido o revocado): hay que volver a vincular. */
-export class MailAuthError extends Error {}
+export class MailAuthError extends Error {
+  /** Texto para el usuario si debe ser distinto al de "sesión expirada" del proveedor (p. ej. permiso retirado). */
+  constructor(message: string, readonly userMessage?: string) {
+    super(message);
+  }
+}
 
 /** Falla transitoria (429, 5xx, red): se reintenta en la próxima corrida. */
 export class MailTransientError extends Error {}
@@ -52,3 +60,9 @@ export function parseCursor(raw: string | null): SyncCursor | null {
     return null;
   }
 }
+
+/** El canje del código no trajo refresh token (Google solo lo entrega en el primer consentimiento). */
+export class NoRefreshTokenError extends Error {}
+
+/** El usuario no concedió el permiso de lectura de correo. */
+export class MissingScopeError extends Error {}

@@ -20,7 +20,10 @@
     "verify:bundle": "expo export --platform android --output-dir .expo-export-check && node -e \"require('fs').rmSync('.expo-export-check',{recursive:true,force:true})\"",
     "functions:serve": "supabase functions serve --env-file supabase/functions/.env",
     "dev:link-outlook": "bun scripts/dev-link-outlook.ts",
-    "dev:sync": "bun scripts/dev-sync.ts"
+    "dev:link-gmail": "bun scripts/dev-link-gmail.ts",
+    "dev:sync": "bun scripts/dev-sync.ts",
+    "dev:download-eml": "bun scripts/dev-download-eml.ts",
+    "eml:anonymize": "bun scripts/anonymize-eml.ts"
   },
   "devDependencies": {
     "@types/aes-js": "^3.1.4",
@@ -41,6 +44,7 @@
     "@expo/vector-icons": "^15.0.2",
     "@react-native-async-storage/async-storage": "2.2.0",
     "@react-native-community/datetimepicker": "9.1.0",
+    "@react-native-google-signin/google-signin": "^16.1.5",
     "@supabase/supabase-js": "^2.117.2",
     "@tanstack/react-query": "^5.104.1",
     "aes-js": "^3.1.2",

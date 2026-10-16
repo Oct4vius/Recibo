@@ -4,6 +4,11 @@ const schema = z.object({
   EXPO_PUBLIC_SUPABASE_URL: z.url(),
   EXPO_PUBLIC_SUPABASE_ANON_KEY: z.string().min(20),
   EXPO_PUBLIC_MS_CLIENT_ID: z.guid(),
+  // Vacío (como lo deja .env.example) cuenta como ausente: Gmail es opcional y no debe tumbar la app.
+  EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID: z.preprocess(
+    (value) => (typeof value === 'string' && value.trim() === '' ? undefined : value),
+    z.string().regex(/^\d+-[a-z0-9]+\.apps\.googleusercontent\.com$/).optional(),
+  ),
 });
 
 export type Env = z.infer<typeof schema>;

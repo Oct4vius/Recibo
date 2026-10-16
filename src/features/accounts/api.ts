@@ -11,15 +11,14 @@ export async function fetchLinkedAccounts(): Promise<LinkedAccount[]> {
   return data.map(toLinkedAccount);
 }
 
-export interface LinkOutlookInput {
-  code: string;
-  codeVerifier: string;
-  redirectUri: string;
-}
+/** Outlook manda el código PKCE; Gmail, el `serverAuthCode` del SDK de Google. */
+export type LinkAccountInput =
+  | { provider: 'outlook'; code: string; codeVerifier: string; redirectUri: string }
+  | { provider: 'gmail'; code: string };
 
-/** Envía el código PKCE a link-account; la app nunca canjea el código ni ve tokens. */
-export async function linkOutlook(input: LinkOutlookInput): Promise<void> {
-  const { error } = await supabase.functions.invoke('link-account', { body: { provider: 'outlook', ...input } });
+/** Envía el código a link-account; la app nunca canjea el código ni ve tokens. */
+export async function linkAccount(input: LinkAccountInput): Promise<void> {
+  const { error } = await supabase.functions.invoke('link-account', { body: input });
   if (error) throw new Error(await functionErrorMessage(error));
 }
 
