@@ -10,6 +10,13 @@ export function parseTarget(argv: readonly string[]): Target {
   return value;
 }
 
+/** Valor que sigue a `name`; null si falta o si el siguiente token es otra bandera. */
+export function flagValue(argv: readonly string[], name: string): string | null {
+  const index = argv.indexOf(name);
+  const value = index === -1 ? undefined : argv[index + 1];
+  return value === undefined || value.startsWith('--') ? null : value;
+}
+
 export function parseEnvLines(text: string): Record<string, string> {
   const result: Record<string, string> = {};
   for (const line of text.split(/\r?\n/)) {

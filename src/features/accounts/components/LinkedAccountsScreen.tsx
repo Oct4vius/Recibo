@@ -9,11 +9,13 @@ import { useLinkedAccounts } from '../hooks';
 import type { LinkedAccount } from '../mapping';
 import { accountStatusText } from '../sync-time';
 import { AccountSheet } from './AccountSheet';
+import { env } from '@/lib/env';
+import { LinkGmailButton } from './LinkGmailButton';
 import { LinkOutlookButton } from './LinkOutlookButton';
 
 const messageStyle = { fontFamily: fonts.body, fontSize: typeScale.body, color: colors.ash, marginVertical: 8 } as const;
 
-/** Cuentas de correo vinculadas: estado, última sincronización, vincular Outlook y desvincular. */
+/** Cuentas de correo vinculadas: estado, última sincronización, vincular Outlook o Gmail y desvincular. */
 export function LinkedAccountsScreen() {
   const accounts = useLinkedAccounts();
   const [selected, setSelected] = useState<LinkedAccount | null>(null);
@@ -47,12 +49,16 @@ export function LinkedAccountsScreen() {
         <View style={{ marginTop: 12 }}>
           <LinkOutlookButton onMessage={setMessage} />
         </View>
+        {env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID ? (
+          <View style={{ marginTop: 8 }}>
+            <LinkGmailButton webClientId={env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID} onMessage={setMessage} />
+          </View>
+        ) : null}
         {message ? (
           <Text accessibilityLiveRegion="polite" style={{ fontFamily: fonts.bodyStrong, fontSize: typeScale.caption, color: colors.signal, marginTop: 8 }}>
             {message}
           </Text>
         ) : null}
-        <SkewRow title="Gmail" subtitle="Próximamente" muted />
       </Screen>
       <AccountSheet account={selected} onClose={() => setSelected(null)} />
     </>

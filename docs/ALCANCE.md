@@ -167,13 +167,16 @@ el plan gratuito de Supabase.
   totales. Hasta el Plan 3, con una tasa fija configurable en ajustes. Desde el
   Plan 3 (decisión del 2026-10-09), con la tasa de referencia diaria del Banco
   Central (BCRD): se guarda una tasa por día y cada gasto en USD se convierte con
-  la tasa de **su** fecha, para que los totales pasados no cambien solos.
+  la tasa de **su** fecha, para que los totales pasados no cambien solos. La tasa
+  de Ajustes queda como **respaldo**: se usa solo si no hay ninguna tasa del BCRD
+  en o antes de la fecha del gasto (implementado en el Plan 3c).
 
 ## 4. Modelo de datos (Supabase, schema `public`, RLS por `user_id`)
 
 | Tabla | Propósito |
 |-------|-----------|
-| `profiles` | timezone, moneda principal, tasa DOP/USD |
+| `profiles` | timezone, moneda principal, tasa DOP/USD (respaldo) |
+| `usd_rates` | tasa de venta diaria del BCRD (`rate_date`, `sell`, `source`); global, sin `user_id`; la escribe solo `fetch-usd-rates` |
 | `linked_accounts` | provider (`gmail`/`outlook`), email, `vault_secret_id`, `sync_cursor`, `status`, `last_sync_at`, `last_error` |
 | `transactions` | `bank_code`, `type` (`card_purchase`/`card_reversal`/`atm_withdrawal`/`transfer_out`), `amount`, `currency`, `merchant` (nullable), `occurred_at`, `category_id`, `source` (`email`/`manual`), `is_ignored`, `ignored_reason` (`user`/`reversed`/`unmatched_reversal`), `reversed_by`, `reference`, `counterparty_last4`, `message_id` (unique por cuenta, `<id>#<fila>`), `card_last4`, `raw_snippet` |
 | `categories` | nombre, icono, color, `counts_as_spending`; `user_id` null = por defecto |

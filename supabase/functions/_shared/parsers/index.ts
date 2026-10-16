@@ -8,9 +8,14 @@ export { candidateBanks };
 /** Agregar un banco = crear su carpeta con un BankParser y sumarlo aquí. Nada más cambia. */
 export const banks: BankParser[] = [bhd];
 
+/** "BHD <Alertas@bhd.com.do>" → "Alertas@bhd.com.do". Conserva las mayúsculas. */
+export function senderAddress(from: string): string {
+  return (from.match(/<([^>]+)>/)?.[1] ?? from).trim();
+}
+
 /** "BHD <Alertas@bhd.com.do>" → "bhd.com.do"; "a@b.c" → "b.c"; sin @ → null. */
 export function senderDomain(from: string): string | null {
-  const address = from.match(/<([^>]+)>/)?.[1] ?? from;
+  const address = senderAddress(from);
   const at = address.lastIndexOf('@');
   if (at === -1) return null;
   const domain = address.slice(at + 1).trim().toLowerCase();

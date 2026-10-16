@@ -1,6 +1,6 @@
 import { assertEquals, assertNotEquals } from 'jsr:@std/assert@1';
 import type { RawEmail } from './types.ts';
-import { banks, candidateBanks, findBank, parseEmail, senderDomain } from './index.ts';
+import { banks, candidateBanks, findBank, parseEmail, senderAddress, senderDomain } from './index.ts';
 import { loadFixture } from './test-helpers.ts';
 
 const EMPTY: RawEmail = { messageId: '', from: '', subject: '', text: '', receivedAt: '' };
@@ -10,6 +10,12 @@ Deno.test('senderDomain — extracts the domain from bare or display-name addres
   assertEquals(senderDomain('BHD <Alertas@bhd.com.do>'), 'bhd.com.do');
   assertEquals(senderDomain('"Alertas BHD" <alertas@mail.bhd.com.do>'), 'mail.bhd.com.do');
   assertEquals(senderDomain('sin arroba'), null);
+});
+
+Deno.test('senderAddress — bare or display-name addresses, case kept', () => {
+  assertEquals(senderAddress('Alertas@bhd.com.do'), 'Alertas@bhd.com.do');
+  assertEquals(senderAddress('BHD <Alertas@bhd.com.do>'), 'Alertas@bhd.com.do');
+  assertEquals(senderAddress('"Alertas, BHD" <alertas@mail.bhd.com.do> '), 'alertas@mail.bhd.com.do');
 });
 
 Deno.test('findBank — exact domain and subdomain match a bank', () => {

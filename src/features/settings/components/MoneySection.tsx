@@ -6,6 +6,8 @@ import { SkewChip } from '@/components/SkewChip';
 import { SkewRow } from '@/components/SkewRow';
 import { useProfile, useUpdateProfile } from '@/features/profile/hooks';
 import { usdRateText } from '@/features/profile/rate';
+import { useLatestUsdRate } from '@/features/rates/hooks';
+import { latestRateText } from '@/features/rates/text';
 import { CURRENCY_LABELS } from '@/features/transactions/filters';
 import { SAVE_ERROR } from '@/features/transactions/messages';
 import { colors, fonts, typeScale } from '@/theme/tokens';
@@ -16,6 +18,7 @@ import { UsdRateSheet } from './UsdRateSheet';
 export function MoneySection() {
   const profile = useProfile();
   const update = useUpdateProfile();
+  const latestRate = useLatestUsdRate();
   const [open, setOpen] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const shown = (update.isPending ? update.variables?.primary_currency : undefined) ?? profile.data?.primaryCurrency;
@@ -38,7 +41,12 @@ export function MoneySection() {
         ))}
       </View>
       {profile.data ? (
-        <SkewRow title="Tasa del dólar" subtitle={usdRateText(profile.data.usdRate)} onPress={() => setOpen(true)} />
+        <SkewRow title="Tasa de respaldo" subtitle={usdRateText(profile.data.usdRate)} onPress={() => setOpen(true)} />
+      ) : null}
+      {latestRate.isSuccess ? (
+        <Text style={{ fontFamily: fonts.body, fontSize: typeScale.caption, color: colors.ash, marginTop: 4 }}>
+          {latestRateText(latestRate.data)}
+        </Text>
       ) : null}
       {error ? (
         <Text accessibilityLiveRegion="polite" style={{ fontFamily: fonts.bodyStrong, fontSize: typeScale.caption, color: colors.signal, marginTop: 8 }}>

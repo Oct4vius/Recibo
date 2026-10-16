@@ -6,7 +6,7 @@ import { SAVE_ERROR } from '@/features/transactions/messages';
 import { toCents } from '@/lib/money';
 import { colors, fonts, typeScale } from '@/theme/tokens';
 
-/** Pesos por dólar con el teclado propio (centavos enteros). La tasa convierte todos los totales. */
+/** Pesos por dólar con el teclado propio (centavos enteros). Es la tasa de respaldo: la del BCRD tiene prioridad. */
 export function UsdRateForm({ rate, onDone }: { rate: number; onDone: () => void }) {
   const update = useUpdateProfile();
   const [error, setError] = useState<string | null>(null);
@@ -22,7 +22,7 @@ export function UsdRateForm({ rate, onDone }: { rate: number; onDone: () => void
       }}
     >
       <Text style={{ fontFamily: fonts.body, fontSize: typeScale.body, color: colors.ash, marginBottom: 8 }}>
-        Pesos por cada US$ 1. Cambiarla recalcula todos tus totales, incluido el historial.
+        Pesos por cada US$ 1. Solo se usa si no hay ninguna tasa del BCRD para la fecha del gasto.
       </Text>
     </AmountForm>
   );

@@ -6,6 +6,7 @@ import {
   draftToChanges,
   draftToNewExpense,
   emptyDraft,
+  keepsSavedRate,
 } from '@/features/transactions/expense-draft';
 import type { TransactionListItem } from '@/features/transactions/mapping';
 import { localDate } from '@/lib/dates';
@@ -96,5 +97,20 @@ describe('draftToChanges', () => {
   it('sends the new instant when the day of a manual expense changed', () => {
     const draft = { ...original, date: { kind: 'today' as const } };
     expect(draftToChanges(draft, original, 'manual', now, SD)).toMatchObject({ occurredAt: '2026-10-07T02:30:00.000Z' });
+  });
+});
+
+describe('keepsSavedRate', () => {
+  const base = { amountText: '15.16', currency: 'USD' as const, merchant: 'NETFLIX', categoryId: null, date: { kind: 'other' as const, date: localDate(2026, 9, 7) } };
+  it('keeps the rate while amount, currency and date are the originals', () => {
+    expect(keepsSavedRate({ ...base, merchant: 'OTRO' }, base)).toBe(true);
+  });
+  it('drops it when the amount or the currency change', () => {
+    expect(keepsSavedRate({ ...base, amountText: '20' }, base)).toBe(false);
+    expect(keepsSavedRate({ ...base, currency: 'DOP' }, base)).toBe(false);
+  });
+  it('regression — drops it when the date changes, since the rate belongs to the old day', () => {
+    expect(keepsSavedRate({ ...base, date: { kind: 'today' } }, base)).toBe(false);
+    expect(keepsSavedRate({ ...base, date: { kind: 'other', date: localDate(2026, 9, 8) } }, base)).toBe(false);
   });
 });

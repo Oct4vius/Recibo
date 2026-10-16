@@ -71,6 +71,7 @@ export default function GalleryScreen() {
           title={title}
           subtitle={i === 2 ? 'Entretenimiento' : 'Sin categoría'}
           amount={i === 2 ? { value: 12, currency: 'USD' } : { value: i === 0 ? 275.72 : 2140, currency: 'DOP' }}
+          approx={i === 2 ? { value: 709.44, currency: 'DOP' } : undefined}
           selected={selected === i}
           onPress={() => setSelected(i)}
         />

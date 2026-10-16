@@ -4,8 +4,7 @@ import { SkewButton } from '@/components/SkewButton';
 import { colors, fonts, typeScale } from '@/theme/tokens';
 import { useUnlinkAccount } from '../hooks';
 import type { LinkedAccount } from '../mapping';
-
-const CONSENT_NOTE = 'Para quitar también el permiso en Microsoft: account.live.com/consent';
+import { unlinkNote } from '../provider-copy';
 
 /** Desvincular una cuenta (con confirmación). Los movimientos importados se quedan. */
 export function AccountForm({ account, onDone }: { account: LinkedAccount; onDone: () => void }) {
@@ -25,7 +24,7 @@ export function AccountForm({ account, onDone }: { account: LinkedAccount; onDon
     ]);
   return (
     <View>
-      <Text style={{ fontFamily: fonts.body, fontSize: typeScale.body, color: colors.ash, marginBottom: 16 }}>{CONSENT_NOTE}</Text>
+      <Text style={{ fontFamily: fonts.body, fontSize: typeScale.body, color: colors.ash, marginBottom: 16 }}>{unlinkNote(account.provider)}</Text>
       <SkewButton label="Desvincular" variant="ghost" loading={unlink.isPending} onPress={confirm} />
       {error ? (
         <Text accessibilityLiveRegion="polite" style={{ fontFamily: fonts.bodyStrong, fontSize: typeScale.caption, color: colors.signal, marginTop: 8 }}>

@@ -1,5 +1,5 @@
 import { assertEquals, assertRejects, assertStringIncludes } from 'jsr:@std/assert@1';
-import { createGraphProvider, firstPageUrl, nextCursor, toRawEmail } from './graph.ts';
+import { createGraphProvider, firstPageUrl, toRawEmail } from './graph.ts';
 import { MailAuthError, MailTransientError, type SyncCursor } from './types.ts';
 
 const cursor: SyncCursor = { since: '2026-09-01T04:00:00Z', next: null, maxSeen: null };
@@ -48,15 +48,6 @@ Deno.test('toRawEmail — maps a Graph message and converts the HTML body to tex
   assertEquals(raw.from, 'Alertas@bhd.com.do');
   assertEquals(raw.receivedAt, '2026-09-16T02:43:15Z');
   assertEquals(raw.text, 'Fecha | Monto');
-});
-
-Deno.test('nextCursor — keeps since while pages remain, then advances to the newest message seen', () => {
-  const page1 = [toRawEmail(message('a', '2026-09-10T00:00:00Z'))];
-  const mid = nextCursor(cursor, page1, 'https://graph.example/next');
-  assertEquals(mid, { since: cursor.since, next: 'https://graph.example/next', maxSeen: '2026-09-10T00:00:00Z' });
-  const page2 = [toRawEmail(message('b', '2026-09-05T00:00:00Z'))];
-  assertEquals(nextCursor(mid, page2, null), { since: '2026-09-10T00:00:00Z', next: null, maxSeen: null });
-  assertEquals(nextCursor(cursor, [], null), cursor);
 });
 
 Deno.test('fetchNew — sends the immutable id header and follows the next link', async () => {

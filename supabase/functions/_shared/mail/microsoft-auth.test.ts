@@ -1,6 +1,6 @@
 import { assertEquals, assertRejects, assertStringIncludes } from 'jsr:@std/assert@1';
-import { emailFromIdToken, exchangeCode, MS_SCOPES, MS_TOKEN_URL, refreshTokens } from './microsoft-auth.ts';
-import { MailAuthError, MailTransientError } from './types.ts';
+import { exchangeCode, MS_SCOPES, MS_TOKEN_URL, refreshTokens } from './microsoft-auth.ts';
+import { MailAuthError, MailTransientError, NoRefreshTokenError } from './types.ts';
 
 function idToken(claims: Record<string, unknown>): string {
   const b64 = (o: unknown) => btoa(JSON.stringify(o)).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
@@ -23,6 +23,7 @@ Deno.test('exchangeCode — posts a PKCE code exchange as a public client', asyn
   );
   assertEquals(result, { refreshToken: 'rt-1', email: 'owner@outlook.example' });
   assertEquals(seen.url, MS_TOKEN_URL);
+  assertStringIncludes(MS_SCOPES, 'Mail.Read');
   assertEquals(Object.fromEntries(seen.form ?? []), {
     client_id: 'client-1',
     grant_type: 'authorization_code',
@@ -54,10 +55,9 @@ Deno.test('refreshTokens — 503 is transient, invalid_grant is auth', async () 
   await assertRejects(() => refreshTokens('c', 'rt', fakeFetch(400, { error: 'invalid_grant' })), MailAuthError);
 });
 
-Deno.test('emailFromIdToken — prefers email, falls back to preferred_username, rejects garbage', () => {
-  assertEquals(emailFromIdToken(idToken({ email: 'A@B.example', preferred_username: 'x@y.example' })), 'a@b.example');
-  assertEquals(emailFromIdToken(idToken({ preferred_username: 'X@Y.example' })), 'x@y.example');
-  assertEquals(emailFromIdToken('nope'), null);
-  assertEquals(emailFromIdToken(idToken({ email: 'no-at-sign' })), null);
-  assertStringIncludes(MS_SCOPES, 'Mail.Read');
+Deno.test('exchangeCode — a response without refresh token is a NoRefreshTokenError', async () => {
+  await assertRejects(
+    () => exchangeCode({ clientId: 'c', code: 'k', codeVerifier: 'v', redirectUri: 'r' }, fakeFetch(200, { id_token: idToken({ email: 'a@b.example' }) })),
+    NoRefreshTokenError,
+  );
 });
