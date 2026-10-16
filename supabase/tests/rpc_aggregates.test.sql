@@ -1,6 +1,9 @@
 begin;
 select plan(18);
 
+-- Aísla las pruebas de cualquier tasa del BCRD que haya en la base (se revierte con la transacción).
+delete from public.usd_rates;
+
 select has_function('public', 'get_spending_summary', array['public.budget_period', 'date'], 'get_spending_summary exists');
 select has_function('public', 'get_history', array['text', 'date', 'date'], 'get_history exists');
 

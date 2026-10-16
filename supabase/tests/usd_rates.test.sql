@@ -1,5 +1,5 @@
 begin;
-select plan(32);
+select plan(38);
 
 -- Estructura y privilegios
 select has_table('public', 'usd_rates', 'usd_rates exists');
@@ -10,6 +10,7 @@ select has_function('public', 'usd_rate_on', array['uuid', 'timestamp with time 
 select ok(has_function_privilege('authenticated', 'public.usd_rate_on(uuid, timestamptz)', 'execute'), 'authenticated can read rates by date');
 select ok(not has_function_privilege('anon', 'public.usd_rate_on(uuid, timestamptz)', 'execute'), 'anon cannot read rates by date');
 select ok(not has_function_privilege('authenticated', 'public.usd_rates_fetch_window(date)', 'execute'), 'only service_role computes the fetch window');
+select ok(not has_function_privilege('anon', 'public.usd_rates_fetch_window(date)', 'execute'), 'anon cannot compute the fetch window');
 select throws_ok($$insert into public.usd_rates (rate_date, sell, source) values ('2026-01-02', 0, 'bcrd')$$, '23514', null, 'sell must be positive');
 -- Sin USD ni tasas: la ventana empieza el día 1 del mes anterior a hoy
 select results_eq($$select from_date, to_date from public.usd_rates_fetch_window('2026-10-15')$$,
@@ -81,11 +82,27 @@ select results_eq($$select rate, rate_date, origin::text from public.usd_rate_on
 
 set local request.jwt.claim.sub = '22222222-2222-2222-2222-222222222222';
 select is_empty($$select 1 from public.transactions_with_rate$$, 'other users see none of the rows (RLS through the view)');
+select results_eq($$select rate, rate_date, origin::text from public.usd_rate_on('11111111-1111-1111-1111-111111111111', '2026-09-01T12:00:00-04:00')$$,
+  $$values (null::numeric, null::date, null::text)$$, 'regression — another user''s manual rate is never exposed');
 
 set local role anon;
 select throws_ok($$select * from public.usd_rates$$, '42501', null, 'anon cannot read rates');
 select throws_ok($$select * from public.transactions_with_rate$$, '42501', null, 'anon cannot read the list view');
 reset role;
+
+set local role service_role;
+select lives_ok($$insert into public.usd_rates (rate_date, sell, source) values ('2026-10-01', 61.0000, 'bcrd')$$, 'service_role inserts rates');
+select lives_ok($$update public.usd_rates set sell = 61.5000 where rate_date = '2026-10-01'$$, 'service_role updates rates');
+reset role;
+delete from public.usd_rates where rate_date = '2026-10-01';
+
+-- La vista no consulta tasas para filas en DOP: usd_rate_on solo se ejecuta una vez por fila en USD (3 en este momento)
+set local track_functions = 'all';
+do $$ begin
+  perform count(*) from public.transactions_with_rate;
+end $$;
+select results_eq($$select calls::int from pg_stat_xact_user_functions where funcname = 'usd_rate_on'$$, $$values (3)$$,
+  'regression — DOP rows never run the rate lookup');
 
 -- Ventana de descarga (como postgres)
 select results_eq($$select from_date, to_date from public.usd_rates_fetch_window('2026-10-15')$$,
@@ -105,6 +122,13 @@ insert into public.transactions (user_id, type, amount, currency, merchant, occu
 select results_eq($$select from_date, to_date from public.usd_rates_fetch_window('2026-10-15')$$,
   $$values ('2026-04-01'::date, '2026-10-15'::date)$$,
   'DOP spending does not move the window');
+-- Hueco: la última tasa guardada quedó antes del inicio de la ventana
+delete from public.usd_rates;
+delete from public.transactions where currency = 'USD';
+insert into public.usd_rates (rate_date, sell, source) values ('2026-06-26', 58.0000, 'bcrd');
+select results_eq($$select from_date, to_date from public.usd_rates_fetch_window('2026-10-15')$$,
+  $$values ('2026-06-19'::date, '2026-10-15'::date)$$,
+  'regression — the window starts at the last stored rate minus 7 days even when that is before the month start');
 
 select * from finish();
 rollback;

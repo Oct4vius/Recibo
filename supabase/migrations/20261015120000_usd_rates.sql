@@ -25,11 +25,13 @@ grant select, insert, update on public.usd_rates to service_role;
 
 -- Tasa de venta que corresponde a un gasto: la fecha local sale de la zona del perfil; se usa la última tasa
 -- publicada en o antes de esa fecha (fines de semana, feriados, hoy sin publicar) y, si no hay ninguna,
--- profiles.usd_rate. Siempre devuelve exactamente una fila (todo null si el perfil no es visible).
+-- profiles.usd_rate (null si el perfil no es visible para quien llama). Es strict: con p_user o p_at null no se
+-- ejecuta y no devuelve filas (la vista lo usa para saltarse las filas en DOP).
 create or replace function public.usd_rate_on(p_user uuid, p_at timestamptz)
 returns table (rate numeric, rate_date date, origin public.usd_rate_origin)
 language plpgsql
 stable
+strict
 security invoker
 set search_path = ''
 as $$
@@ -55,11 +57,14 @@ begin
 end;
 $$;
 
--- Lista de movimientos con su equivalente en pesos. Es el ÚNICO lugar con la fórmula de conversión; el lateral se
--- salta las filas en DOP (el filtro se evalúa una vez, no llama a la función).
+-- Lista de movimientos con su equivalente en pesos. Es el ÚNICO lugar con la fórmula de conversión. Las filas en DOP
+-- pasan user_id null a usd_rate_on, que es strict: no se ejecuta y no hay consulta de tasa.
+-- Las columnas de transactions van explícitas: una columna nueva de transactions debe agregarse aquí a mano.
 create view public.transactions_with_rate with (security_invoker = true) as
 select
-  t.*,
+  t.id, t.user_id, t.linked_account_id, t.bank_code, t.type, t.amount, t.currency, t.merchant, t.occurred_at,
+  t.category_id, t.source, t.is_ignored, t.ignored_reason, t.reversed_by, t.message_id, t.card_last4, t.reference,
+  t.counterparty_last4, t.template_id, t.raw_snippet, t.created_at, t.updated_at, t.reviewed_at,
   r.rate as usd_rate,
   r.rate_date as usd_rate_date,
   r.origin as usd_rate_origin,
@@ -68,7 +73,7 @@ select
     when 'USD' then round(t.amount * r.rate, 2)
   end as amount_dop
 from public.transactions t
-left join lateral (select * from public.usd_rate_on(t.user_id, t.occurred_at) where t.currency = 'USD') r on true;
+left join lateral public.usd_rate_on(case when t.currency = 'USD' then t.user_id end, t.occurred_at) r on true;
 
 -- Qué cuenta como gasto (una sola definición, reutilizada por las RPC). amount_dop sale de transactions_with_rate;
 -- una moneda nueva queda en NULL hasta que se agregue su rama explícita allí.
@@ -114,7 +119,8 @@ begin
   if v_min is null or v_min > v_start + 7 then
     return query select v_start, v_today;
   else
-    return query select greatest(v_start, v_max - 7), v_today;
+    -- Sin greatest(): si la última tasa quedó antes del inicio, el rango arranca ahí y no queda hueco permanente.
+    return query select v_max - 7, v_today;
   end if;
 end;
 $$;
