@@ -27,6 +27,8 @@ export async function exchangeGoogleCode(
   const granted = typeof json.scope === 'string' ? json.scope.split(' ') : [];
   if (!granted.includes(GMAIL_READONLY_SCOPE)) {
     // El permiso emitido no sirve: se revoca el refresh token (best effort) antes de avisar.
+    // Google revoca toda la concesión de este cliente y usuario: revincular un Gmail ya vinculado con la casilla
+    // desmarcada también invalida el token existente (la cuenta pedirá volver a vincular). Costo aceptado.
     if (typeof json.refresh_token === 'string') await revokeGoogleToken(json.refresh_token, fetchImpl).catch(() => undefined);
     throw new MissingScopeError('gmail scope not granted');
   }

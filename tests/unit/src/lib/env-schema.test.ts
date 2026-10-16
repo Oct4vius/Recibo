@@ -32,4 +32,10 @@ describe('parseEnv', () => {
     expect(parseEnv(withoutGoogle)).toEqual(withoutGoogle);
     expect(() => parseEnv({ ...withoutGoogle, EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID: 'recibo' })).toThrow(/EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID/);
   });
+  it('regression — a blank Google client id does not break the app', () => {
+    const { EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID: _omitted, ...rest } = valid;
+    expect(parseEnv({ ...rest, EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID: '' }).EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID).toBeUndefined();
+    expect(parseEnv({ ...rest, EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID: '   ' }).EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID).toBeUndefined();
+    expect(() => parseEnv({ ...rest, EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID: 'recibo' })).toThrow(/EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID/);
+  });
 });

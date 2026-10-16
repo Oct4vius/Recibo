@@ -21,3 +21,8 @@ Deno.test('regression — without Google configuration Gmail has no provider and
   assertEquals(providerFor('gmail', { msClientId: 'ms', googleClientId: 'g' }), null);
   assertEquals(typeof providerFor('outlook', noGoogle)?.provider.fetchNew, 'function');
 });
+
+Deno.test('regression — blank or whitespace-only Google configuration counts as absent', () => {
+  assertEquals(providerFor('gmail', { msClientId: 'ms', googleClientId: '', googleClientSecret: '' }), null);
+  assertEquals(providerFor('gmail', { msClientId: 'ms', googleClientId: 'g', googleClientSecret: '  ' }), null);
+});

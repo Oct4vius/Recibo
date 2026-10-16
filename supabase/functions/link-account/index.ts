@@ -14,7 +14,7 @@ Deno.serve(
     userIdFromToken: async (token) => (await db.auth.getUser(token)).data.user?.id ?? null,
     exchangers: {
       outlook: outlookExchanger(msClientId),
-      ...(googleClientId && googleClientSecret ? { gmail: gmailExchanger({ clientId: googleClientId, clientSecret: googleClientSecret }) } : {}),
+      ...(googleClientId?.trim() && googleClientSecret?.trim() ? { gmail: gmailExchanger({ clientId: googleClientId, clientSecret: googleClientSecret }) } : {}),
     },
     linkAccount: async (userId, provider, email, refreshToken) => {
       const { data, error } = await db.rpc('link_mail_account', {

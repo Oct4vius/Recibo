@@ -22,7 +22,7 @@ const registry: Record<MailProviderName, (config: ProviderConfig) => RegisteredP
     expiredSession: 'La sesión de Outlook expiró. Vuelve a vincular.',
   }),
   gmail: ({ googleClientId, googleClientSecret }) =>
-    googleClientId && googleClientSecret
+    googleClientId?.trim() && googleClientSecret?.trim()
       ? {
         provider: createGmailProvider({ clientId: googleClientId, clientSecret: googleClientSecret }),
         expiredSession: 'La sesión de Gmail expiró. Vuelve a vincular.',
