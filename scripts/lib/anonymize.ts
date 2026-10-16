@@ -35,7 +35,8 @@ export function termPattern(term: string): RegExp {
   return /^\d+$/.test(term) ? new RegExp(`(?<!\\d)${literal}(?!\\d)`, 'giu') : new RegExp(literal, 'giu');
 }
 
-export const LONG_NUMBER = /(?<!\d)\d{10,15}(?!\d)/g;
+/** Red de seguridad: cualquier número de 10 o más dígitos (teléfonos, cuentas, cuerpos de IBAN). */
+export const LONG_NUMBER = /(?<!\d)\d{10,}(?!\d)/g;
 
 /** Solo las entidades que resultan en una letra (PE&Ntilde;A); las de marcado (&lt;) se dejan como están. */
 function decodeLetterEntities(text: string): string {
@@ -48,7 +49,7 @@ function decodeLetterEntities(text: string): string {
 export function anonymizeText(text: string, config: AnonymizeConfig): string {
   const ordered = [...config.replacements].sort((a, b) => b.find.length - a.find.length);
   const replaced = ordered.reduce((acc, { find, replace }) => acc.replace(termPattern(find), () => replace), decodeLetterEntities(text));
-  return replaced.replace(LONG_NUMBER, (digits) => '1234567890'.repeat(2).slice(0, digits.length));
+  return replaced.replace(LONG_NUMBER, (digits) => '1234567890'.repeat(Math.ceil(digits.length / 10)).slice(0, digits.length));
 }
 
 /** Términos de la config que siguen en algún texto, sin repetir: primero `replacements[].find`, luego `forbidden`. */
@@ -59,6 +60,14 @@ export function forbiddenTermsIn(texts: readonly string[], config: AnonymizeConf
     return texts.some((text) => text.search(pattern) !== -1);
   });
   return [...new Set(surviving)];
+}
+
+export type AnonymizeVerdict = { ok: true } | { ok: false; terms: string[] };
+
+/** Decisión única de "escribir o no": se rechaza mientras algún término de la config siga en los textos. */
+export function checkAnonymized(texts: readonly string[], config: AnonymizeConfig): AnonymizeVerdict {
+  const terms = forbiddenTermsIn(texts, config);
+  return terms.length === 0 ? { ok: true } : { ok: false, terms };
 }
 
 /** .eml mínimo: solo los headers imprescindibles y el HTML en UTF-8 plano (nunca base64/QP: esconderían términos). */

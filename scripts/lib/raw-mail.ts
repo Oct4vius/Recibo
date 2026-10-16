@@ -1,22 +1,33 @@
 import { createHash } from 'node:crypto';
 import { join } from 'node:path';
+import { GMAIL_MESSAGES_URL } from '../../supabase/functions/_shared/mail/gmail';
 import { decodeBase64Url } from '../../supabase/functions/_shared/mail/base64url';
 import type { MailProviderName } from '../../supabase/functions/_shared/mail/types';
 
+const GRAPH_MESSAGES_URL = 'https://graph.microsoft.com/v1.0/me/messages';
+
+const RAW_REQUESTS: Record<MailProviderName, (id: string) => { url: string; headers: Record<string, string> }> = {
+  outlook: (id) => ({ url: `${GRAPH_MESSAGES_URL}/${id}/$value`, headers: { Prefer: 'IdType="ImmutableId"' } }),
+  gmail: (id) => ({ url: `${GMAIL_MESSAGES_URL}/${id}?format=raw`, headers: {} }),
+};
+
 /** Petición del MIME original de un mensaje. Sin `Authorization`: lo agrega el script. */
 export function rawMessageRequest(provider: MailProviderName, messageId: string): { url: string; headers: Record<string, string> } {
-  const id = encodeURIComponent(messageId);
-  return provider === 'outlook'
-    ? { url: `https://graph.microsoft.com/v1.0/me/messages/${id}/$value`, headers: { Prefer: 'IdType="ImmutableId"' } }
-    : { url: `https://gmail.googleapis.com/gmail/v1/users/me/messages/${id}?format=raw`, headers: {} };
+  return RAW_REQUESTS[provider](encodeURIComponent(messageId));
 }
 
+const RAW_BODIES: Record<MailProviderName, (response: Response) => Promise<Uint8Array>> = {
+  outlook: async (response) => new Uint8Array(await response.arrayBuffer()),
+  gmail: async (response) => {
+    const json = (await response.json()) as { raw?: unknown };
+    if (typeof json.raw !== 'string') throw new Error('La respuesta de Gmail no trae el campo raw');
+    return decodeBase64Url(json.raw);
+  },
+};
+
 /** Graph entrega el MIME tal cual; Gmail lo entrega en base64url dentro de `raw`. */
-export async function rawMessageBytes(provider: MailProviderName, response: Response): Promise<Uint8Array> {
-  if (provider === 'outlook') return new Uint8Array(await response.arrayBuffer());
-  const json = (await response.json()) as { raw?: unknown };
-  if (typeof json.raw !== 'string') throw new Error('La respuesta de Gmail no trae el campo raw');
-  return decodeBase64Url(json.raw);
+export function rawMessageBytes(provider: MailProviderName, response: Response): Promise<Uint8Array> {
+  return RAW_BODIES[provider](response);
 }
 
 /** Ruta local de la descarga: por banco, con fecha y hash; nada del id crudo en el nombre (seguro en Windows). */

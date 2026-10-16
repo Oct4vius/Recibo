@@ -36,7 +36,12 @@ export interface MailProvider {
 }
 
 /** El proveedor rechazó la sesión (refresh token inválido o revocado): hay que volver a vincular. */
-export class MailAuthError extends Error {}
+export class MailAuthError extends Error {
+  /** Texto para el usuario si debe ser distinto al de "sesión expirada" del proveedor (p. ej. permiso retirado). */
+  constructor(message: string, readonly userMessage?: string) {
+    super(message);
+  }
+}
 
 /** Falla transitoria (429, 5xx, red): se reintenta en la próxima corrida. */
 export class MailTransientError extends Error {}

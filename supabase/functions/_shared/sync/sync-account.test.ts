@@ -178,3 +178,11 @@ Deno.test('an expired Gmail session shows the injected Gmail message on the acco
   assertEquals(marks, [{ status: 'error', lastError: 'La sesión de Gmail expiró. Vuelve a vincular.', lastSyncAt: null }]);
   assertEquals(logs[0].error, 'La sesión de Gmail expiró. Vuelve a vincular.');
 });
+
+Deno.test('regression — an auth error with its own user message shows it instead of the expired-session text', async () => {
+  const { repo, logs, marks } = fakeRepo();
+  const provider = fakeProvider([], () => Promise.reject(new MailAuthError('insufficient', 'Recibo ya no tiene permiso para leer tu Gmail. Vuelve a vincular.')));
+  await syncAccount({ ...account, provider: 'gmail' }, { provider, repo, parse, maxPages: 10, now, expiredSession: 'La sesión de Gmail expiró. Vuelve a vincular.' });
+  assertEquals(marks, [{ status: 'error', lastError: 'Recibo ya no tiene permiso para leer tu Gmail. Vuelve a vincular.', lastSyncAt: null }]);
+  assertEquals(logs[0].error, 'Recibo ya no tiene permiso para leer tu Gmail. Vuelve a vincular.');
+});

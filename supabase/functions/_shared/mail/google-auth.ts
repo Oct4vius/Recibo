@@ -3,9 +3,9 @@ import { MissingScopeError, NoRefreshTokenError, type TokenSet } from './types.t
 
 export const GOOGLE_TOKEN_URL = 'https://oauth2.googleapis.com/token';
 export const GOOGLE_REVOKE_URL = 'https://oauth2.googleapis.com/revoke';
-export const GMAIL_SCOPE = 'https://www.googleapis.com/auth/gmail.readonly';
+export const GMAIL_READONLY_SCOPE = 'https://www.googleapis.com/auth/gmail.readonly';
 /** Solo lectura de correo + correo de la cuenta (id_token). */
-export const GOOGLE_SCOPES = `openid email ${GMAIL_SCOPE}`;
+export const GOOGLE_SCOPES = `openid email ${GMAIL_READONLY_SCOPE}`;
 export const REVOKE_TIMEOUT_MS = 5_000;
 
 /** Canjea un código de Google (SDK nativo o navegador) con el cliente Web. Los errores nunca incluyen código ni secreto. */
@@ -25,7 +25,11 @@ export async function exchangeGoogleCode(
     fetchImpl,
   );
   const granted = typeof json.scope === 'string' ? json.scope.split(' ') : [];
-  if (!granted.includes(GMAIL_SCOPE)) throw new MissingScopeError('gmail scope not granted');
+  if (!granted.includes(GMAIL_READONLY_SCOPE)) {
+    // El permiso emitido no sirve: se revoca el refresh token (best effort) antes de avisar.
+    if (typeof json.refresh_token === 'string') await revokeGoogleToken(json.refresh_token, fetchImpl).catch(() => undefined);
+    throw new MissingScopeError('gmail scope not granted');
+  }
   if (typeof json.refresh_token !== 'string') throw new NoRefreshTokenError('no refresh token');
   const email = emailFromIdToken(json.id_token);
   if (!email) throw new Error('incomplete token response');

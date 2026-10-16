@@ -9,6 +9,7 @@ import { useLinkedAccounts } from '../hooks';
 import type { LinkedAccount } from '../mapping';
 import { accountStatusText } from '../sync-time';
 import { AccountSheet } from './AccountSheet';
+import { env } from '@/lib/env';
 import { LinkGmailButton } from './LinkGmailButton';
 import { LinkOutlookButton } from './LinkOutlookButton';
 
@@ -48,9 +49,11 @@ export function LinkedAccountsScreen() {
         <View style={{ marginTop: 12 }}>
           <LinkOutlookButton onMessage={setMessage} />
         </View>
-        <View style={{ marginTop: 8 }}>
-          <LinkGmailButton onMessage={setMessage} />
-        </View>
+        {env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID ? (
+          <View style={{ marginTop: 8 }}>
+            <LinkGmailButton webClientId={env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID} onMessage={setMessage} />
+          </View>
+        ) : null}
         {message ? (
           <Text accessibilityLiveRegion="polite" style={{ fontFamily: fonts.bodyStrong, fontSize: typeScale.caption, color: colors.signal, marginTop: 8 }}>
             {message}

@@ -7,8 +7,9 @@ import { refreshGoogleTokens } from './google-auth.ts';
 import { bankSenderAddresses, gmailQuery } from './sender-query.ts';
 import { MailAuthError, MailTransientError, type MailProvider, type Page, type SyncCursor } from './types.ts';
 
-export const GMAIL_MESSAGES = 'https://gmail.googleapis.com/gmail/v1/users/me/messages';
+export const GMAIL_MESSAGES_URL = 'https://gmail.googleapis.com/gmail/v1/users/me/messages';
 export const GET_CONCURRENCY = 5;
+export const GMAIL_SCOPE_LOST = 'Recibo ya no tiene permiso para leer tu Gmail. Vuelve a vincular.';
 
 export interface GmailPart {
   mimeType?: string;
@@ -36,7 +37,34 @@ export function listUrl(addresses: readonly string[], cursor: SyncCursor): strin
     maxResults: String(PAGE_SIZE),
   });
   if (cursor.next) params.set('pageToken', cursor.next);
-  return `${GMAIL_MESSAGES}?${params.toString()}`;
+  return `${GMAIL_MESSAGES_URL}?${params.toString()}`;
+}
+
+function bytesOfQ(text: string): Uint8Array {
+  const bytes: number[] = [];
+  for (let i = 0; i < text.length; i += 1) {
+    const char = text[i];
+    if (char === '_') bytes.push(0x20);
+    else if (char === '=' && /^[0-9a-f]{2}$/i.test(text.slice(i + 1, i + 3))) {
+      bytes.push(parseInt(text.slice(i + 1, i + 3), 16));
+      i += 2;
+    } else bytes.push(char.charCodeAt(0));
+  }
+  return Uint8Array.from(bytes);
+}
+
+/** Decodifica palabras codificadas RFC 2047 (`=?charset?B|Q?...?=`); charset desconocido: se deja el texto crudo. */
+export function decodeMimeWords(value: string): string {
+  return value
+    .replace(/(\?=)\s+(=\?)/g, '$1$2')
+    .replace(/=\?([^?\s*]+)(?:\*[^?\s]*)?\?([BbQq])\?([^?\s]*)\?=/g, (match, charset: string, encoding: string, text: string) => {
+      try {
+        const bytes = encoding.toUpperCase() === 'B' ? Uint8Array.from(atob(text), (c) => c.charCodeAt(0)) : bytesOfQ(text);
+        return new TextDecoder(charset).decode(bytes);
+      } catch {
+        return match;
+      }
+    });
 }
 
 function header(part: GmailPart | undefined, name: string): string {
@@ -74,7 +102,7 @@ export function toRawEmail(message: GmailMessage): RawEmail {
   return {
     messageId: message.id,
     from: senderAddress(header(message.payload, 'From')),
-    subject: header(message.payload, 'Subject'),
+    subject: decodeMimeWords(header(message.payload, 'Subject')),
     text: html ? htmlToText(decodePartText(html)) : '',
     receivedAt: new Date(Number(message.internalDate)).toISOString(),
   };
@@ -103,7 +131,7 @@ export function createGmailProvider(config: {
     if (response.status === 403) {
       const body = (await response.json().catch(() => null)) as { error?: { errors?: { reason?: string }[] } } | null;
       const reason = body?.error?.errors?.[0]?.reason;
-      if (reason === 'insufficientPermissions') throw new MailAuthError('gmail insufficient permissions');
+      if (reason === 'insufficientPermissions') throw new MailAuthError('gmail insufficient permissions', GMAIL_SCOPE_LOST);
       if (reason === 'rateLimitExceeded' || reason === 'userRateLimitExceeded') throw new MailTransientError('gmail rate limit');
       throw new Error('gmail 403');
     }
@@ -118,11 +146,12 @@ export function createGmailProvider(config: {
   }
 
   async function getMessage(id: string, accessToken: string): Promise<GmailMessage | null> {
-    const outcome = await get<GmailMessage>(`${GMAIL_MESSAGES}/${encodeURIComponent(id)}?format=full`, accessToken);
+    const outcome = await get<GmailMessage>(`${GMAIL_MESSAGES_URL}/${encodeURIComponent(id)}?format=full`, accessToken);
     if (outcome.ok) return outcome.json;
-    // Borrado entre list y get: se salta.
-    if (outcome.status === 404) return null;
-    throw new Error(`gmail ${outcome.status}`);
+    // 404 (borrado entre list y get) o cualquier otro 4xx de un solo mensaje: se salta y la página sigue.
+    // Texto fijo, sin ids.
+    console.warn('gmail: skipped a message that could not be read');
+    return null;
   }
 
   async function fetchNew(accessToken: string, cursor: SyncCursor): Promise<Page> {

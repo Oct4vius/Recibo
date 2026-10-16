@@ -34,6 +34,8 @@ export function createUnlinkHandler(deps: UnlinkDeps): (request: Request) => Pro
           if (refreshToken) await revoke(refreshToken);
         } catch {
           // Texto fijo: nunca el error (podría traer el token). Desvincular debe terminar igual.
+          // Si la revocación falló, el permiso puede seguir en Google: el usuario lo ve en myaccount.google.com/permissions
+          // (el aviso de la app lo dice) y una nueva vinculación lo sustituye.
           console.error('unlink-account: token revocation failed');
         }
       }

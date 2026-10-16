@@ -14,32 +14,40 @@ import { LOOPBACK_REDIRECT, openBrowser, waitForCode } from './lib/loopback';
 import { authorizeUrl, createPkce } from './lib/ms-login';
 import { downloadPath, rawMessageBytes, rawMessageRequest } from './lib/raw-mail';
 
-/** Login en el navegador y access token en memoria. Devuelve también el correo con el que se inició sesión. */
-async function browserAccessToken(provider: MailProviderName): Promise<{ accessToken: string; email: string }> {
+type BrowserLogin = () => Promise<{ accessToken: string; email: string }>;
+
+async function outlookLogin(): Promise<{ accessToken: string; email: string }> {
+  const clientId = process.env.EXPO_PUBLIC_MS_CLIENT_ID;
+  if (!clientId) throw new Error('Falta EXPO_PUBLIC_MS_CLIENT_ID en .env.local');
   const state = randomUUID();
-  if (provider === 'outlook') {
-    const clientId = process.env.EXPO_PUBLIC_MS_CLIENT_ID;
-    if (!clientId) throw new Error('Falta EXPO_PUBLIC_MS_CLIENT_ID en .env.local');
-    const { verifier, challenge } = createPkce();
-    const loginUrl = authorizeUrl(clientId, challenge, state);
-    console.log(`Abriendo el inicio de sesión de Microsoft… Si no se abre, abre esta URL:\n${loginUrl}`);
-    openBrowser(loginUrl);
-    const code = await waitForCode(state);
-    const linked = await exchangeCode({ clientId, code, codeVerifier: verifier, redirectUri: LOOPBACK_REDIRECT });
-    return { accessToken: (await refreshTokens(clientId, linked.refreshToken)).accessToken, email: linked.email };
-  }
+  const { verifier, challenge } = createPkce();
+  const loginUrl = authorizeUrl(clientId, challenge, state);
+  console.log(`Abriendo el inicio de sesión de Microsoft… Si no se abre, abre esta URL:
+${loginUrl}`);
+  openBrowser(loginUrl);
+  const code = await waitForCode(state);
+  const linked = await exchangeCode({ clientId, code, codeVerifier: verifier, redirectUri: LOOPBACK_REDIRECT });
+  return { accessToken: (await refreshTokens(clientId, linked.refreshToken)).accessToken, email: linked.email };
+}
+
+async function gmailLogin(): Promise<{ accessToken: string; email: string }> {
   const env = functionsEnv();
   const clientId = env.GOOGLE_CLIENT_ID;
   const clientSecret = env.GOOGLE_CLIENT_SECRET;
   if (!clientId || !clientSecret) throw new Error('Faltan GOOGLE_CLIENT_ID o GOOGLE_CLIENT_SECRET en supabase/functions/.env');
+  const state = randomUUID();
   const loginUrl = googleAuthorizeUrl(clientId, state);
-  console.log(`Abriendo el inicio de sesión de Google… Si no se abre, abre esta URL:\n${loginUrl}`);
+  console.log(`Abriendo el inicio de sesión de Google… Si no se abre, abre esta URL:
+${loginUrl}`);
   openBrowser(loginUrl);
   const code = await waitForCode(state);
   const linked = await exchangeGoogleCode({ clientId, clientSecret, code, redirectUri: LOOPBACK_REDIRECT });
   // Nunca se revoca el token de Google: revocar invalida el permiso completo del cliente y desvincularía la cuenta real.
   return { accessToken: (await refreshGoogleTokens(clientId, clientSecret, linked.refreshToken)).accessToken, email: linked.email };
 }
+
+/** Login en el navegador por proveedor; el access token vive solo en memoria. */
+const BROWSER_LOGINS: Record<MailProviderName, BrowserLogin> = { outlook: outlookLogin, gmail: gmailLogin };
 
 async function main(): Promise<void> {
   const argv = process.argv.slice(2);
@@ -63,7 +71,7 @@ async function main(): Promise<void> {
     return;
   }
 
-  const login = await browserAccessToken(account.provider);
+  const login = await BROWSER_LOGINS[account.provider as MailProviderName]();
   if (login.email !== account.email.toLowerCase()) throw new Error('Iniciaste sesión con otra cuenta; no se descargó nada.');
 
   let downloaded = 0;

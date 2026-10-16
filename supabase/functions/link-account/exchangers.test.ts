@@ -1,5 +1,5 @@
 import { assertEquals } from 'jsr:@std/assert@1';
-import { gmailExchanger, GMAIL_MESSAGES, OUTLOOK_MESSAGES, outlookExchanger } from './exchangers.ts';
+import { gmailExchanger, GMAIL_LINK_MESSAGES, OUTLOOK_LINK_MESSAGES, outlookExchanger } from './exchangers.ts';
 
 function idToken(claims: Record<string, unknown>): string {
   const b64 = (o: unknown) => btoa(JSON.stringify(o)).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
@@ -21,7 +21,7 @@ Deno.test('outlookExchanger — needs code, codeVerifier and redirectUri', () =>
   assertEquals(ex.prepare({ provider: 'outlook', code: 'c', redirectUri: 'r' }), null);
   assertEquals(ex.prepare({ provider: 'outlook', code: '', codeVerifier: 'v', redirectUri: 'r' }), null);
   assertEquals(typeof ex.prepare({ provider: 'outlook', code: 'c', codeVerifier: 'v', redirectUri: 'r' }), 'function');
-  assertEquals(ex.messages, OUTLOOK_MESSAGES);
+  assertEquals(ex.messages, OUTLOOK_LINK_MESSAGES);
 });
 
 Deno.test('gmailExchanger — the SDK code goes with an empty redirect_uri and the web client secret', async () => {
@@ -40,5 +40,5 @@ Deno.test('gmailExchanger — the terminal script sends its loopback redirect; i
   assertEquals(typeof ex.prepare({ provider: 'gmail', code: 'c', redirectUri: 'http://localhost:53682/callback' }), 'function');
   assertEquals(ex.prepare({ provider: 'gmail', code: 'c', redirectUri: 5 }), null);
   assertEquals(ex.prepare({ provider: 'gmail' }), null);
-  assertEquals(ex.messages, GMAIL_MESSAGES);
+  assertEquals(ex.messages, GMAIL_LINK_MESSAGES);
 });

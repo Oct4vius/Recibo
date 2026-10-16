@@ -3,7 +3,7 @@
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { dirname } from 'node:path';
 import PostalMime from 'postal-mime';
-import { anonymizeText, buildMinimalEml, forbiddenTermsIn, parseAnonymizeConfig } from './lib/anonymize';
+import { anonymizeText, buildMinimalEml, checkAnonymized, parseAnonymizeConfig } from './lib/anonymize';
 import { emlToRawEmail } from './lib/eml';
 
 const CONFIG_PATH = 'fixtures-raw/anonymize.local.json';
@@ -31,9 +31,9 @@ async function main(): Promise<void> {
     html: anonymizeText(parsed.html, config),
   });
   const raw = await emlToRawEmail(new TextEncoder().encode(eml));
-  const surviving = forbiddenTermsIn([eml, raw.subject, raw.text], config);
-  if (surviving.length > 0) {
-    console.error(`Quedan términos prohibidos: ${surviving.join(', ')}. No se escribió ${output}.`);
+  const verdict = checkAnonymized([eml, raw.subject, raw.text], config);
+  if (!verdict.ok) {
+    console.error(`Quedan términos prohibidos: ${verdict.terms.join(', ')}. No se escribió ${output}.`);
     process.exit(1);
   }
   mkdirSync(dirname(output), { recursive: true });

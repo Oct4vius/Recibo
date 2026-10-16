@@ -1,5 +1,5 @@
 // Lógica pura del login con Google. No importa el SDK: lo usa LinkGmailButton.
-export const GMAIL_READONLY_SCOPE = 'https://www.googleapis.com/auth/gmail.readonly';
+import { GMAIL_READONLY_SCOPE } from '../../../supabase/functions/_shared/mail/google-auth.ts';
 
 export const GOOGLE_MESSAGES = {
   cancelled: 'Cancelaste el inicio de sesión con Google.',

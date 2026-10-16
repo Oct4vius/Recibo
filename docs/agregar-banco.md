@@ -20,6 +20,8 @@ correos bancarios"): nunca se adivina un monto ni se inventa un parser sin corre
   inicias sesión con otra cuenta, aborta. Los que ya existen se saltan. Para Gmail necesita `GOOGLE_CLIENT_ID` y
   `GOOGLE_CLIENT_SECRET` en `supabase/functions/.env`; para Outlook, `EXPO_PUBLIC_MS_CLIENT_ID` en `.env.local`.
 
+La herramienta es de desarrollo y no pagina: baja los correos que devuelve la consulta de `unparsed_emails` (suficiente para tomar muestras; para un volumen grande, usa `--all` por tandas o entrega los `.eml` a mano).
+
 `fixtures-raw/` está en `.gitignore`: nada de lo que hay ahí se versiona.
 
 ## 2. Anonimizar y generar la fixture
@@ -90,12 +92,28 @@ asunto, columnas, mapeo de estados, formatos de fecha y monto).
 
 1. `bunx supabase functions deploy sync-mail`.
 2. Reiniciar el cursor de las cuentas afectadas para releer desde el inicio (la ingesta es idempotente por
-   `message_id`). Ejemplo de SQL para una cuenta `active` (reemplazar `<user_id>` y `<account_id>`):
+   `message_id`). Ojo: `initial_sync_cursor` solo llega al día 1 del mes anterior. Si los correos sin procesar son
+   más viejos, fija `since` en el más antiguo sin resolver de esa cuenta (más abajo). Ejemplo de SQL para una cuenta
+   `active` (reemplazar `<user_id>` y `<account_id>`):
 
    ```sql
    update public.linked_accounts
    set sync_cursor = public.initial_sync_cursor('<user_id>')
    where id = '<account_id>' and status = 'active';
+   ```
+
+   Para releer desde el correo sin procesar más antiguo de esa cuenta en lugar del mes anterior:
+
+   ```sql
+   update public.linked_accounts a
+   set sync_cursor = jsonb_build_object(
+     'since', to_char(u.oldest at time zone 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS"Z"'), 'next', null, 'maxSeen', null
+   )::text
+   from (
+     select min(received_at) as oldest from public.unparsed_emails
+     where linked_account_id = '<account_id>' and resolved = false
+   ) u
+   where a.id = '<account_id>' and a.status = 'active' and u.oldest is not null;
    ```
 
 3. `bun run dev:sync --target remote` (o esperar al cron de 15 min).

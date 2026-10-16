@@ -132,3 +132,23 @@ Deno.test('revokeGoogleToken — a hanging endpoint is aborted after the timeout
     )) as typeof fetch;
   await assertRejects(() => revokeGoogleToken('rt', hanging, 10));
 });
+
+Deno.test('regression — a consent without the Gmail scope revokes the issued refresh token before failing', async () => {
+  const calls: { url: string; form: URLSearchParams }[] = [];
+  const fetchImpl = ((url: string, init?: RequestInit) => {
+    calls.push({ url, form: new URLSearchParams(String(init?.body ?? '')) });
+    const body = url === GOOGLE_TOKEN_URL ? { refresh_token: 'rt-bad', scope: 'openid', id_token: idToken({ email: 'a@b.example' }) } : {};
+    return Promise.resolve(new Response(JSON.stringify(body), { status: 200 }));
+  }) as typeof fetch;
+  await assertRejects(() => exchangeGoogleCode({ clientId: 'c', clientSecret: 's', code: 'k', redirectUri: '' }, fetchImpl), MissingScopeError);
+  assertEquals(calls[1].url, GOOGLE_REVOKE_URL);
+  assertEquals(calls[1].form.get('token'), 'rt-bad');
+});
+
+Deno.test('regression — a failing revoke still returns the missing-scope error', async () => {
+  const fetchImpl = ((url: string) =>
+    url === GOOGLE_TOKEN_URL
+      ? Promise.resolve(new Response(JSON.stringify({ refresh_token: 'rt-bad', scope: 'openid' }), { status: 200 }))
+      : Promise.reject(new TypeError('net'))) as typeof fetch;
+  await assertRejects(() => exchangeGoogleCode({ clientId: 'c', clientSecret: 's', code: 'k', redirectUri: '' }, fetchImpl), MissingScopeError);
+});

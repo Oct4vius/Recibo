@@ -79,8 +79,8 @@ export async function syncAccount(account: SyncAccount, deps: SyncDeps): Promise
       outcome.status = 'skipped';
     } else if (err instanceof MailAuthError) {
       outcome.status = 'auth_error';
-      error = deps.expiredSession;
-      await repo.markAccount(account.id, { status: 'error', lastError: deps.expiredSession, lastSyncAt: null });
+      error = err.userMessage ?? deps.expiredSession;
+      await repo.markAccount(account.id, { status: 'error', lastError: error, lastSyncAt: null });
     } else if (err instanceof MailTransientError) {
       outcome.status = 'transient_error';
       error = TRANSIENT_ERROR;

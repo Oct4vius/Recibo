@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { htmlToText } from '../../../supabase/functions/_shared/parsers/normalize.ts';
-import { anonymizeText, buildMinimalEml, forbiddenTermsIn, parseAnonymizeConfig } from '../../../scripts/lib/anonymize';
+import { anonymizeText, buildMinimalEml, checkAnonymized, forbiddenTermsIn, parseAnonymizeConfig } from '../../../scripts/lib/anonymize';
 import { emlToRawEmail } from '../../../scripts/lib/eml';
 
 const config = parseAnonymizeConfig({
@@ -29,10 +29,11 @@ describe('anonymizeText', () => {
     expect(anonymizeText('XXXXXXX5678', config)).toBe('XXXXXXX1234');
     expect(anonymizeText('ref 956789 · RD$ 15,678.00 · 05678', config)).toBe('ref 956789 · RD$ 15,678.00 · 05678');
   });
-  it('masks runs of 10 to 15 digits, not shorter or longer ones', () => {
+  it('regression — masks every run of 10 or more digits (including IBAN bodies), not shorter ones', () => {
     expect(anonymizeText('Tel 8095551234567', config)).toBe('Tel 1234567890123');
     expect(anonymizeText('Conf 123456789', config)).toBe('Conf 123456789');
-    expect(anonymizeText('x 1234567890123456', config)).toBe('x 1234567890123456');
+    expect(anonymizeText('x 9999999999999999', config)).toBe('x 1234567890123456');
+    expect(anonymizeText('DO28 99999999999999999999', config)).toBe('DO28 12345678901234567890');
   });
 });
 
@@ -69,5 +70,12 @@ describe('buildMinimalEml', () => {
       text: 'Fecha | Comercio\n16/09/2026 | PANADERÍA',
       receivedAt: '2026-09-17T02:43:15.000Z',
     });
+  });
+});
+
+describe('checkAnonymized', () => {
+  it('accepts clean texts and refuses, listing the terms, while any survives', () => {
+    expect(checkAnonymized(['JUAN PEREZ 1234'], config)).toEqual({ ok: true });
+    expect(checkAnonymized(['hola pareja@gmail.example'], config)).toEqual({ ok: false, terms: ['pareja@gmail.example'] });
   });
 });

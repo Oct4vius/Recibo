@@ -1,6 +1,6 @@
 import { assertEquals } from 'jsr:@std/assert@1';
 import { MailAuthError, MissingScopeError, NoRefreshTokenError } from '../_shared/mail/types.ts';
-import { GMAIL_MESSAGES, OUTLOOK_MESSAGES } from './exchangers.ts';
+import { GMAIL_LINK_MESSAGES, OUTLOOK_LINK_MESSAGES } from './exchangers.ts';
 import { type CodeExchanger, createLinkHandler, type LinkDeps, type LinkedTokens } from './handler.ts';
 
 const body = { provider: 'outlook', code: 'the-code', codeVerifier: 'the-verifier', redirectUri: 'recibo://auth/microsoft' };
@@ -14,7 +14,7 @@ function request(payload: unknown, token: string | null = 'user-jwt'): Request {
   });
 }
 
-const fakeExchanger = (result: () => Promise<LinkedTokens>, seen: unknown[], messages = OUTLOOK_MESSAGES): CodeExchanger => ({
+const fakeExchanger = (result: () => Promise<LinkedTokens>, seen: unknown[], messages = OUTLOOK_LINK_MESSAGES): CodeExchanger => ({
   messages,
   prepare: (b) => (typeof b.code === 'string' ? () => (seen.push(b), result()) : null),
 });
@@ -33,7 +33,7 @@ function deps(
     userIdFromToken: (t) => Promise.resolve(t === 'user-jwt' ? 'user-1' : null),
     exchangers: {
       outlook: fakeExchanger(ok('owner@outlook.example'), exchanged),
-      gmail: fakeExchanger(gmail ?? ok('pareja@gmail.example'), exchanged, GMAIL_MESSAGES),
+      gmail: fakeExchanger(gmail ?? ok('pareja@gmail.example'), exchanged, GMAIL_LINK_MESSAGES),
     },
     linkAccount: (userId, provider, email, refreshToken) => {
       linked.push({ userId, provider, email, refreshToken });
@@ -77,7 +77,7 @@ Deno.test('an expired or reused code is a 400 with the provider message', async 
     request({ provider: 'gmail', code: 'c' }),
   );
   assertEquals(response.status, 400);
-  assertEquals(await response.json(), { error: GMAIL_MESSAGES.codeExpired });
+  assertEquals(await response.json(), { error: GMAIL_LINK_MESSAGES.codeExpired });
 });
 
 Deno.test('a Google consent without refresh token or without the Gmail scope is a 400 with a clear message', async () => {
@@ -85,16 +85,23 @@ Deno.test('a Google consent without refresh token or without the Gmail scope is 
     request({ provider: 'gmail', code: 'c' }),
   );
   assertEquals(noRefresh.status, 400);
-  assertEquals(await noRefresh.json(), { error: GMAIL_MESSAGES.noRefreshToken });
+  assertEquals(await noRefresh.json(), { error: GMAIL_LINK_MESSAGES.noRefreshToken });
   const noScope = await createLinkHandler(deps({ gmail: () => Promise.reject(new MissingScopeError('x')) }))(
     request({ provider: 'gmail', code: 'c' }),
   );
   assertEquals(noScope.status, 400);
-  assertEquals(await noScope.json(), { error: GMAIL_MESSAGES.missingScope });
+  assertEquals(await noScope.json(), { error: GMAIL_LINK_MESSAGES.missingScope });
 });
 
 Deno.test('any other failure is a 502 without details', async () => {
   const response = await createLinkHandler(deps({ linkAccount: () => Promise.reject(new Error('db down')) }))(request(body));
   assertEquals(response.status, 502);
   assertEquals(await response.json(), LINK_FAILED);
+});
+
+Deno.test('regression — without a Gmail exchanger (no Google configuration) Gmail is a 400 and Outlook still links', async () => {
+  const d = deps();
+  const outlookOnly = { ...d, exchangers: { outlook: d.exchangers.outlook } };
+  assertEquals((await createLinkHandler(outlookOnly)(request({ provider: 'gmail', code: 'c' }))).status, 400);
+  assertEquals((await createLinkHandler(outlookOnly)(request(body))).status, 200);
 });

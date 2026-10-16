@@ -1,7 +1,6 @@
 import { GoogleSignin, isErrorWithCode, statusCodes } from '@react-native-google-signin/google-signin';
 import { useState } from 'react';
 import { SkewButton } from '@/components/SkewButton';
-import { env } from '@/lib/env';
 import { GOOGLE_MESSAGES, googleLinkStep, googleSignInConfig } from '../google';
 import { useLinkAccount } from '../hooks';
 
@@ -15,7 +14,7 @@ async function signOutQuietly(): Promise<void> {
 }
 
 /** Google Sign-In nativo: solo se lee el `serverAuthCode`, que link-account canjea en el servidor. */
-export function LinkGmailButton({ onMessage }: { onMessage: (message: string | null) => void }) {
+export function LinkGmailButton({ webClientId, onMessage }: { webClientId: string; onMessage: (message: string | null) => void }) {
   const { mutate, isPending } = useLinkAccount();
   const [signingIn, setSigningIn] = useState(false);
 
@@ -23,7 +22,7 @@ export function LinkGmailButton({ onMessage }: { onMessage: (message: string | n
     onMessage(null);
     setSigningIn(true);
     try {
-      GoogleSignin.configure(googleSignInConfig(env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID));
+      GoogleSignin.configure(googleSignInConfig(webClientId));
       await GoogleSignin.hasPlayServices();
       await signOutQuietly(); // fuerza el selector de cuenta
       const step = googleLinkStep(await GoogleSignin.signIn());

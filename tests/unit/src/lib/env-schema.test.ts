@@ -13,7 +13,7 @@ describe('parseEnv', () => {
     expect(parseEnv(valid)).toEqual(valid);
   });
   it('names every missing variable in the error', () => {
-    expect(() => parseEnv({})).toThrow(/EXPO_PUBLIC_SUPABASE_URL.*EXPO_PUBLIC_SUPABASE_ANON_KEY.*EXPO_PUBLIC_MS_CLIENT_ID.*EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID/);
+    expect(() => parseEnv({})).toThrow(/EXPO_PUBLIC_SUPABASE_URL.*EXPO_PUBLIC_SUPABASE_ANON_KEY.*EXPO_PUBLIC_MS_CLIENT_ID/);
   });
   it('rejects a URL that is not a URL', () => {
     expect(() => parseEnv({ ...valid, EXPO_PUBLIC_SUPABASE_URL: 'not-a-url' })).toThrow(/EXPO_PUBLIC_SUPABASE_URL/);
@@ -26,5 +26,10 @@ describe('parseEnv', () => {
   });
   it('rejects a Google web client id that is not a googleusercontent id', () => {
     expect(() => parseEnv({ ...valid, EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID: 'recibo' })).toThrow(/EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID/);
+  });
+  it('regression — the Google web client id is optional so Outlook keeps working without it', () => {
+    const { EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID: _omitted, ...withoutGoogle } = valid;
+    expect(parseEnv(withoutGoogle)).toEqual(withoutGoogle);
+    expect(() => parseEnv({ ...withoutGoogle, EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID: 'recibo' })).toThrow(/EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID/);
   });
 });

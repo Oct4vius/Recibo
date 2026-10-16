@@ -1,5 +1,5 @@
 import { assertEquals, assertRejects, assertStringIncludes } from 'jsr:@std/assert@1';
-import { createGmailProvider, decodePartText, type GmailMessage, type GmailPart, listUrl, toRawEmail } from './gmail.ts';
+import { createGmailProvider, GMAIL_SCOPE_LOST, decodeMimeWords, decodePartText, type GmailMessage, type GmailPart, listUrl, toRawEmail } from './gmail.ts';
 import { MailAuthError, MailTransientError, type SyncCursor } from './types.ts';
 
 const cursor: SyncCursor = { since: '2026-09-01T04:00:00Z', next: null, maxSeen: null };
@@ -171,6 +171,8 @@ Deno.test('fetchNew — 401 and 403 insufficientPermissions are auth; 403 rate l
     createGmailProvider({ clientId: 'c', clientSecret: 's', addresses: ADDR, fetchImpl: (() => fn()) as typeof fetch });
   await assertRejects(() => make({ status: 401 }).fetchNew('at', cursor), MailAuthError);
   await assertRejects(() => make({ status: 403, body: { error: { errors: [{ reason: 'insufficientPermissions' }] } } }).fetchNew('at', cursor), MailAuthError);
+  const lost = await assertRejects(() => make({ status: 403, body: { error: { errors: [{ reason: 'insufficientPermissions' }] } } }).fetchNew('at', cursor), MailAuthError);
+  assertEquals(lost.userMessage, GMAIL_SCOPE_LOST);
   await assertRejects(() => make({ status: 403, body: { error: { errors: [{ reason: 'userRateLimitExceeded' }] } } }).fetchNew('at', cursor), MailTransientError);
   await assertRejects(() => make({ status: 403, body: { error: { errors: [{ reason: 'rateLimitExceeded' }] } } }).fetchNew('at', cursor), MailTransientError);
   await assertRejects(() => make({ status: 403, body: {} }).fetchNew('at', cursor), Error, 'gmail 403');
@@ -199,4 +201,31 @@ Deno.test('refreshToken — delegates to the Google token endpoint with the web 
   assertEquals(await provider.refreshToken('rt'), { accessToken: 'at', refreshToken: 'rt' });
   assertEquals(seen[0].form?.get('client_id'), 'web-id');
   assertEquals(seen[0].form?.get('client_secret'), 'web-secret');
+});
+
+Deno.test('regression — RFC 2047 encoded-word subjects are decoded (B and Q, adjacent words joined, plain untouched)', () => {
+  assertEquals(decodeMimeWords('=?UTF-8?B?QkhEIE5vdGlmaWNhY2nDs24gZGUgVHJhbnNhY2Npb25lcw==?='), 'BHD Notificación de Transacciones');
+  assertEquals(decodeMimeWords('=?UTF-8?Q?BHD_Notificaci=C3=B3n?= =?UTF-8?Q?_de_Transacciones?='), 'BHD Notificación de Transacciones');
+  assertEquals(decodeMimeWords('=?ISO-8859-1?Q?Notificaci=F3n?='), 'Notificación');
+  assertEquals(decodeMimeWords('BHD Notificación de Transacciones'), 'BHD Notificación de Transacciones');
+  assertEquals(decodeMimeWords('=?x-desconocido?B?AAAA?='), '=?x-desconocido?B?AAAA?=');
+});
+
+Deno.test('regression — toRawEmail decodes an encoded Subject header', () => {
+  const raw = toRawEmail({
+    id: 's',
+    internalDate: '1789526595000',
+    payload: { mimeType: 'text/plain', headers: [{ name: 'Subject', value: '=?UTF-8?B?QkhEIE5vdGlmaWNhY2nDs24gZGUgVHJhbnNhY2Npb25lcw==?=' }], body: {} },
+  });
+  assertEquals(raw.subject, 'BHD Notificación de Transacciones');
+});
+
+Deno.test('regression — an unclassified 4xx on one message skips that message and keeps the page', async () => {
+  const provider = providerWith((url) => {
+    if (isList(url)) return { status: 200, body: { messages: [{ id: 'bad' }, { id: 'ok' }] } };
+    if (url.includes('/bad?')) return { status: 400 };
+    return { status: 200, body: message('ok', Date.parse('2026-09-20T10:00:00Z')) };
+  });
+  const page = await provider.fetchNew('at', cursor);
+  assertEquals(page.emails.map((e) => e.messageId), ['ok']);
 });
