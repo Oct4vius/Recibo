@@ -16,3 +16,9 @@ export function senderFilter(addresses: readonly string[], since: string): strin
   const senders = addresses.map((address) => `from/emailAddress/address eq '${address.replaceAll("'", "''")}'`).join(' or ');
   return `receivedDateTime ge ${from} and (${senders})`;
 }
+
+/** `q` de Gmail: remitentes exactos y recibidos desde `since` (segundos epoch, truncado; `after:` es exacto en segundos). */
+export function gmailQuery(addresses: readonly string[], since: string): string {
+  if (addresses.length === 0) throw new Error('no sender addresses');
+  return `from:(${addresses.join(' OR ')}) after:${Math.floor(Date.parse(since) / 1000)}`;
+}
