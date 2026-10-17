@@ -251,6 +251,9 @@ como gasto (ver Categorías), no en el parser.
 y **sin** `Producto origen` (transferencia recibida). Es un ingreso y v1 no los registra:
 `parseEmail` devuelve `ignored` y el correo no se guarda en ningún lado.
 
+**Ignorado `bhd/purchase-code`** — asunto `Código de validación de compra` (OTP de una compra). Solo lee
+remitente y asunto; se prueba con un `RawEmail` mínimo hasta tener un `.eml` real.
+
 Detalles técnicos comunes:
 - `multipart/related` o `multipart/mixed`; HTML en `quoted-printable` UTF-8.
   `_shared/mail/` decodifica; el parser recibe texto plano normalizado.
