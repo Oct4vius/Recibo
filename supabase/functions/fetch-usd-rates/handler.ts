@@ -36,6 +36,7 @@ export function createFetchUsdRatesHandler(deps: FetchUsdRatesDeps): (request: R
 
     // Fechas ISO: la comparación de texto es la de calendario.
     const inWindow = rates.filter((rate) => rate.date >= window.from && rate.date <= window.to);
+    if (inWindow.length === 0) console.warn(`fetch-usd-rates: no BCRD rates in window ${window.from}..${window.to}`);
     try {
       await deps.repo.save(inWindow, deps.source.id);
     } catch {

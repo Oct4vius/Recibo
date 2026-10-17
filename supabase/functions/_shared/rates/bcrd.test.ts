@@ -1,5 +1,6 @@
 import { assertEquals, assertRejects, assertThrows } from 'jsr:@std/assert@1';
 import { BCRD_RATES_URL, createBcrdSource, monthNumber, parseBcrdRates } from './bcrd.ts';
+import { deflateRawSync } from 'node:zlib';
 import { openZip } from './xlsx.ts';
 import { RateSourceError } from './types.ts';
 
@@ -86,6 +87,10 @@ Deno.test('the URL is the one the spike recorded', () => {
   assertEquals(BCRD_RATES_URL, 'https://cdn.bancentral.gov.do/documents/estadisticas/mercado-cambiario/documents/TASA_DOLAR_REFERENCIA_MC.xlsx');
 });
 
+Deno.test('regression — month labels named like Object.prototype members are not months', () => {
+  assertEquals(['constructor', 'toString', '__proto__', 'hasOwnProperty', 'valueOf'].map(monthNumber), [null, null, null, null, null]);
+});
+
 Deno.test('month labels accept Spanish and unambiguous English names', () => {
   assertEquals(['Ene ', 'Jan', 'dic', 'Dec', 'Sept', 'sep', 'Aug', 'ago', 'Abr', 'apr'].map(monthNumber), [1, 1, 12, 12, 9, 9, 8, 8, 4, 4]);
   assertEquals([monthNumber('Foo'), monthNumber(''), monthNumber(3), monthNumber(undefined)], [null, null, null, null]);
@@ -96,4 +101,41 @@ Deno.test('the zip reader refuses entries bigger than the limit and ignores miss
   assertEquals(zip.read('nope.xml'), undefined);
   assertThrows(() => zip.read('xl/worksheets/sheet1.xml', 1000), RateSourceError);
   assertEquals((zip.read('xl/workbook.xml')?.length ?? 0) > 0, true);
+});
+
+/** Zip de una sola entrada cuya cabecera declara `declaredSize` sin importar el contenido real. */
+function zipWithDeclaredSize(name: string, payload: Uint8Array, method: 0 | 8, declaredSize: number): Uint8Array {
+  const nameBytes = new TextEncoder().encode(name);
+  const local = new Uint8Array(30 + nameBytes.length + payload.length);
+  const lv = new DataView(local.buffer);
+  lv.setUint32(0, 0x04034b50, true);
+  lv.setUint16(8, method, true);
+  lv.setUint32(18, payload.length, true);
+  lv.setUint32(22, declaredSize, true);
+  lv.setUint16(26, nameBytes.length, true);
+  local.set(nameBytes, 30);
+  local.set(payload, 30 + nameBytes.length);
+  const central = new Uint8Array(46 + nameBytes.length);
+  const cv = new DataView(central.buffer);
+  cv.setUint32(0, 0x02014b50, true);
+  cv.setUint16(10, method, true);
+  cv.setUint32(20, payload.length, true);
+  cv.setUint32(24, declaredSize, true);
+  cv.setUint16(28, nameBytes.length, true);
+  central.set(nameBytes, 46);
+  const end = new Uint8Array(22);
+  const ev = new DataView(end.buffer);
+  ev.setUint32(0, 0x06054b50, true);
+  ev.setUint16(10, 1, true);
+  ev.setUint32(12, central.length, true);
+  ev.setUint32(16, local.length, true);
+  return Uint8Array.from([...local, ...central, ...end]);
+}
+
+Deno.test('the zip reader refuses an entry whose real size exceeds the limit despite a small declared size', () => {
+  const big = new Uint8Array(100_000);
+  assertThrows(() => openZip(zipWithDeclaredSize('a.xml', deflateRawSync(big), 8, 10)).read('a.xml', 1000), RateSourceError);
+  assertThrows(() => openZip(zipWithDeclaredSize('a.xml', big, 0, 10)).read('a.xml', 1000), RateSourceError);
+  const ok = zipWithDeclaredSize('a.xml', deflateRawSync(new Uint8Array(500)), 8, 500);
+  assertEquals(openZip(ok).read('a.xml', 1000)?.length, 500);
 });
