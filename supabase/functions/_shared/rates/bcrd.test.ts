@@ -103,6 +103,8 @@ Deno.test('the zip reader refuses entries bigger than the limit and ignores miss
   assertEquals((zip.read('xl/workbook.xml')?.length ?? 0) > 0, true);
 });
 
+const deflate = (data: Uint8Array) => deflateRawSync(data) as unknown as Uint8Array;
+
 /** Zip de una sola entrada cuya cabecera declara `declaredSize` sin importar el contenido real. */
 function zipWithDeclaredSize(name: string, payload: Uint8Array, method: 0 | 8, declaredSize: number): Uint8Array {
   const nameBytes = new TextEncoder().encode(name);
@@ -134,8 +136,8 @@ function zipWithDeclaredSize(name: string, payload: Uint8Array, method: 0 | 8, d
 
 Deno.test('the zip reader refuses an entry whose real size exceeds the limit despite a small declared size', () => {
   const big = new Uint8Array(100_000);
-  assertThrows(() => openZip(zipWithDeclaredSize('a.xml', deflateRawSync(big), 8, 10)).read('a.xml', 1000), RateSourceError);
+  assertThrows(() => openZip(zipWithDeclaredSize('a.xml', deflate(big), 8, 10)).read('a.xml', 1000), RateSourceError);
   assertThrows(() => openZip(zipWithDeclaredSize('a.xml', big, 0, 10)).read('a.xml', 1000), RateSourceError);
-  const ok = zipWithDeclaredSize('a.xml', deflateRawSync(new Uint8Array(500)), 8, 500);
+  const ok = zipWithDeclaredSize('a.xml', deflate(new Uint8Array(500)), 8, 500);
   assertEquals(openZip(ok).read('a.xml', 1000)?.length, 500);
 });
