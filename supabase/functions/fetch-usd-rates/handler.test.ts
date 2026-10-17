@@ -122,3 +122,20 @@ Deno.test('an unexpected source error is logged without its message', async () =
   assertEquals(result.status, 502);
   assertEquals(logged, [['fetch-usd-rates: the rate source failed', 'unexpected error']]);
 });
+
+Deno.test('an empty window logs a fixed warning and still answers 200 with saved: 0', async () => {
+  const { repo } = fakeRepo({ from: '2026-10-10', to: '2026-10-15' });
+  const { source } = fakeSource([{ date: '2026-09-01', sell: 59.1 }]);
+  const handler = createFetchUsdRatesHandler({ secret: 's3cret', source, repo });
+  const warned: unknown[][] = [];
+  const original = console.warn;
+  console.warn = (...args: unknown[]) => void warned.push(args);
+  try {
+    const response = await handler(req('s3cret'));
+    assertEquals(response.status, 200);
+    assertEquals(await response.json(), { from: '2026-10-10', to: '2026-10-15', saved: 0 });
+  } finally {
+    console.warn = original;
+  }
+  assertEquals(warned, [['fetch-usd-rates: no BCRD rates in window 2026-10-10..2026-10-15']]);
+});

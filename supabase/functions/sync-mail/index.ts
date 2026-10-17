@@ -15,6 +15,8 @@ const secret = Deno.env.get('SYNC_MAIL_SECRET');
 if (!msClientId || !secret) throw new Error('missing MS_CLIENT_ID or SYNC_MAIL_SECRET');
 // GOOGLE_CLIENT_ID / GOOGLE_CLIENT_SECRET son opcionales: sin ellos las cuentas Gmail se omiten y Outlook sigue.
 
+const providerConfig = { msClientId, googleClientId, googleClientSecret };
+
 Deno.serve(
   createSyncMailHandler({
     secret,
@@ -25,13 +27,13 @@ Deno.serve(
         repo.markAccount(accountId, { status: 'error', lastError: 'Estado de sincronización inválido. Vuelve a vincular.', lastSyncAt: null }),
       );
     },
+    repo,
+    now: () => new Date(),
+    isConfigured: (name) => providerFor(name, providerConfig) !== null,
     syncOne: (account) => {
-      const registered = providerFor(account.provider, { msClientId, googleClientId, googleClientSecret });
-      if (!registered) {
-        // Texto fijo: proveedor sin configurar. No aborta las demás cuentas.
-        console.error('sync-mail: provider not configured, account skipped');
-        return Promise.resolve({ status: 'error', fetched: 0, parsed: 0, unparsed: 0, pages: 0 });
-      }
+      const registered = providerFor(account.provider, providerConfig);
+      // El handler ya omitió los proveedores sin configurar; esto solo estrecha el tipo.
+      if (!registered) throw new Error('provider not configured');
       const { provider, expiredSession } = registered;
       return syncAccount(account, { provider, repo, parse: parseEmail, maxPages: MAX_PAGES_PER_RUN, now: () => new Date(), expiredSession });
     },

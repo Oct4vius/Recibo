@@ -1,5 +1,5 @@
 import { assertEquals } from 'jsr:@std/assert@1';
-import type { SyncAccount } from '../_shared/sync/repository.ts';
+import type { SyncAccount, SyncLog } from '../_shared/sync/repository.ts';
 import type { SyncOutcome } from '../_shared/sync/sync-account.ts';
 import { createSyncMailHandler, toSyncAccounts } from './handler.ts';
 
@@ -10,13 +10,35 @@ const accounts: SyncAccount[] = [
 ];
 const req = (token: string) => new Request('http://x/sync-mail', { method: 'POST', headers: { Authorization: `Bearer ${token}` } });
 
+type MarkState = { status: 'active' | 'error'; lastError: string | null; lastSyncAt: string | null };
+
+function fakeRepo() {
+  const logs: SyncLog[] = [];
+  const marks: { accountId: string; state: MarkState }[] = [];
+  const repo = {
+    logSync: (log: SyncLog) => {
+      logs.push(log);
+      return Promise.resolve();
+    },
+    markAccount: (accountId: string, state: MarkState) => {
+      marks.push({ accountId, state });
+      return Promise.resolve();
+    },
+  };
+  return { repo, logs, marks };
+}
+const common = () => ({ ...fakeRepo(), isConfigured: () => true, now: () => new Date('2026-10-17T12:00:00Z') });
+const { repo: noRepo, isConfigured: allConfigured, now: fixedNow } = common();
+const base = { repo: noRepo, isConfigured: allConfigured, now: fixedNow };
+
 Deno.test('only the cron secret can trigger a sync', async () => {
-  const handler = createSyncMailHandler({ secret: 's3cret', listActiveAccounts: () => Promise.resolve(accounts), syncOne: () => Promise.reject(new Error('unreachable')) });
+  const handler = createSyncMailHandler({ ...base, secret: 's3cret', listActiveAccounts: () => Promise.resolve(accounts), syncOne: () => Promise.reject(new Error('unreachable')) });
   assertEquals((await handler(req('wrong'))).status, 401);
 });
 
 Deno.test('one failing account does not stop the others', async () => {
   const handler = createSyncMailHandler({
+    ...base,
     secret: 's3cret',
     listActiveAccounts: () => Promise.resolve(accounts),
     syncOne: (account) =>
@@ -60,4 +82,61 @@ Deno.test('a failing mark of an invalid-cursor row does not drop the valid accou
   });
   assertEquals(result.map((a) => a.id), ['a', 'b']);
   assertEquals(marked, ['bad1', 'bad2']);
+});
+
+Deno.test('regression — a Gmail account whose provider is not configured is skipped visibly while Outlook still syncs', async () => {
+  const { repo, logs, marks } = fakeRepo();
+  const synced: string[] = [];
+  const handler = createSyncMailHandler({
+    secret: 's3cret',
+    repo,
+    now: () => new Date('2026-10-17T12:00:00Z'),
+    isConfigured: (provider) => provider !== 'gmail',
+    listActiveAccounts: () => Promise.resolve([{ id: 'g', userId: 'u1', provider: 'gmail', cursor }, { id: 'o', userId: 'u2', provider: 'outlook', cursor }]),
+    syncOne: (account) => {
+      synced.push(account.id);
+      return Promise.resolve<SyncOutcome>({ status: 'ok', fetched: 1, parsed: 1, unparsed: 0, pages: 1 });
+    },
+  });
+  const original = console.error;
+  console.error = () => {};
+  let response: Response;
+  try {
+    response = await handler(req('s3cret'));
+  } finally {
+    console.error = original;
+  }
+  assertEquals(synced, ['o']);
+  assertEquals(logs, [{
+    accountId: 'g', userId: 'u1', startedAt: '2026-10-17T12:00:00.000Z', finishedAt: '2026-10-17T12:00:00.000Z',
+    fetched: 0, parsed: 0, unparsed: 0, error: 'provider not configured',
+  }]);
+  assertEquals(marks, [{
+    accountId: 'g',
+    state: { status: 'active', lastError: 'Gmail no está disponible por ahora. Se reintentará más tarde.', lastSyncAt: null },
+  }]);
+  assertEquals((await response.json()).outcomes.map((o: { accountId: string; status: string }) => [o.accountId, o.status]), [['g', 'error'], ['o', 'ok']]);
+});
+
+Deno.test('a failing skip record does not stop the other accounts', async () => {
+  const synced: string[] = [];
+  const handler = createSyncMailHandler({
+    secret: 's3cret',
+    repo: { logSync: () => Promise.reject(new Error('db down')), markAccount: () => Promise.resolve() },
+    now: () => new Date(),
+    isConfigured: (provider) => provider !== 'gmail',
+    listActiveAccounts: () => Promise.resolve([{ id: 'g', userId: 'u1', provider: 'gmail', cursor }, { id: 'o', userId: 'u2', provider: 'outlook', cursor }]),
+    syncOne: (account) => {
+      synced.push(account.id);
+      return Promise.resolve<SyncOutcome>({ status: 'ok', fetched: 0, parsed: 0, unparsed: 0, pages: 1 });
+    },
+  });
+  const original = console.error;
+  console.error = () => {};
+  try {
+    assertEquals((await handler(req('s3cret'))).status, 200);
+  } finally {
+    console.error = original;
+  }
+  assertEquals(synced, ['o']);
 });
