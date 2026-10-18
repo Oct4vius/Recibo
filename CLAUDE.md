@@ -15,7 +15,7 @@ parezca fácil.
 - **UI**: NativeWind (Tailwind para RN), iconos `@expo/vector-icons`
 - **Datos en la app**: TanStack Query + `@supabase/supabase-js`; sesión en `expo-secure-store`
 - **Backend**: Supabase — Postgres (RLS), Auth (email + password), Edge Functions (Deno), `pg_cron` + `pg_net`, Vault
-- **Push**: `expo-notifications` + Expo Push Service (gratis)
+- **Avisos**: `expo-notifications` solo locales + `expo-background-task`/`expo-task-manager` (sin Firebase ni Expo Push)
 - **OAuth correo**: Outlook con `expo-auth-session` (PKCE); Gmail con `@react-native-google-signin/google-signin`
   (`serverAuthCode`) → `link-account` intercambia el código en el servidor
 - **Idioma**: UI en español, código/variables/commits en inglés
@@ -44,6 +44,7 @@ bun run eml:anonymize <entrada.eml> <salida.eml>  # anonimiza un .eml (config lo
 bun run start                      # Expo; requiere .env.local con EXPO_PUBLIC_*. Desde el 3a se prueba en la build
                                    #   de desarrollo (Expo Go ya no sirve para vincular: el retorno OAuth usa el esquema propio)
 bunx eas-cli build --profile development --platform android   # APK de desarrollo; --profile preview = APK de prueba
+bunx eas-cli build --profile production --platform android    # APK final (1.0.0)
 bun run verify:bundle              # empaqueta Android sin dispositivo (verificación de Metro/Babel/NativeWind)
 ```
 Pins por compatibilidad (no "actualizar" a ciegas): TypeScript `~6.0` (typescript-eslint, que usa
@@ -52,6 +53,7 @@ Pins por compatibilidad (no "actualizar" a ciegas): TypeScript `~6.0` (typescrip
 
 ## Estructura clave
 ```
+index.ts                   # entrada (`main`): define la tarea en segundo plano antes de `expo-router/entry`
 app/                       # Expo Router: solo routing + layout, sin lógica
   dev/gallery.tsx          # galería de componentes, solo __DEV__
   (auth)/                  # login (registro cerrado: sin register ni reset)
@@ -65,6 +67,8 @@ src/
   lib/                     # supabase.ts, queryClient.ts, env.ts, money.ts, dates.ts
   theme/                   # tokens.ts + colors.json (paleta única), motion*, ransom, shapes, progress, backdrops
                            #   (progress.ts calcula el % de presupuesto en centavos enteros)
+  features/notifications/  # avisos locales: text, mapping, state (puro), flows (puerto inyectado), api, native-port,
+                           #   background (tarea), hooks, components/ (Vitest solo sobre la parte pura)
   features/rates/          # texto de tasas (`≈ RD$ …`, última tasa) y consulta de la última tasa del BCRD
   types/                   # tipos compartidos; database.ts re-exporta _shared/database.types.ts (Plan 4)
 supabase/
@@ -86,7 +90,7 @@ supabase/
       http.ts              # respuestas JSON y errores comunes de las funciones
     link-account/          # intercambia el código OAuth → refresh token a Vault; handler.ts + exchangers.ts (uno por proveedor) + index.ts
     unlink-account/        # desvincula (secreto de Vault borrado, status = 'revoked')
-    sync-mail/             # invocada por pg_cron; lee correos, parsea, ingesta, registra (alertas y push: 4c)
+    sync-mail/             # invocada por pg_cron; lee correos, parsea, ingesta, registra
     fetch-usd-rates/       # invocada por pg_cron; lee la tasa de venta del BCRD y la guarda en usd_rates
                            #   (cada función: handler.ts testeable con dependencias inyectadas + index.ts delgado)
 scripts/                   # herramientas de desarrollo (Bun); scripts/lib/{loopback,google-login,dev-session,anonymize,raw-mail}.ts
@@ -359,8 +363,8 @@ Receta completa con herramientas (descargar sin procesar, anonimizar, desplegar 
   autorización/liquidación hasta que una fixture real lo demuestre necesario.
 - Cada corrida escribe una fila en `sync_logs` (`fetched`, `parsed`, `unparsed`,
   `error`). Un error en una cuenta **no** aborta las demás.
-- La evaluación de presupuestos (umbrales 80 y 100 %; `budget_alerts` evita re-notificar el mismo
-  `(budget_id, period_start, threshold)`) y el push (`send-push`) llegan en 4c, no en `sync-mail` del 3a.
+- `sync-mail` no evalúa presupuestos ni envía avisos: los avisos son locales y los reclama la app (ver "Avisos de
+  presupuesto (Plan 4c)").
 
 ## Tasa del dólar (`fetch-usd-rates`)
 - Fuente (spike del Plan 3c): el archivo histórico público del BCRD "Tasas de cambio del dólar de referencia del mercado
@@ -375,6 +379,30 @@ Receta completa con herramientas (descargar sin procesar, anonimizar, desplegar 
   gasto en USD más viejo, se rellena desde ahí; si ya llega, se pide desde la última tasa guardada menos 7 días (una
   racha de corridas fallidas no deja huecos). El handler guarda con upsert por `rate_date` solo las fechas de la
   ventana, así que reintentar es idempotente.
+
+## Avisos de presupuesto (Plan 4c)
+- **Locales, sin Firebase ni Expo Push, sin montos.** El servidor decide y reclama; la app muestra lo reclamado.
+  RPC `claim_budget_alerts()` y `silence_budget_alerts()`: `security definer`, solo actúan sobre `auth.uid()` (EXECUTE
+  solo `authenticated`). La lógica vive en funciones internas con fecha fija (`budget_progress`,
+  `crossed_budget_thresholds`, `claim_budget_alerts_at`, `silence_budget_alerts_at`: sin EXECUTE para la app; pgTAP las
+  prueba con `p_today`). Gasto = `spending_transactions.amount_dop`; comparación en numeric
+  `spent_dop * 100 >= limit_amount * threshold`.
+- **Una vez por umbral y período** (`budget_alerts`). Un salto 70 → 105 % devuelve solo el 100 y deja el 80 reclamado.
+  Reclamar 100 reclama también 80 aunque el 80 esté apagado en el perfil; solo se devuelve lo que la llamada insertó
+  y está encendido en `alert_thresholds`.
+- **Lo ya cruzado no avisa al activar**: encender "Avisos en este teléfono" o un umbral llama antes a
+  `silence_budget_alerts()` (si falla, no se guarda nada). Trigger `budgets_reset_alerts`: al insertar un presupuesto
+  activo, cambiar `limit_amount` o reactivarlo borra los reclamos del período y reclama en silencio lo ya cruzado;
+  guardar el mismo monto (el upsert reescribe la fila) no reinicia nada.
+- **Texto exacto**: `Llevas el 80 % de tu presupuesto semanal` / `Llegaste a tu presupuesto semanal` (`mensual` para el
+  mes), cuerpo `Toca para ver tu gasto.`, `data: { kind: 'budget' }`; tocar abre Inicio. Canal Android `budget`
+  ("Presupuesto"). Texto en `notifications/text.ts`; nunca montos.
+- **Cableado**: tarea `recibo-budget-alerts` (`expo-background-task`, ≥ 15 min) definida en `background.ts`, importado desde
+  `index.ts`; además se revisa al abrir o volver a la app (`BudgetAlertsBootstrap`). **Nunca reclamar sin sesión,
+  preferencia y permiso** (`shouldCheck`): un teléfono apagado se "comería" el aviso del otro. La preferencia es por
+  teléfono (AsyncStorage `recibo:device-alerts`, apagada al instalar) y se borra, con la tarea, al cerrar sesión.
+- Los flujos (`flows.ts`) reciben un `AlertsPort`; `native-port.ts` es la única implementación nativa. Android puede
+  espaciar la tarea o pausarla si se fuerza el cierre de la app (aceptado por el usuario).
 
 ## Supabase / Postgres — reglas
 - **Dinero**: `numeric(14,2)`, nunca `float`. Las sumas se hacen en SQL, no en JS.
@@ -423,7 +451,10 @@ Receta completa con herramientas (descargar sin procesar, anonimizar, desplegar 
   `save_merchant_rule` crea/actualiza la regla y la aplica a los movimientos sin categoría. Ni la app ni `sync-mail`
   reimplementan la coincidencia.
 - **Avisos de presupuesto.** `profiles.alert_thresholds` (`{80,100}` por defecto) es la única fuente de qué umbrales
-  envían push; `sync-mail` (Plan 3) solo notifica esos. La app muestra el borde amarillo y la `CallingCard` siempre.
+  avisan; `claim_budget_alerts` solo reclama esos (no `sync-mail`). La app muestra el borde amarillo y la `CallingCard` siempre.
+- `public.budget_period_bounds(period, ref)` es la única regla de límites de período (semana desde el lunes, mes
+  calendario; fin exclusivo); `get_spending_summary` y los avisos la usan. No repetir `date_trunc` en otro lado.
+- `push_tokens` queda sin uso en la v1 (avisos solo locales); no se borra.
 - `profiles.timezone` se valida contra `pg_timezone_names` (trigger; zona inválida → 22023).
 
 ## Principios de diseño — SOLID y DRY, siempre
