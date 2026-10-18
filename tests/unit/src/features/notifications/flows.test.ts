@@ -6,6 +6,7 @@ import {
   cleanupWithoutSession,
   ensureTaskRegistered,
   saveAlertThresholds,
+  sessionState,
   type AlertsPort,
 } from '@/features/notifications/flows';
 import type { ClaimedAlert } from '@/features/notifications/mapping';
@@ -194,12 +195,25 @@ describe('regression — task registration follows session, preference and permi
 describe('cleanupWithoutSession', () => {
   it('clears the preference and the task when the app starts without a session', async () => {
     const port = fakePort();
-    await cleanupWithoutSession(false, port);
+    await cleanupWithoutSession('absent', port);
     expect(port.calls).toEqual(['writeEnabled:false', 'unregisterTask']);
   });
   it('does nothing with a session', async () => {
     const port = fakePort();
-    await cleanupWithoutSession(true, port);
+    await cleanupWithoutSession('present', port);
     expect(port.calls).toEqual([]);
+  });
+});
+
+describe('regression — a getSession error does not wipe the device alerts preference', () => {
+  it('unknown session state makes no calls', async () => {
+    const port = fakePort();
+    await cleanupWithoutSession('unknown', port);
+    expect(port.calls).toEqual([]);
+  });
+  it('sessionState maps the getSession result', () => {
+    expect(sessionState({ session: null, error: new Error('storage') })).toBe('unknown');
+    expect(sessionState({ session: null, error: null })).toBe('absent');
+    expect(sessionState({ session: {}, error: null })).toBe('present');
   });
 });

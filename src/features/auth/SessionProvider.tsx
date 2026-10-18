@@ -1,5 +1,5 @@
 import { useEffect, useState, type ReactNode } from 'react';
-import { cleanupWithoutSession, disableDeviceAlerts } from '@/features/notifications/flows';
+import { cleanupWithoutSession, disableDeviceAlerts, sessionState } from '@/features/notifications/flows';
 import { nativePort } from '@/features/notifications/native-port';
 import { queryClient } from '@/lib/queryClient';
 import { supabase } from '@/lib/supabase';
@@ -11,9 +11,9 @@ export function SessionProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     supabase.auth
       .getSession()
-      .then(({ data }) => {
+      .then(({ data, error }) => {
         setState({ session: data.session, loading: false });
-        cleanupWithoutSession(data.session !== null, nativePort).catch(() => undefined);
+        cleanupWithoutSession(sessionState({ session: data.session, error }), nativePort).catch(() => undefined);
       })
       .catch(() => setState({ session: null, loading: false }));
     const { data } = supabase.auth.onAuthStateChange((event, session) => {

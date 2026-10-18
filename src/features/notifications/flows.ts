@@ -64,10 +64,18 @@ export async function ensureTaskRegistered(
 
 /** La app arrancó sin sesión: la preferencia es de la sesión anterior, así quien entre después empieza apagado. */
 export async function cleanupWithoutSession(
-  hasSession: boolean,
+  state: SessionState,
   port: Pick<AlertsPort, 'writeEnabled' | 'unregisterTask'>,
 ): Promise<void> {
-  if (!hasSession) await disableDeviceAlerts(port);
+  if (state === 'absent') await disableDeviceAlerts(port);
+}
+
+export type SessionState = 'present' | 'absent' | 'unknown';
+
+/** Resultado de `getSession`: con `error` no se sabe si hay sesión (un fallo de almacenamiento no debe borrar nada). */
+export function sessionState(result: { session: unknown; error: unknown }): SessionState {
+  if (result.error) return 'unknown';
+  return result.session ? 'present' : 'absent';
 }
 
 /**
