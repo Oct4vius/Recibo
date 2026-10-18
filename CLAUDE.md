@@ -400,7 +400,11 @@ Receta completa con herramientas (descargar sin procesar, anonimizar, desplegar 
 - **Cableado**: tarea `recibo-budget-alerts` (`expo-background-task`, ≥ 15 min) definida en `background.ts`, importado desde
   `index.ts`; además se revisa al abrir o volver a la app (`BudgetAlertsBootstrap`). **Nunca reclamar sin sesión,
   preferencia y permiso** (`shouldCheck`): un teléfono apagado se "comería" el aviso del otro. La preferencia es por
-  teléfono (AsyncStorage `recibo:device-alerts`, apagada al instalar) y se borra, con la tarea, al cerrar sesión.
+  teléfono (AsyncStorage `recibo:device-alerts`, apagada al instalar) y se borra, con la tarea, al cerrar sesión o al
+  arrancar sin sesión. Android 13+ informa `denied` antes de pedir: solo es "bloqueado" si la app ya pidió
+  (`recibo:device-alerts-asked`, `resolvePermission`).
+- **Limitación aceptada**: un cruce que se detecta cuando su período ya terminó (p. ej. domingo 23:50 sincronizado el
+  lunes) no avisa.
 - Los flujos (`flows.ts`) reciben un `AlertsPort`; `native-port.ts` es la única implementación nativa. Android puede
   espaciar la tarea o pausarla si se fuerza el cierre de la app (aceptado por el usuario).
 
@@ -453,7 +457,7 @@ Receta completa con herramientas (descargar sin procesar, anonimizar, desplegar 
 - **Avisos de presupuesto.** `profiles.alert_thresholds` (`{80,100}` por defecto) es la única fuente de qué umbrales
   avisan; `claim_budget_alerts` solo reclama esos (no `sync-mail`). La app muestra el borde amarillo y la `CallingCard` siempre.
 - `public.budget_period_bounds(period, ref)` es la única regla de límites de período (semana desde el lunes, mes
-  calendario; fin exclusivo); `get_spending_summary` y los avisos la usan. No repetir `date_trunc` en otro lado.
+  calendario; fin exclusivo); `get_spending_summary` y los avisos la usan. Los períodos de presupuesto no se recalculan con `date_trunc` suelto (`get_history` sí agrupa con `date_trunc`, es historial, no presupuesto).
 - `push_tokens` queda sin uso en la v1 (avisos solo locales); no se borra.
 - `profiles.timezone` se valida contra `pg_timezone_names` (trigger; zona inválida → 22023).
 

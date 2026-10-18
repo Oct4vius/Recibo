@@ -25,8 +25,7 @@
       "@react-native-community/datetimepicker",
       "expo-localization",
       "expo-web-browser",
-      ["expo-notifications", { "icon": "./assets/adaptive-icon-monochrome.png" }],
-      "expo-background-task"
+      ["expo-notifications", { "icon": "./assets/adaptive-icon-monochrome.png" }]
     ],
     "extra": {
       "eas": { "projectId": "e81c1d8a-1157-4dc6-9e0c-630671969de3" }

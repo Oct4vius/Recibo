@@ -3,6 +3,7 @@ import {
   checkBudgetAlerts,
   disableDeviceAlerts,
   enableDeviceAlerts,
+  cleanupWithoutSession,
   ensureTaskRegistered,
   saveAlertThresholds,
   type AlertsPort,
@@ -162,5 +163,43 @@ describe('saveAlertThresholds', () => {
     const d = deps(true);
     await expect(saveAlertThresholds(d, [80], true)).rejects.toThrow();
     expect(d.calls).toEqual(['silence']);
+  });
+});
+
+describe('regression — task registration follows session, preference and permission', () => {
+  it('unregisters when the preference is off', async () => {
+    const port = fakePort({ enabled: false });
+    await ensureTaskRegistered(port);
+    expect(port.calls).toContain('unregisterTask');
+    expect(port.calls).not.toContain('registerTask');
+  });
+  it('unregisters when there is no session (sign-out race)', async () => {
+    const port = fakePort({ session: false });
+    await ensureTaskRegistered(port);
+    expect(port.calls).toContain('unregisterTask');
+    expect(port.calls).not.toContain('registerTask');
+  });
+  it('unregisters when the permission was revoked', async () => {
+    const port = fakePort({ permission: 'denied' });
+    await ensureTaskRegistered(port);
+    expect(port.calls).toContain('unregisterTask');
+  });
+  it('does not unregister when everything is on', async () => {
+    const port = fakePort();
+    await ensureTaskRegistered(port);
+    expect(port.calls).not.toContain('unregisterTask');
+  });
+});
+
+describe('cleanupWithoutSession', () => {
+  it('clears the preference and the task when the app starts without a session', async () => {
+    const port = fakePort();
+    await cleanupWithoutSession(false, port);
+    expect(port.calls).toEqual(['writeEnabled:false', 'unregisterTask']);
+  });
+  it('does nothing with a session', async () => {
+    const port = fakePort();
+    await cleanupWithoutSession(true, port);
+    expect(port.calls).toEqual([]);
   });
 });

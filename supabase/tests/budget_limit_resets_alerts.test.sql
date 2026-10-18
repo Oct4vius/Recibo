@@ -1,5 +1,5 @@
 begin;
-select plan(11);
+select plan(13);
 
 insert into auth.users (id, email) values ('11111111-1111-1111-1111-111111111111', 'u1@example.com');
 insert into public.linked_accounts (id, user_id, provider, email)
@@ -65,6 +65,16 @@ select results_eq(
   $$select threshold from public.budget_alerts where period_start = (select period_start from wk) order by 1$$,
   $$values (80), (100)$$, 'reactivating a budget claims silently (rows)');
 select is_empty($$select * from public.claim_budget_alerts()$$, 'reactivating a budget claims silently (no alert)');
+
+-- Un presupuesto nuevo inactivo no reclama nada; reiniciar uno no toca los reclamos del otro presupuesto.
+insert into public.budgets (user_id, period, limit_amount, is_active) values ('11111111-1111-1111-1111-111111111111', 'month', 100, false);
+select is(
+  (select count(*)::int from public.budget_alerts where budget_id = (select id from public.budgets where period = 'month')), 0,
+  'inserting an inactive budget claims nothing');
+update public.budgets set limit_amount = 5000, is_active = true where period = 'month';
+select results_eq(
+  $$select threshold from public.budget_alerts where budget_id = (select id from public.budgets where period = 'week') and period_start = (select period_start from wk) order by 1$$,
+  $$values (80), (100)$$, 'resetting one budget leaves the other budget''s claims untouched');
 
 reset role;
 select * from finish();

@@ -14,3 +14,11 @@ export function deviceAlertsView(enabled: boolean, permission: PermissionState):
 export function shouldCheck(enabled: boolean, permission: PermissionState): boolean {
   return enabled && permission === 'granted';
 }
+
+/**
+ * Android 13+ informa `denied` antes de la primera solicitud. Solo cuenta como rechazo si ya se pidió el permiso
+ * desde esta app (no se usa `canAskAgain` solo: tampoco distingue ese caso).
+ */
+export function resolvePermission(raw: PermissionState, asked: boolean): PermissionState {
+  return raw === 'denied' && !asked ? 'undetermined' : raw;
+}

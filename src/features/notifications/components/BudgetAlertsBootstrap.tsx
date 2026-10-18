@@ -14,12 +14,10 @@ export function BudgetAlertsBootstrap() {
     const run = () => {
       if (running) return;
       running = true;
-      ensureTaskRegistered(nativePort)
-        .then(() => checkBudgetAlerts(nativePort))
-        .catch(() => undefined)
-        .finally(() => {
-          running = false;
-        });
+      // Independientes: si falla el registro de la tarea, la revisión de avisos igual corre (y al revés).
+      Promise.allSettled([ensureTaskRegistered(nativePort), checkBudgetAlerts(nativePort)]).finally(() => {
+        running = false;
+      });
     };
     run();
     const appState = AppState.addEventListener('change', (state) => {

@@ -6,12 +6,14 @@ import { Linking } from 'react-native';
 import { supabase } from '@/lib/supabase';
 import { claimBudgetAlerts, silenceBudgetAlerts } from './api';
 import type { AlertsPort } from './flows';
-import type { PermissionState } from './state';
+import { resolvePermission, type PermissionState } from './state';
 import { BUDGET_ALERTS_TASK, BUDGET_CHANNEL_ID } from './task-name';
 import { budgetAlertContent } from './text';
 
 /** Preferencia por teléfono: '1' encendida, sin clave apagada. */
 const PREFERENCE_KEY = 'recibo:device-alerts';
+/** Android 13+ informa denied antes de la primera solicitud: solo es rechazo real si ya se pidió. */
+const ASKED_KEY = 'recibo:device-alerts-asked';
 /** Mínimo que admite Android (WorkManager), en minutos. */
 const TASK_INTERVAL_MINUTES = 15;
 
@@ -43,12 +45,15 @@ export const nativePort: AlertsPort = {
     else await AsyncStorage.removeItem(PREFERENCE_KEY);
   },
   async readPermission() {
-    return toPermissionState((await Notifications.getPermissionsAsync()).status);
+    const asked = (await AsyncStorage.getItem(ASKED_KEY)) === '1';
+    return resolvePermission(toPermissionState((await Notifications.getPermissionsAsync()).status), asked);
   },
   async requestPermission() {
     // Android 13+: el canal debe existir antes de pedir el permiso.
     await ensureChannel();
-    return toPermissionState((await Notifications.requestPermissionsAsync()).status);
+    const result = await Notifications.requestPermissionsAsync();
+    await AsyncStorage.setItem(ASKED_KEY, '1');
+    return resolvePermission(toPermissionState(result.status), true);
   },
   claim: claimBudgetAlerts,
   silence: silenceBudgetAlerts,

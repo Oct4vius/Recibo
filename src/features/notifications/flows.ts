@@ -52,10 +52,22 @@ export async function disableDeviceAlerts(port: Pick<AlertsPort, 'writeEnabled' 
   await port.unregisterTask();
 }
 
-/** Al abrir la app: si los avisos están encendidos y permitidos, la tarea en segundo plano debe estar registrada. */
-export async function ensureTaskRegistered(port: Pick<AlertsPort, 'readEnabled' | 'readPermission' | 'registerTask'>): Promise<void> {
+/** Al abrir la app: la tarea está registrada solo con sesión, preferencia y permiso; si no, se cancela. */
+export async function ensureTaskRegistered(
+  port: Pick<AlertsPort, 'hasSession' | 'readEnabled' | 'readPermission' | 'registerTask' | 'unregisterTask'>,
+): Promise<void> {
+  const session = await port.hasSession();
   const [enabled, permission] = [await port.readEnabled(), await port.readPermission()];
-  if (shouldCheck(enabled, permission)) await port.registerTask();
+  if (session && shouldCheck(enabled, permission)) await port.registerTask();
+  else await port.unregisterTask();
+}
+
+/** La app arrancó sin sesión: la preferencia es de la sesión anterior, así quien entre después empieza apagado. */
+export async function cleanupWithoutSession(
+  hasSession: boolean,
+  port: Pick<AlertsPort, 'writeEnabled' | 'unregisterTask'>,
+): Promise<void> {
+  if (!hasSession) await disableDeviceAlerts(port);
 }
 
 /**
