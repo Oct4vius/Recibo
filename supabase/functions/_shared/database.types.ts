@@ -253,7 +253,12 @@ isOneToOne: false
                 }
           }
           Functions: {
-            "get_history":
+            "budget_period_bounds":
+{ Args: { "p_period": Database["public"]['Enums']["budget_period"],"p_ref": string }; Returns: {
+              "period_end": string,"period_start": string
+            }[]
+                           },
+"get_history":
 { Args: { "p_from": string,"p_granularity": string,"p_to": string }; Returns: {
               "bucket_start": string,"total_dop": number,"tx_count": number
             }[]
@@ -277,6 +282,9 @@ isOneToOne: false
                            },
 "link_mail_account":
 { Args: { "p_email": string,"p_provider": Database["public"]['Enums']["mail_provider"],"p_refresh_token": string,"p_user_id": string }; Returns: string
+                           },
+"lock_down_rls_auto_enable":
+{ Args: Record<PropertyKey, never>; Returns: undefined
                            },
 "mail_account_token":
 { Args: { "p_account_id": string }; Returns: string
