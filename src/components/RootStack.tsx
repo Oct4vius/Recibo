@@ -8,6 +8,7 @@ import { StatusBar } from 'expo-status-bar';
 import { useEffect } from 'react';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { useSession } from '@/features/auth/hooks';
+import { BudgetAlertsBootstrap } from '@/features/notifications/components/BudgetAlertsBootstrap';
 import { colors } from '@/theme/tokens';
 
 /** Carga fuentes, oculta el splash cuando todo está listo y protege las rutas según la sesión. */
@@ -23,6 +24,7 @@ export function RootStack() {
   return (
     <SafeAreaProvider>
       <StatusBar style="light" />
+      {signedIn ? <BudgetAlertsBootstrap /> : null}
       <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: colors.void }, animation: 'fade' }}>
         <Stack.Protected guard={signedIn}>
           <Stack.Screen name="(tabs)" />

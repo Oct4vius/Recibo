@@ -12,6 +12,7 @@
   },
   "include": [
     "app",
+    "index.ts",
     "src",
     "scripts",
     "tests",

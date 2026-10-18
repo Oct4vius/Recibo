@@ -1,7 +1,7 @@
 {
   "name": "gastos-app",
   "private": true,
-  "main": "expo-router/entry",
+  "main": "index.ts",
   "scripts": {
     "start": "expo start",
     "typecheck": "tsc --noEmit",
