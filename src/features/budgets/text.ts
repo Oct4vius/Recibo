@@ -7,7 +7,7 @@ export const PERIOD_TITLE: Record<BudgetPeriod, string> = { week: 'SEMANAL', mon
 export const LIMIT_TITLE: Record<BudgetPeriod, string> = { week: 'LÍMITE SEMANAL', month: 'LÍMITE MENSUAL' };
 export const DEFINE_LIMIT: Record<BudgetPeriod, string> = { week: 'Definir límite semanal', month: 'Definir límite mensual' };
 export const LOAD_BUDGET_ERROR = 'No se pudo cargar tu presupuesto. Tira hacia abajo para reintentar.';
-const PERIOD_ADJECTIVE: Record<BudgetPeriod, string> = { week: 'semanal', month: 'mensual' };
+export const PERIOD_ADJECTIVE: Record<BudgetPeriod, string> = { week: 'semanal', month: 'mensual' };
 
 /** Días que quedan contando hoy. `periodEnd` es el fin exclusivo que devuelve la RPC. */
 export function daysLeft(periodEnd: string, today: LocalDate): number {
