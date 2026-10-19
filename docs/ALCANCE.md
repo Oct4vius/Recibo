@@ -35,7 +35,7 @@ el plan gratuito de Supabase.
 | Estilos | NativeWind (Tailwind para RN) | StyleSheet nativo |
 | Datos remotos en la app | TanStack Query + cliente Supabase | Redux, MobX |
 | Acceso a la base de datos | Sin ORM: migraciones SQL con la CLI de Supabase, `supabase-js` en app y Edge Functions, tipos con `supabase gen types` | Prisma (no corre bien en Deno, ignora RLS, no expresa políticas ni pg_cron), Drizzle |
-| Push | Expo Push Service (gratis) | FCM/APNs directo |
+| Avisos | Notificaciones locales (`expo-notifications`) + tarea en segundo plano; sin FCM ni Expo Push (decisión del 2026-10-17) | FCM/APNs directo, Expo Push Service |
 
 ## 3. Funcionalidades v1
 
@@ -79,8 +79,8 @@ el plan gratuito de Supabase.
      `unparsed_emails` (asunto + fragmento) para escribir la plantilla después.
      **Nunca se adivina un monto.**
   6. Registrar resultado en `sync_logs`.
-- La evaluación de presupuestos y el push por umbral cruzado aún no notificado
-  **no** forman parte de `sync-mail` en el 3a: llegan en el 4c.
+- La evaluación de presupuestos y los avisos **no** forman parte de `sync-mail`: la app pregunta al servidor
+  (`claim_budget_alerts()`) y muestra una notificación local (Plan 4c).
 - La única deduplicación en v1 es por `message_id`. La dedup de autorización +
   liquidación queda **diferida** hasta que los correos reales muestren que
   algún banco envía dos correos por la misma compra.
@@ -161,7 +161,7 @@ el plan gratuito de Supabase.
   prioridad; editable. Cada categoría tiene `counts_as_spending`; la categoría
   por defecto **"Transferencias propias"** lo tiene en falso y sus movimientos
   no suman a totales ni presupuesto, aunque siguen visibles.
-- **Presupuesto:** límite semanal y/o mensual en DOP; alertas push al 80 % y
+- **Presupuesto:** límite semanal y/o mensual en DOP; avisos locales (sin montos) al 80 % y
   100 %, una sola vez por período y umbral.
 - **Moneda consolidada:** DOP es la principal; USD se convierte a DOP para los
   totales. Hasta el Plan 3, con una tasa fija configurable en ajustes. Desde el
@@ -183,7 +183,7 @@ el plan gratuito de Supabase.
 | `merchant_rules` | `pattern`, `category_id`, `priority` |
 | `budgets` | `period` (`week`/`month`), `limit_amount`, `currency`, umbrales |
 | `budget_alerts` | período + umbral ya notificado |
-| `push_tokens` | Expo push token por dispositivo |
+| `push_tokens` | Expo push token por dispositivo (sin uso en la v1: los avisos son locales) |
 | `sync_logs` | por corrida: fetched, parsed, unparsed, error |
 | `unparsed_emails` | correos bancarios sin plantilla, para depurar |
 
@@ -209,7 +209,6 @@ supabase/
     link-account/
     unlink-account/
     sync-mail/
-    send-push/          # llega en 4c
   seed.sql              # solo datos de desarrollo local; las categorías por defecto salen de una migración
 tests/
   unit/                 # Vitest (app)
@@ -286,5 +285,5 @@ en `CLAUDE.md`.
 
 Con Gmail y Outlook vinculados, una compra con tarjeta de cualquiera de los
 cuatro bancos aparece en la app en menos de 20 minutos, categorizada, sumada al
-gasto semanal y mensual, y dispara una notificación push si cruza el
-presupuesto. Cero tokens de correo en el dispositivo.
+gasto semanal y mensual, y avisa en el teléfono (notificación local, con la
+puntualidad aproximada que permite Android) si cruza el presupuesto. Cero tokens de correo en el dispositivo.

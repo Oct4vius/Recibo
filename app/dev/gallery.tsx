@@ -19,6 +19,7 @@ import { SkewToggle } from '@/components/SkewToggle';
 import { SlamSheet } from '@/components/SlamSheet';
 import { SlantPanel } from '@/components/SlantPanel';
 import { TextField } from '@/components/TextField';
+import { DeviceAlertsBlocked } from '@/features/notifications/components/DeviceAlertsBlocked';
 import { formatAmountInput, pressKey } from '@/features/transactions/amount-input';
 import { colors, fonts, typeScale } from '@/theme/tokens';
 
@@ -106,6 +107,9 @@ export default function GalleryScreen() {
       <Section name="Interruptores" />
       <SkewToggle label="Aviso al 80 %" value={toggle} onChange={setToggle} />
       <SkewToggle label="Desactivado" value={false} onChange={() => undefined} disabled />
+
+      <Section name="Avisos bloqueados" />
+      <DeviceAlertsBlocked onOpenSettings={() => undefined} />
 
       <Section name="Teclado de montos" />
       <Text style={{ fontFamily: fonts.amount, fontSize: typeScale.amountHero, color: colors.paper, fontVariant: ['tabular-nums'] }}>

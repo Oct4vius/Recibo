@@ -59,6 +59,7 @@ no hay avisos hasta volver a abrirla). A cambio, nada pasa por Google ni por Exp
 | Notificaciones | `expo-notifications` **solo locales** (sin `google-services.json`, sin token de push). Canal Android "Presupuesto", importancia por defecto. El aviso lleva `data: { kind: 'budget' }`; tocarlo abre la app en Inicio. |
 | Preferencia "Avisos en este teléfono" | Se guarda en el teléfono (es por dispositivo). Al iniciar la app con la preferencia encendida y el permiso concedido, se asegura que la tarea esté registrada. |
 | APK final | Perfil `production` en `eas.json` (APK, distribución interna) con el mismo entorno de variables que `preview`, versión `1.0.0`. El checklist del teléfono corre antes en `preview`. |
+| Nombres finales (implementación) | `public.budget_period_bounds(period, ref)` (regla única de límites, la usa `get_spending_summary`); internas sin EXECUTE para la app `budget_progress`, `crossed_budget_thresholds`, `claim_budget_alerts_at`, `silence_budget_alerts_at` (usuario y fecha como parámetros, para pgTAP); públicas `claim_budget_alerts()` y `silence_budget_alerts()`. Trigger `budgets_reset_alerts` (`security definer`): dispara al insertar un presupuesto activo, al cambiar `limit_amount` o al reactivarlo; guardar el mismo monto no reinicia. Preferencia del teléfono: AsyncStorage, clave `recibo:device-alerts`. Tarea: `recibo-budget-alerts`, intervalo mínimo 15 min, definida en `background.ts` e importada desde `index.ts`. Canal Android `budget`. |
 
 ## 3. Componentes
 
