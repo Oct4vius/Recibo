@@ -8,9 +8,27 @@ export interface SyncMailDeps {
   listActiveAccounts(): Promise<SyncAccount[]>;
   /** false = el proveedor de la cuenta no está configurado en este entorno: se omite y se deja constancia. */
   isConfigured(provider: MailProviderName): boolean;
-  syncOne(account: SyncAccount): Promise<SyncOutcome>;
+  /** `deadline` (epoch ms, opcional): la cuenta deja de pedir páginas después. */
+  syncOne(account: SyncAccount, deadline?: number): Promise<SyncOutcome>;
   repo: Pick<SyncRepository, 'logSync' | 'markAccount'>;
   now(): Date;
+  /**
+   * Orden de las cuentas en esta corrida (por defecto, el de la base). En producción se baraja: una cuenta que agote
+   * la invocación no queda siempre delante de las de otros usuarios.
+   */
+  order?(accounts: SyncAccount[]): SyncAccount[];
+  /** Tras este tiempo no se empiezan más cuentas (quedan 'skipped' para la próxima corrida). Por defecto, sin límite. */
+  runBudgetMs?: number;
+}
+
+/** Copia barajada (Fisher-Yates). `random` se inyecta en los tests. */
+export function shuffled<T>(items: readonly T[], random: () => number = Math.random): T[] {
+  const copy = [...items];
+  for (let i = copy.length - 1; i > 0; i--) {
+    const j = Math.floor(random() * (i + 1));
+    [copy[i], copy[j]] = [copy[j], copy[i]];
+  }
+  return copy;
 }
 
 export const PROVIDER_NOT_CONFIGURED = 'provider not configured';
@@ -38,10 +56,17 @@ async function recordSkip(deps: SyncMailDeps, account: SyncAccount): Promise<voi
 export function createSyncMailHandler(deps: SyncMailDeps): (request: Request) => Promise<Response> {
   return async (request) => {
     if (bearerToken(request) !== deps.secret) return json(UNAUTHORIZED, 401);
-    const accounts = await deps.listActiveAccounts();
+    const accounts = (deps.order ?? ((list) => list))(await deps.listActiveAccounts());
+    const startedAt = deps.now().getTime();
+    const budget = deps.runBudgetMs ?? Infinity;
     const outcomes = [];
     for (const account of accounts) {
       let outcome: SyncOutcome;
+      if (deps.now().getTime() - startedAt >= budget) {
+        // Sin tiempo para otra cuenta: se intenta en la próxima corrida, sin escribir nada.
+        outcomes.push({ accountId: account.id, status: 'skipped', fetched: 0, parsed: 0, unparsed: 0 });
+        continue;
+      }
       if (!deps.isConfigured(account.provider)) {
         // Texto fijo: proveedor sin configurar. No aborta las demás cuentas.
         console.error('sync-mail: provider not configured, account skipped');
@@ -50,7 +75,7 @@ export function createSyncMailHandler(deps: SyncMailDeps): (request: Request) =>
         continue;
       }
       try {
-        outcome = await deps.syncOne(account);
+        outcome = await deps.syncOne(account, Number.isFinite(budget) ? startedAt + budget : undefined);
       } catch {
         // Texto fijo: ni ids ni el mensaje del error (puede traer datos de la cuenta).
         console.error('sync-mail: an account sync failed unexpectedly');

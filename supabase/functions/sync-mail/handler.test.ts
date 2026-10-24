@@ -1,7 +1,7 @@
 import { assertEquals } from 'jsr:@std/assert@1';
 import type { SyncAccount, SyncLog } from '../_shared/sync/repository.ts';
 import type { SyncOutcome } from '../_shared/sync/sync-account.ts';
-import { createSyncMailHandler, toSyncAccounts } from './handler.ts';
+import { createSyncMailHandler, shuffled, toSyncAccounts } from './handler.ts';
 
 const cursor = { since: '2026-09-01T04:00:00Z', next: null, maxSeen: null };
 const accounts: SyncAccount[] = [
@@ -139,4 +139,67 @@ Deno.test('a failing skip record does not stop the other accounts', async () => 
     console.error = original;
   }
   assertEquals(synced, ['o']);
+});
+
+const okOutcome: SyncOutcome = { status: 'ok', fetched: 0, parsed: 0, unparsed: 0, pages: 0 };
+const three: SyncAccount[] = [
+  { id: 'a', userId: 'u1', provider: 'outlook', cursor },
+  { id: 'b', userId: 'u2', provider: 'outlook', cursor },
+  { id: 'c', userId: 'u3', provider: 'outlook', cursor },
+];
+
+Deno.test('regression — the run stops starting new accounts once its time budget is spent', async () => {
+  let t = 0;
+  const started: string[] = [];
+  const handler = createSyncMailHandler({
+    ...base,
+    secret: 's',
+    now: () => new Date(t),
+    runBudgetMs: 1000,
+    listActiveAccounts: () => Promise.resolve(three),
+    syncOne: (account) => {
+      started.push(account.id);
+      t += 600;
+      return Promise.resolve(okOutcome);
+    },
+  });
+  const body = await (await handler(req('s'))).json();
+  assertEquals(started, ['a', 'b']);
+  assertEquals(body.outcomes.map((o: { accountId: string; status: string }) => [o.accountId, o.status]), [['a', 'ok'], ['b', 'ok'], ['c', 'skipped']]);
+});
+
+Deno.test('regression — each account receives the run deadline so it stops between pages', async () => {
+  const deadlines: (number | undefined)[] = [];
+  const handler = createSyncMailHandler({
+    ...base,
+    secret: 's',
+    now: () => new Date(5_000),
+    runBudgetMs: 1000,
+    listActiveAccounts: () => Promise.resolve([three[0]]),
+    syncOne: (_account, deadline) => (deadlines.push(deadline), Promise.resolve(okOutcome)),
+  });
+  await handler(req('s'));
+  assertEquals(deadlines, [6_000]);
+});
+
+Deno.test('regression — accounts are synced in the injected order, not the database order', async () => {
+  const started: string[] = [];
+  const handler = createSyncMailHandler({
+    ...base,
+    secret: 's',
+    order: (list) => [...list].reverse(),
+    listActiveAccounts: () => Promise.resolve(three),
+    syncOne: (account) => (started.push(account.id), Promise.resolve(okOutcome)),
+  });
+  await handler(req('s'));
+  assertEquals(started, ['c', 'b', 'a']);
+});
+
+Deno.test('shuffled keeps every account exactly once', () => {
+  const ids = Array.from({ length: 20 }, (_, i) => String(i));
+  const random = [0.9, 0.1, 0.5, 0.3, 0.7];
+  let k = 0;
+  const result = shuffled(ids, () => random[k++ % random.length]);
+  assertEquals([...result].sort(), [...ids].sort());
+  assertEquals(ids, Array.from({ length: 20 }, (_, i) => String(i)));
 });

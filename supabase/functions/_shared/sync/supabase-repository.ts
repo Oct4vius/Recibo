@@ -1,9 +1,17 @@
 import type { SupabaseClient } from 'npm:@supabase/supabase-js@2';
 import type { Database } from '../database.types.ts';
-import type { IngestResult, SyncRepository } from './repository.ts';
+import { DataRejectedError, type IngestResult, type SyncRepository } from './repository.ts';
 
-function fail(error: { message: string } | null): void {
-  if (error) throw new Error(error.message);
+/**
+ * Códigos que señalan el valor de UNA fila (check, longitud, desborde, fecha, NUL/escape). Otros de las clases 22/23
+ * (enum desconocido, not null, FK) apuntan a un despliegue o a un bug que afecta toda la página: se reintentan.
+ */
+const ROW_DATA_CODES = new Set(['23514', '22001', '22003', '22007', '22008', '22021', '22P05']);
+
+export function fail(error: { message: string; code?: string } | null): void {
+  if (!error) return;
+  if (error.code && ROW_DATA_CODES.has(error.code)) throw new DataRejectedError(error.message, error.code);
+  throw new Error(error.message);
 }
 
 export function createSupabaseRepository(db: SupabaseClient<Database>): SyncRepository {

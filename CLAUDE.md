@@ -132,6 +132,9 @@ scripts de desarrollo leen los secretos de `supabase/functions/.env` (`functions
   propio (no hay dominio): sin invitaciones ni recuperación de contraseña por
   correo; la contraseña se cambia en la app con sesión abierta (`updateUser`) o
   la restablece el admin. El registro abierto se descartó el 2026-10-05 por eso.
+- **Cambio de contraseña verificado en el servidor.** `changePassword` manda `current_password` (`passwordUpdate`),
+  pero Auth solo lo exige con "Require current password when updating" encendido en el dashboard (Authentication →
+  Providers → Email; `config.toml` no tiene esa clave). Con la opción apagada se ignora y basta con robar la sesión.
 - **RLS en todas las tablas** con policy `user_id = auth.uid()`. Nueva tabla
   sin RLS = migración incompleta.
 - La app usa **anon key**; las Edge Functions usan **service role**. Jamás al revés.
@@ -145,6 +148,8 @@ scripts de desarrollo leen los secretos de `supabase/functions/.env` (`functions
   la app indica revocar el acceso en account.live.com/consent. Google sí lo permite: `unlink-account` verifica que la
   cuenta es del usuario, lee el token y lo revoca en Google (best effort, con timeout; si falla igual desvincula) antes de
   `unlink_mail_account`. Las transacciones ya importadas se conservan.
+- Borrar una fila de `linked_accounts` (o el usuario: cascada de `auth.users`) borra su secreto de Vault (trigger
+  `linked_accounts_delete_vault_secret`). Aun así, desvincular antes de borrar un usuario: así también se revoca en Google.
 - Las funciones SQL de Vault y vinculación (`initial_sync_cursor`, `link_mail_account`, `unlink_mail_account`,
   `mail_account_token`, `set_mail_account_token`) viven en `public` porque `supabase.rpc` solo alcanza esquemas
   expuestos. La protección es `EXECUTE` solo para `service_role` (pgTAP falla si `anon`/`authenticated` lo reciben).
@@ -309,6 +314,11 @@ banco es conocido y `parse()` devuelve `[]`, `sync-mail` inserta en
 `unparsed_emails` (subject + primeros 500 chars). **Nunca adivinar un monto ni
 inventar un parser sin correo real.**
 
+`senderAddress()` toma la dirección real del `From` (RFC 5322): ignora frases entre comillas y comentarios, así un
+`"<alertas@bhd.com.do>" <x@otro.example>` no pasa por BHD. `parseAmount()` devuelve null para 0 o montos que no
+caben en `numeric(14,2)`. `htmlToText()` es una pasada lineal (sin regex globales sobre el HTML): un correo con miles
+de `<` sin cerrar no puede frenar `sync-mail`; la prueba de regresión mide 200 KB de entrada hostil.
+
 **Estado de los bancos:**
 - `bhd`: parser en v1. Único correo verificado.
 - `banreservas`, `popular`, `apap`: **candidatos sin parser**. Solo se registran
@@ -363,6 +373,11 @@ Receta completa con herramientas (descargar sin procesar, anonimizar, desplegar 
   autorización/liquidación hasta que una fixture real lo demuestre necesario.
 - Cada corrida escribe una fila en `sync_logs` (`fetched`, `parsed`, `unparsed`,
   `error`). Un error en una cuenta **no** aborta las demás.
+- **Un correo no bloquea la cuenta.** Si la base rechaza los datos de una página (`DataRejectedError`, SQLSTATE clase
+  22 o 23), `syncAccount` reintenta correo por correo y guarda los rechazados como muestra en `unparsed_emails`; el
+  cursor avanza. Cualquier otro error del repositorio reintenta la página entera en la próxima corrida.
+- **Reparto entre cuentas.** `sync-mail` baraja las cuentas en cada corrida (`shuffled`) y no empieza cuentas nuevas
+  después de 100 s (quedan `skipped`). Cada llamada a Google/Microsoft tiene `PROVIDER_TIMEOUT_MS` (20 s).
 - `sync-mail` no evalúa presupuestos ni envía avisos: los avisos son locales y los reclama la app (ver "Avisos de
   presupuesto (Plan 4c)").
 
@@ -378,7 +393,9 @@ Receta completa con herramientas (descargar sin procesar, anonimizar, desplegar 
 - Ventana: `usd_rates_fetch_window()` la decide en SQL. Si el historial guardado no llega al día 1 del mes anterior al
   gasto en USD más viejo, se rellena desde ahí; si ya llega, se pide desde la última tasa guardada menos 7 días (una
   racha de corridas fallidas no deja huecos). El handler guarda con upsert por `rate_date` solo las fechas de la
-  ventana, así que reintentar es idempotente.
+  ventana, así que reintentar es idempotente. **Piso:** la ventana nunca empieza antes del día 1 del mes 13 meses antes
+  del actual; si no, un gasto manual con fecha vieja de cualquier usuario la arrastraba a filas históricas ilegibles del
+  BCRD y la descarga fallaba para todos.
 
 ## Avisos de presupuesto (Plan 4c)
 - **Locales, sin Firebase ni Expo Push, sin montos.** El servidor decide y reclama; la app muestra lo reclamado.
@@ -415,7 +432,8 @@ Receta completa con herramientas (descargar sin procesar, anonimizar, desplegar 
   empieza **lunes**.
 - **Agregados (home, historial, presupuesto) → RPC SQL**, no traer filas y sumar
   en el cliente. Ej.: `get_spending_summary(period, ref_date)`,
-  `get_history(granularity, from, to)`.
+  `get_history(granularity, from, to)`. Toda RPC con rango lo acota en el servidor: `get_history` rechaza (22023)
+  rangos nulos, invertidos o de más de 520 períodos.
 - **PostgREST recorta a 1000 filas** silenciosamente. Listados de
   `transactions` siempre paginados (`.range()` + `count: 'exact'`; Movimientos usa keyset, ver Convenciones de la app).
   Nunca asumir que `.select('*')` devuelve todo.
@@ -438,6 +456,11 @@ Receta completa con herramientas (descargar sin procesar, anonimizar, desplegar 
   `linked_account_id`, `bank_code`, `template_id`) son inmutables; un trigger
   `before update` lanza 42501 (migración `transactions_immutable_columns`). Los
   correos importados nunca se borran (solo se borran las manuales).
+- **Referencias entre filas, siempre del mismo dueño.** Una FK no basta: `reversed_by` solo apunta a un movimiento del
+  mismo usuario (trigger `transactions_reversed_by_same_owner`, 42501) y `category_id` solo a una categoría por
+  defecto o propia (policies de insert/update, igual que `merchant_rules`). Una columna nueva que referencie otra fila
+  de usuario necesita la misma regla, y toda consulta `security definer`/`service_role` que lea filas por id filtra
+  también por el dueño.
 - `unparsed_emails`: el usuario solo puede actualizar `resolved` (privilegio por
   columna); el resto lo escribe `sync-mail` con service role.
 - `categories.counts_as_spending boolean default true`. La categoría por defecto

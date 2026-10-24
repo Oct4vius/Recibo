@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { passwordChangeError } from '@/features/auth/password';
+import { passwordChangeError, passwordUpdate } from '@/features/auth/password';
 
 const valid = { current: 'vieja-clave-1', next: 'nueva-clave-12', repeat: 'nueva-clave-12' };
 
@@ -22,5 +22,11 @@ describe('passwordChangeError', () => {
     expect(passwordChangeError({ current: 'misma-clave-1', next: 'misma-clave-1', repeat: 'misma-clave-1' })).toBe(
       'La nueva contraseña debe ser distinta de la actual.',
     );
+  });
+});
+
+describe('regression — passwordUpdate', () => {
+  it('sends the current password so the Auth server can require it', () => {
+    expect(passwordUpdate('vieja-clave-1', 'nueva-clave-12')).toEqual({ password: 'nueva-clave-12', current_password: 'vieja-clave-1' });
   });
 });

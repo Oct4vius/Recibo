@@ -19,6 +19,7 @@ interface FakeOptions {
   requested?: PermissionState;
   claimed?: ClaimedAlert[];
   silenceFails?: boolean;
+  unregisterFails?: boolean;
 }
 
 function fakePort(options: FakeOptions = {}): AlertsPort & { calls: string[] } {
@@ -60,6 +61,10 @@ function fakePort(options: FakeOptions = {}): AlertsPort & { calls: string[] } {
     },
     unregisterTask: async () => {
       calls.push('unregisterTask');
+      if (options.unregisterFails) throw new Error('task manager unavailable');
+    },
+    dismissAll: async () => {
+      calls.push('dismissAll');
     },
   };
 }
@@ -111,10 +116,16 @@ describe('enableDeviceAlerts', () => {
 });
 
 describe('disableDeviceAlerts', () => {
+  it('regression — still clears the tray when cancelling the task fails', async () => {
+    const port = fakePort({ unregisterFails: true });
+    await expect(disableDeviceAlerts(port)).rejects.toThrow();
+    expect(port.calls).toContain('dismissAll');
+  });
+
   it('clears the preference before cancelling the task', async () => {
     const port = fakePort();
     await disableDeviceAlerts(port);
-    expect(port.calls).toEqual(['writeEnabled:false', 'unregisterTask']);
+    expect(port.calls).toEqual(['writeEnabled:false', 'unregisterTask', 'dismissAll']);
   });
 });
 
@@ -196,7 +207,7 @@ describe('cleanupWithoutSession', () => {
   it('clears the preference and the task when the app starts without a session', async () => {
     const port = fakePort();
     await cleanupWithoutSession('absent', port);
-    expect(port.calls).toEqual(['writeEnabled:false', 'unregisterTask']);
+    expect(port.calls).toEqual(['writeEnabled:false', 'unregisterTask', 'dismissAll']);
   });
   it('does nothing with a session', async () => {
     const port = fakePort();

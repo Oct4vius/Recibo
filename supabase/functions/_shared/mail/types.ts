@@ -46,6 +46,12 @@ export class MailAuthError extends Error {
 /** Falla transitoria (429, 5xx, red): se reintenta en la próxima corrida. */
 export class MailTransientError extends Error {}
 
+/**
+ * Tiempo máximo de cada llamada a Google/Microsoft. Una conexión colgada aborta (→ MailTransientError) en vez de
+ * retener la corrida compartida de sync-mail hasta que la plataforma la mate.
+ */
+export const PROVIDER_TIMEOUT_MS = 20_000;
+
 export function parseCursor(raw: string | null): SyncCursor | null {
   if (!raw) return null;
   try {

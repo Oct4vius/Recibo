@@ -5,7 +5,7 @@ import { decodeBase64Url } from './base64url.ts';
 import { nextCursor, OVERLAP_MS, PAGE_SIZE } from './cursor.ts';
 import { refreshGoogleTokens } from './google-auth.ts';
 import { bankSenderAddresses, gmailQuery } from './sender-query.ts';
-import { MailAuthError, MailTransientError, type MailProvider, type Page, type SyncCursor } from './types.ts';
+import { MailAuthError, MailTransientError, PROVIDER_TIMEOUT_MS, type MailProvider, type Page, type SyncCursor } from './types.ts';
 
 export const GMAIL_MESSAGES_URL = 'https://gmail.googleapis.com/gmail/v1/users/me/messages';
 export const GET_CONCURRENCY = 5;
@@ -123,7 +123,7 @@ export function createGmailProvider(config: {
   async function get<T>(url: string, accessToken: string): Promise<Outcome<T>> {
     let response: Response;
     try {
-      response = await fetchImpl(url, { headers: { Authorization: `Bearer ${accessToken}` } });
+      response = await fetchImpl(url, { headers: { Authorization: `Bearer ${accessToken}` }, signal: AbortSignal.timeout(PROVIDER_TIMEOUT_MS) });
     } catch {
       throw new MailTransientError('gmail unreachable');
     }

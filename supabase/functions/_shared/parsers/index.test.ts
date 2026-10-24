@@ -18,6 +18,22 @@ Deno.test('senderAddress — bare or display-name addresses, case kept', () => {
   assertEquals(senderAddress('"Alertas, BHD" <alertas@mail.bhd.com.do> '), 'alertas@mail.bhd.com.do');
 });
 
+Deno.test('regression — senderAddress ignores addresses written inside the display name or a comment', () => {
+  assertEquals(senderAddress('"<alertas@bhd.com.do>" <attacker@evil.example>'), 'attacker@evil.example');
+  assertEquals(senderAddress('attacker@evil.example (<alertas@bhd.com.do>)'), 'attacker@evil.example');
+  assertEquals(senderAddress('"BHD \\" <alertas@bhd.com.do>" <attacker@evil.example>'), 'attacker@evil.example');
+  assertEquals(findBank('"<alertas@bhd.com.do>" <attacker@evil.example>'), null);
+  assertEquals(senderAddress('BHD (banco) <Alertas@bhd.com.do>'), 'Alertas@bhd.com.do');
+});
+
+Deno.test('regression — a From header with more than one mailbox is not trusted', () => {
+  assertEquals(findBank('<x@evil.example> <Alertas@bhd.com.do>'), null);
+  assertEquals(findBank('x@evil.example, Alertas@bhd.com.do'), null);
+  assertEquals(findBank('<Alertas@bhd.com.do>, x@evil.example'), null);
+  assertEquals(findBank('x@evil.example Alertas@bhd.com.do'), null);
+  assertEquals(findBank('BHD <Alertas@bhd.com.do>')?.kind, 'bank');
+});
+
 Deno.test('findBank — exact domain and subdomain match a bank', () => {
   const exact = findBank('Alertas@bhd.com.do');
   const sub = findBank('x@mail.bhd.com.do');
