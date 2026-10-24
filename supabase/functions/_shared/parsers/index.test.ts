@@ -26,6 +26,14 @@ Deno.test('regression — senderAddress ignores addresses written inside the dis
   assertEquals(senderAddress('BHD (banco) <Alertas@bhd.com.do>'), 'Alertas@bhd.com.do');
 });
 
+Deno.test('regression — a From header with more than one mailbox is not trusted', () => {
+  assertEquals(findBank('<x@evil.example> <Alertas@bhd.com.do>'), null);
+  assertEquals(findBank('x@evil.example, Alertas@bhd.com.do'), null);
+  assertEquals(findBank('<Alertas@bhd.com.do>, x@evil.example'), null);
+  assertEquals(findBank('x@evil.example Alertas@bhd.com.do'), null);
+  assertEquals(findBank('BHD <Alertas@bhd.com.do>')?.kind, 'bank');
+});
+
 Deno.test('findBank — exact domain and subdomain match a bank', () => {
   const exact = findBank('Alertas@bhd.com.do');
   const sub = findBank('x@mail.bhd.com.do');

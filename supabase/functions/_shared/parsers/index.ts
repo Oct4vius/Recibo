@@ -46,10 +46,15 @@ function withoutDisplayText(from: string): string {
 /**
  * "BHD <Alertas@bhd.com.do>" → "Alertas@bhd.com.do". Conserva las mayúsculas. Un "<...>" dentro del nombre visible
  * o de un comentario no cuenta: '"<alertas@bhd.com.do>" <x@evil.example>' es x@evil.example.
+ * Solo se acepta UN buzón ("nombre <dirección>" o una dirección suelta); con varios, o malformado, devuelve "" y el
+ * correo queda como remitente desconocido.
  */
 export function senderAddress(from: string): string {
-  const mailbox = withoutDisplayText(from);
-  return (mailbox.match(/<([^<>]+)>[^<]*$/)?.[1] ?? mailbox).trim();
+  const mailbox = withoutDisplayText(from).trim();
+  if (mailbox.includes(',')) return '';
+  const angled = mailbox.match(/^[^<>]*<([^<>]+)>\s*$/);
+  if (angled) return angled[1].trim();
+  return /^[^\s<>]+$/.test(mailbox) ? mailbox : '';
 }
 
 /** "BHD <Alertas@bhd.com.do>" → "bhd.com.do"; "a@b.c" → "b.c"; sin @ → null. */
