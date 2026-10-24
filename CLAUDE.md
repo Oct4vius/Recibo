@@ -132,6 +132,9 @@ scripts de desarrollo leen los secretos de `supabase/functions/.env` (`functions
   propio (no hay dominio): sin invitaciones ni recuperación de contraseña por
   correo; la contraseña se cambia en la app con sesión abierta (`updateUser`) o
   la restablece el admin. El registro abierto se descartó el 2026-10-05 por eso.
+- **Cambio de contraseña verificado en el servidor.** `changePassword` manda `current_password` (`passwordUpdate`),
+  pero Auth solo lo exige con "Require current password when updating" encendido en el dashboard (Authentication →
+  Providers → Email; `config.toml` no tiene esa clave). Con la opción apagada se ignora y basta con robar la sesión.
 - **RLS en todas las tablas** con policy `user_id = auth.uid()`. Nueva tabla
   sin RLS = migración incompleta.
 - La app usa **anon key**; las Edge Functions usan **service role**. Jamás al revés.
