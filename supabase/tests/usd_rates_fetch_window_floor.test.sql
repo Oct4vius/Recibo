@@ -1,5 +1,5 @@
 begin;
-select plan(3);
+select plan(4);
 
 insert into auth.users (id, email) values ('11111111-1111-1111-1111-111111111111', 'a@example.com');
 insert into public.usd_rates (rate_date, sell, source) values ('2026-08-03', 59.0000, 'bcrd');
@@ -26,6 +26,16 @@ select results_eq(
   $$select from_date, to_date from public.usd_rates_fetch_window('2026-10-15')$$,
   $$values ('2026-04-01'::date, '2026-10-15'::date)$$,
   'a USD spend inside the floor still reopens the backfill from the month before it'
+);
+
+-- Un feed detenido más de 13 meses tampoco arrastra la ventana antes del piso
+delete from public.transactions;
+delete from public.usd_rates;
+insert into public.usd_rates (rate_date, sell, source) values ('2024-01-10', 58.0000, 'bcrd');
+select results_eq(
+  $$select from_date, to_date from public.usd_rates_fetch_window('2026-10-15')$$,
+  $$values ('2025-09-01'::date, '2026-10-15'::date)$$,
+  'a feed stalled for more than 13 months restarts at the floor, not before it'
 );
 
 select * from finish();

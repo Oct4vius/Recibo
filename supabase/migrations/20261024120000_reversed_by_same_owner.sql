@@ -20,6 +20,12 @@ $$;
 
 revoke execute on function public.transactions_reversed_by_same_owner() from public, anon, authenticated;
 
+-- Limpieza única: un reversed_by que ya apunte a un movimiento de otro usuario se suelta.
+update public.transactions t
+set reversed_by = null
+where t.reversed_by is not null
+  and not exists (select 1 from public.transactions r where r.id = t.reversed_by and r.user_id = t.user_id);
+
 create trigger transactions_reversed_by_same_owner
   before insert or update of reversed_by on public.transactions
   for each row execute function public.transactions_reversed_by_same_owner();

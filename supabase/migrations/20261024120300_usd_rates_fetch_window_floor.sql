@@ -27,8 +27,8 @@ begin
   if v_min is null or v_min > v_start + 7 then
     return query select v_start, v_today;
   else
-    -- Sin greatest(): si la última tasa quedó antes del inicio, el rango arranca ahí y no queda hueco permanente.
-    return query select v_max - 7, v_today;
+    -- Si la última tasa quedó antes del inicio, el rango arranca ahí (sin hueco), pero nunca antes del piso.
+    return query select greatest(v_max - 7, v_floor), v_today;
   end if;
 end;
 $$;
