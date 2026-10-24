@@ -14,6 +14,8 @@ export interface AlertsPort {
   present(alert: ClaimedAlert): Promise<void>;
   registerTask(): Promise<void>;
   unregisterTask(): Promise<void>;
+  /** Quita de la bandeja los avisos ya mostrados (no deben quedar a la vista de la próxima cuenta del teléfono). */
+  dismissAll(): Promise<void>;
 }
 
 /**
@@ -47,9 +49,10 @@ export async function enableDeviceAlerts(
   return permission;
 }
 
-export async function disableDeviceAlerts(port: Pick<AlertsPort, 'writeEnabled' | 'unregisterTask'>): Promise<void> {
+export async function disableDeviceAlerts(port: Pick<AlertsPort, 'writeEnabled' | 'unregisterTask' | 'dismissAll'>): Promise<void> {
   await port.writeEnabled(false);
   await port.unregisterTask();
+  await port.dismissAll();
 }
 
 /** Al abrir la app: la tarea está registrada solo con sesión, preferencia y permiso; si no, se cancela. */
@@ -65,7 +68,7 @@ export async function ensureTaskRegistered(
 /** La app arrancó sin sesión: la preferencia es de la sesión anterior, así quien entre después empieza apagado. */
 export async function cleanupWithoutSession(
   state: SessionState,
-  port: Pick<AlertsPort, 'writeEnabled' | 'unregisterTask'>,
+  port: Pick<AlertsPort, 'writeEnabled' | 'unregisterTask' | 'dismissAll'>,
 ): Promise<void> {
   if (state === 'absent') await disableDeviceAlerts(port);
 }

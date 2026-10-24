@@ -61,6 +61,9 @@ function fakePort(options: FakeOptions = {}): AlertsPort & { calls: string[] } {
     unregisterTask: async () => {
       calls.push('unregisterTask');
     },
+    dismissAll: async () => {
+      calls.push('dismissAll');
+    },
   };
 }
 
@@ -114,7 +117,7 @@ describe('disableDeviceAlerts', () => {
   it('clears the preference before cancelling the task', async () => {
     const port = fakePort();
     await disableDeviceAlerts(port);
-    expect(port.calls).toEqual(['writeEnabled:false', 'unregisterTask']);
+    expect(port.calls).toEqual(['writeEnabled:false', 'unregisterTask', 'dismissAll']);
   });
 });
 
@@ -196,7 +199,7 @@ describe('cleanupWithoutSession', () => {
   it('clears the preference and the task when the app starts without a session', async () => {
     const port = fakePort();
     await cleanupWithoutSession('absent', port);
-    expect(port.calls).toEqual(['writeEnabled:false', 'unregisterTask']);
+    expect(port.calls).toEqual(['writeEnabled:false', 'unregisterTask', 'dismissAll']);
   });
   it('does nothing with a session', async () => {
     const port = fakePort();

@@ -74,6 +74,9 @@ export const nativePort: AlertsPort = {
     if (!(await TaskManager.isTaskRegisteredAsync(BUDGET_ALERTS_TASK))) return;
     await BackgroundTask.unregisterTaskAsync(BUDGET_ALERTS_TASK);
   },
+  async dismissAll() {
+    await Notifications.dismissAllNotificationsAsync();
+  },
 };
 
 export function openNotificationSettings(): Promise<void> {
