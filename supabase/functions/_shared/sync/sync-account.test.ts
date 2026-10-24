@@ -1,7 +1,7 @@
 import { assertEquals } from 'jsr:@std/assert@1';
 import type { ParseResult, RawEmail } from '../parsers/index.ts';
 import { MailAuthError, MailTransientError, type MailProvider, type Page, type SyncCursor } from '../mail/types.ts';
-import type { IngestResult, SyncAccount, SyncLog, SyncRepository } from './repository.ts';
+import { DataRejectedError, type IngestResult, type SyncAccount, type SyncLog, type SyncRepository } from './repository.ts';
 import { SYNC_FAILED, syncAccount } from './sync-account.ts';
 
 const cursor0: SyncCursor = { since: '2026-09-01T04:00:00Z', next: null, maxSeen: null };
@@ -169,6 +169,28 @@ Deno.test('regression — a generic error shows on the account, keeps it active 
   assertEquals(marks, [{ status: 'active', lastError: SYNC_FAILED, lastSyncAt: null }]);
   // El texto crudo solo queda en sync_logs, nunca en la cuenta que ve el usuario.
   assertEquals(logs[0].error, 'duplicate key value violates unique constraint');
+});
+
+Deno.test('regression — one email the database rejects goes to unparsed and no longer blocks the page', async () => {
+  const { repo, cursors, logs } = fakeRepo();
+  const ingested: string[] = [];
+  const quarantined: string[] = [];
+  repo.ingest = (_id, rows) =>
+    rows.some((r) => r.message_id === 'bad#0')
+      ? Promise.reject(new DataRejectedError('new row violates check constraint "transactions_amount_check"', '23514'))
+      : (ingested.push(...rows.map((r) => r.message_id)), Promise.resolve({ status: 'ok', inserted: rows.length, duplicates: 0, paired: 0, unmatched: 0 }));
+  repo.saveUnparsed = (_a, emails) => (quarantined.push(...emails.map((e) => e.message_id)), Promise.resolve());
+  const c1 = { since: '2026-09-16T02:43:15Z', next: null, maxSeen: null };
+  const provider = fakeProvider(
+    [{ emails: [email('a'), email('bad'), email('c')], cursor: c1, hasMore: false }],
+    () => Promise.resolve({ accessToken: 'at', refreshToken: 'rt-old' }),
+  );
+  const outcome = await syncAccount(account, { provider, repo, parse, maxPages: 10, now, expiredSession: EXPIRED });
+  assertEquals(outcome, { status: 'ok', fetched: 3, parsed: 2, unparsed: 1, pages: 1 });
+  assertEquals(ingested.sort(), ['a#0', 'c#0']);
+  assertEquals(quarantined, ['bad']);
+  assertEquals(cursors, [c1]);
+  assertEquals(logs[0].error, null);
 });
 
 Deno.test('an expired Gmail session shows the injected Gmail message on the account and the log', async () => {

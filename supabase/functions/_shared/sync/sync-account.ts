@@ -1,6 +1,6 @@
-import type { ParseResult, RawEmail } from '../parsers/index.ts';
+import type { BankCode, ParseResult, RawEmail } from '../parsers/index.ts';
 import { MailAuthError, MailTransientError, type MailProvider } from '../mail/types.ts';
-import type { SyncAccount, SyncRepository } from './repository.ts';
+import { DataRejectedError, type SyncAccount, type SyncRepository } from './repository.ts';
 import { toIngestRows, toUnparsed, type IngestRow, type UnparsedEmail } from './rows.ts';
 
 export const TRANSIENT_ERROR = 'Error temporal del proveedor de correo.';
@@ -22,6 +22,40 @@ export interface SyncOutcome {
   parsed: number;
   unparsed: number;
   pages: number;
+}
+
+interface ParsedEmail {
+  email: RawEmail;
+  bankCode: BankCode;
+  rows: IngestRow[];
+}
+
+/**
+ * La página va en una sola llamada (una transacción). Si la base rechaza los datos (DataRejectedError), se reintenta
+ * correo por correo y los rechazados se devuelven aparte; cualquier otro error sube y la página se reintenta entera.
+ */
+async function ingestPage(
+  accountId: string,
+  parsed: ParsedEmail[],
+  repo: SyncRepository,
+): Promise<{ status: 'ok' | 'skipped'; rejected: ParsedEmail[] }> {
+  const rows = parsed.flatMap((p) => p.rows);
+  if (rows.length === 0) return { status: 'ok', rejected: [] };
+  try {
+    return { status: (await repo.ingest(accountId, rows)).status, rejected: [] };
+  } catch (err) {
+    if (!(err instanceof DataRejectedError)) throw err;
+  }
+  const rejected: ParsedEmail[] = [];
+  for (const p of parsed) {
+    try {
+      if ((await repo.ingest(accountId, p.rows)).status === 'skipped') return { status: 'skipped', rejected };
+    } catch (err) {
+      if (!(err instanceof DataRejectedError)) throw err;
+      rejected.push(p);
+    }
+  }
+  return { status: 'ok', rejected };
 }
 
 /** Una cuenta: token rotado → páginas → parseo → ingesta → cursor → estado → log. Sin SQL ni regex. */
@@ -48,21 +82,28 @@ export async function syncAccount(account: SyncAccount, deps: SyncDeps): Promise
       const page = await provider.fetchNew(tokens.accessToken, cursor);
       outcome.pages++;
       outcome.fetched += page.emails.length;
-      const rows: IngestRow[] = [];
+      const parsed: ParsedEmail[] = [];
       const unparsed: UnparsedEmail[] = [];
       for (const email of page.emails) {
         const result = parse(email);
         if (result.kind === 'parsed') {
-          rows.push(...toIngestRows(email, result.transactions));
+          parsed.push({ email, bankCode: result.bankCode, rows: toIngestRows(email, result.transactions) });
           outcome.parsed++;
         } else if (result.kind === 'unparsed') {
           unparsed.push(toUnparsed(email, result.bankCode));
           outcome.unparsed++;
         }
       }
-      if (rows.length > 0 && (await repo.ingest(account.id, rows)).status === 'skipped') {
+      const ingested = await ingestPage(account.id, parsed, repo);
+      if (ingested.status === 'skipped') {
         outcome.status = 'skipped';
         break;
+      }
+      // Un correo cuyos datos la base rechaza queda como muestra en unparsed_emails en vez de bloquear la cuenta.
+      for (const { email, bankCode } of ingested.rejected) {
+        unparsed.push(toUnparsed(email, bankCode));
+        outcome.parsed--;
+        outcome.unparsed++;
       }
       if (unparsed.length > 0) await repo.saveUnparsed(account, unparsed);
       await repo.advanceCursor(account.id, page.cursor);

@@ -22,6 +22,12 @@ Deno.test('toUnparsed — keeps the subject and the first 500 characters', () =>
   assertEquals(unparsed.subject, 'Asunto');
 });
 
+Deno.test('regression — subject and snippet drop NUL and lone surrogates that Postgres rejects', () => {
+  const unparsed = toUnparsed({ ...email, subject: 'a\u0000b\ud800c', text: 'x\u0000y\udfffz' }, 'bhd');
+  assertEquals(unparsed.subject, 'abc');
+  assertEquals(unparsed.snippet, 'xyz');
+});
+
 Deno.test('regression — the snippet never splits an emoji (UTF-16 surrogate pair)', () => {
   const text = `${'a'.repeat(499)}😀${'b'.repeat(50)}`;
   const { snippet } = toUnparsed({ ...email, text }, 'bhd');

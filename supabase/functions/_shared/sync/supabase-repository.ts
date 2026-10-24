@@ -1,9 +1,11 @@
 import type { SupabaseClient } from 'npm:@supabase/supabase-js@2';
 import type { Database } from '../database.types.ts';
-import type { IngestResult, SyncRepository } from './repository.ts';
+import { DataRejectedError, type IngestResult, type SyncRepository } from './repository.ts';
 
-function fail(error: { message: string } | null): void {
-  if (error) throw new Error(error.message);
+export function fail(error: { message: string; code?: string } | null): void {
+  if (!error) return;
+  if (error.code && /^2[23]/.test(error.code)) throw new DataRejectedError(error.message, error.code);
+  throw new Error(error.message);
 }
 
 export function createSupabaseRepository(db: SupabaseClient<Database>): SyncRepository {

@@ -27,6 +27,17 @@ export interface SyncLog {
   error: string | null;
 }
 
+/**
+ * La base rechazó los datos (SQLSTATE clase 22 "data exception" o 23 "integrity constraint"): reintentar lo mismo
+ * vuelve a fallar. Cualquier otro error del repositorio se trata como transitorio y se reintenta en la próxima corrida.
+ */
+export class DataRejectedError extends Error {
+  constructor(message: string, readonly code: string) {
+    super(message);
+    this.name = 'DataRejectedError';
+  }
+}
+
 /** Lo único que la orquestación necesita de la base. Los tests usan una implementación en memoria. */
 export interface SyncRepository {
   readToken(accountId: string): Promise<string | null>;
