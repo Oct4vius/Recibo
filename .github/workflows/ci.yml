@@ -59,7 +59,7 @@ jobs:
       # Misma versión que la devDependency `supabase` de package.json.
       - uses: supabase/setup-cli@v1
         with:
-          version: 2.117.0
+          version: 2.121.0
 
       - name: Start local Supabase
         run: bun run db:start

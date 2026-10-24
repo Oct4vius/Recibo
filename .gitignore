@@ -36,3 +36,17 @@ docs/superpowers/plans/
 
 # spikes desechables
 .spike/
+
+# estado local de herramientas (Claude Code, superpowers): nunca al repo público
+.claude/settings.local.json
+.claude/worktrees/
+.superpowers/
+
+# credenciales y llaves: red de seguridad (hoy no hay ninguna versionada)
+*.pem
+*.key
+*.p12
+*.jks
+*.keystore
+credentials.json
+google-services.json
