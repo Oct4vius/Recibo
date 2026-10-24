@@ -168,6 +168,20 @@ Deno.test('regression — the run stops starting new accounts once its time budg
   assertEquals(body.outcomes.map((o: { accountId: string; status: string }) => [o.accountId, o.status]), [['a', 'ok'], ['b', 'ok'], ['c', 'skipped']]);
 });
 
+Deno.test('regression — each account receives the run deadline so it stops between pages', async () => {
+  const deadlines: (number | undefined)[] = [];
+  const handler = createSyncMailHandler({
+    ...base,
+    secret: 's',
+    now: () => new Date(5_000),
+    runBudgetMs: 1000,
+    listActiveAccounts: () => Promise.resolve([three[0]]),
+    syncOne: (_account, deadline) => (deadlines.push(deadline), Promise.resolve(okOutcome)),
+  });
+  await handler(req('s'));
+  assertEquals(deadlines, [6_000]);
+});
+
 Deno.test('regression — accounts are synced in the injected order, not the database order', async () => {
   const started: string[] = [];
   const handler = createSyncMailHandler({

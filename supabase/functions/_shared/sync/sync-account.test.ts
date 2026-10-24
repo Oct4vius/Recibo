@@ -1,4 +1,4 @@
-import { assertEquals } from 'jsr:@std/assert@1';
+import { assertEquals, assertStringIncludes } from 'jsr:@std/assert@1';
 import type { ParseResult, RawEmail } from '../parsers/index.ts';
 import { MailAuthError, MailTransientError, type MailProvider, type Page, type SyncCursor } from '../mail/types.ts';
 import { DataRejectedError, type IngestResult, type SyncAccount, type SyncLog, type SyncRepository } from './repository.ts';
@@ -190,7 +190,53 @@ Deno.test('regression — one email the database rejects goes to unparsed and no
   assertEquals(ingested.sort(), ['a#0', 'c#0']);
   assertEquals(quarantined, ['bad']);
   assertEquals(cursors, [c1]);
-  assertEquals(logs[0].error, null);
+  // Queda constancia para el operador: cuántos correos se apartaron y por qué código.
+  assertStringIncludes(logs[0].error ?? '', '1 email(s) rejected by the database (23514)');
+});
+
+Deno.test('regression — when the database rejects every email of a page it is a page error and the cursor stays', async () => {
+  const { repo, cursors, marks } = fakeRepo();
+  const quarantined: string[] = [];
+  repo.ingest = () => Promise.reject(new DataRejectedError('invalid input value for enum', '23514'));
+  repo.saveUnparsed = (_a, emails) => (quarantined.push(...emails.map((e) => e.message_id)), Promise.resolve());
+  const provider = fakeProvider(
+    [{ emails: [email('a'), email('b')], cursor: { ...cursor0, since: 'later' }, hasMore: false }],
+    () => Promise.resolve({ accessToken: 'at', refreshToken: 'rt-old' }),
+  );
+  const outcome = await syncAccount(account, { provider, repo, parse, maxPages: 10, now, expiredSession: EXPIRED });
+  assertEquals(outcome.status, 'error');
+  assertEquals(quarantined, []);
+  assertEquals(cursors, []);
+  assertEquals(marks, [{ status: 'active', lastError: SYNC_FAILED, lastSyncAt: null }]);
+});
+
+Deno.test('a transient repository error during the email-by-email retry fails the page and keeps the cursor', async () => {
+  const { repo, cursors } = fakeRepo();
+  let calls = 0;
+  repo.ingest = () =>
+    ++calls === 1
+      ? Promise.reject(new DataRejectedError('numeric field overflow', '22003'))
+      : Promise.reject(new Error('connection reset'));
+  const provider = fakeProvider(
+    [{ emails: [email('a'), email('b')], cursor: { ...cursor0, since: 'later' }, hasMore: false }],
+    () => Promise.resolve({ accessToken: 'at', refreshToken: 'rt-old' }),
+  );
+  const outcome = await syncAccount(account, { provider, repo, parse, maxPages: 10, now, expiredSession: EXPIRED });
+  assertEquals(outcome.status, 'error');
+  assertEquals(cursors, []);
+});
+
+Deno.test('regression — a run past its deadline stops between pages and keeps what it saved', async () => {
+  const { repo, cursors, marks } = fakeRepo();
+  let t = Date.parse('2026-10-10T12:00:00Z');
+  const clock = () => new Date((t += 40_000));
+  const pages: Page[] = Array.from({ length: 5 }, (_, i) => ({ emails: [email(`m${i}`)], cursor: { ...cursor0, next: `n${i}` }, hasMore: true }));
+  const provider = fakeProvider(pages, () => Promise.resolve({ accessToken: 'at', refreshToken: 'rt-old' }));
+  const deadline = Date.parse('2026-10-10T12:02:00Z');
+  const outcome = await syncAccount(account, { provider, repo, parse, maxPages: 10, now: clock, expiredSession: EXPIRED, deadline });
+  assertEquals(outcome.pages < 5, true);
+  assertEquals(cursors.at(-1)?.next, `n${outcome.pages - 1}`);
+  assertEquals(marks.at(-1)?.status, 'active');
 });
 
 Deno.test('an expired Gmail session shows the injected Gmail message on the account and the log', async () => {

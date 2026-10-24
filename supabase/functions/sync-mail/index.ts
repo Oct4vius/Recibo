@@ -34,12 +34,12 @@ Deno.serve(
     order: (accounts) => shuffled(accounts),
     runBudgetMs: RUN_BUDGET_MS,
     isConfigured: (name) => providerFor(name, providerConfig) !== null,
-    syncOne: (account) => {
+    syncOne: (account, deadline) => {
       const registered = providerFor(account.provider, providerConfig);
       // El handler ya omitió los proveedores sin configurar; esto solo estrecha el tipo.
       if (!registered) throw new Error('provider not configured');
       const { provider, expiredSession } = registered;
-      return syncAccount(account, { provider, repo, parse: parseEmail, maxPages: MAX_PAGES_PER_RUN, now: () => new Date(), expiredSession });
+      return syncAccount(account, { provider, repo, parse: parseEmail, maxPages: MAX_PAGES_PER_RUN, now: () => new Date(), expiredSession, deadline });
     },
   }),
 );

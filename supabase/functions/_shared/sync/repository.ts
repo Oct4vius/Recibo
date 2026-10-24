@@ -28,8 +28,8 @@ export interface SyncLog {
 }
 
 /**
- * La base rechazó los datos (SQLSTATE clase 22 "data exception" o 23 "integrity constraint"): reintentar lo mismo
- * vuelve a fallar. Cualquier otro error del repositorio se trata como transitorio y se reintenta en la próxima corrida.
+ * La base rechazó el valor de una fila (un check, un desborde, un NUL…): reintentar lo mismo vuelve a fallar.
+ * Cualquier otro error del repositorio se reintenta entero en la próxima corrida.
  */
 export class DataRejectedError extends Error {
   constructor(message: string, readonly code: string) {

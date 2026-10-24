@@ -8,7 +8,8 @@ export interface SyncMailDeps {
   listActiveAccounts(): Promise<SyncAccount[]>;
   /** false = el proveedor de la cuenta no está configurado en este entorno: se omite y se deja constancia. */
   isConfigured(provider: MailProviderName): boolean;
-  syncOne(account: SyncAccount): Promise<SyncOutcome>;
+  /** `deadline` (epoch ms, opcional): la cuenta deja de pedir páginas después. */
+  syncOne(account: SyncAccount, deadline?: number): Promise<SyncOutcome>;
   repo: Pick<SyncRepository, 'logSync' | 'markAccount'>;
   now(): Date;
   /**
@@ -74,7 +75,7 @@ export function createSyncMailHandler(deps: SyncMailDeps): (request: Request) =>
         continue;
       }
       try {
-        outcome = await deps.syncOne(account);
+        outcome = await deps.syncOne(account, Number.isFinite(budget) ? startedAt + budget : undefined);
       } catch {
         // Texto fijo: ni ids ni el mensaje del error (puede traer datos de la cuenta).
         console.error('sync-mail: an account sync failed unexpectedly');
