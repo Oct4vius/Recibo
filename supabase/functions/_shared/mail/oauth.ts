@@ -15,7 +15,14 @@ export async function postTokenForm(url: string, params: Record<string, string>,
   } catch {
     throw new MailTransientError('token endpoint unreachable');
   }
-  const json = (await response.json().catch(() => ({}))) as TokenJson;
+  let json: TokenJson;
+  try {
+    json = (await response.json()) as TokenJson;
+  } catch {
+    // Un 200 con cuerpo ilegible (p. ej. el timeout cortó la lectura) es transitorio; un error sin JSON, genérico.
+    if (response.ok) throw new MailTransientError('token endpoint body unreadable');
+    json = {};
+  }
   if (response.ok) return json;
   const code = typeof json.error === 'string' ? json.error : 'unknown_error';
   if (response.status === 429 || response.status >= 500) throw new MailTransientError(`token endpoint ${response.status}`);

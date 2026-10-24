@@ -52,3 +52,8 @@ Deno.test('regression — the token request carries a timeout so a hung endpoint
   assertEquals(signal instanceof AbortSignal, true);
 });
 
+Deno.test('regression — a 200 whose body cannot be read (timeout mid-body) is transient', async () => {
+  const brokenBody = (() => Promise.resolve(new Response('{"access_tok', { status: 200 }))) as typeof fetch;
+  await assertRejects(() => postTokenForm('u', {}, brokenBody), MailTransientError);
+});
+

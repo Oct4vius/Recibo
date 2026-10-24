@@ -51,8 +51,8 @@ export async function enableDeviceAlerts(
 
 export async function disableDeviceAlerts(port: Pick<AlertsPort, 'writeEnabled' | 'unregisterTask' | 'dismissAll'>): Promise<void> {
   await port.writeEnabled(false);
-  await port.unregisterTask();
-  await port.dismissAll();
+  // Las dos arrancan siempre: si cancelar la tarea falla, los avisos de la bandeja igual se quitan.
+  await Promise.all([port.unregisterTask(), port.dismissAll()]);
 }
 
 /** Al abrir la app: la tarea está registrada solo con sesión, preferencia y permiso; si no, se cancela. */
