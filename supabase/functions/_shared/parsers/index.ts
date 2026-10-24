@@ -8,9 +8,48 @@ export { candidateBanks };
 /** Agregar un banco = crear su carpeta con un BankParser y sumarlo aquí. Nada más cambia. */
 export const banks: BankParser[] = [bhd];
 
-/** "BHD <Alertas@bhd.com.do>" → "Alertas@bhd.com.do". Conserva las mayúsculas. */
+/**
+ * Quita del header las partes que el remitente escribe libremente: frases entre comillas (con escapes \") y
+ * comentarios entre paréntesis (anidables). Lo que queda es la dirección real (RFC 5322).
+ */
+function withoutDisplayText(from: string): string {
+  let out = '';
+  let inQuote = false;
+  let depth = 0;
+  for (let i = 0; i < from.length; i++) {
+    const c = from[i];
+    if (c === '\\' && (inQuote || depth > 0)) {
+      i++;
+      continue;
+    }
+    if (inQuote) {
+      if (c === '"') inQuote = false;
+      continue;
+    }
+    if (c === '(') {
+      depth++;
+      continue;
+    }
+    if (depth > 0) {
+      if (c === ')') depth--;
+      continue;
+    }
+    if (c === '"') {
+      inQuote = true;
+      continue;
+    }
+    out += c;
+  }
+  return out;
+}
+
+/**
+ * "BHD <Alertas@bhd.com.do>" → "Alertas@bhd.com.do". Conserva las mayúsculas. Un "<...>" dentro del nombre visible
+ * o de un comentario no cuenta: '"<alertas@bhd.com.do>" <x@evil.example>' es x@evil.example.
+ */
 export function senderAddress(from: string): string {
-  return (from.match(/<([^>]+)>/)?.[1] ?? from).trim();
+  const mailbox = withoutDisplayText(from);
+  return (mailbox.match(/<([^<>]+)>[^<]*$/)?.[1] ?? mailbox).trim();
 }
 
 /** "BHD <Alertas@bhd.com.do>" → "bhd.com.do"; "a@b.c" → "b.c"; sin @ → null. */
