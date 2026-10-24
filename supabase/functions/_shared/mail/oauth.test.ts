@@ -41,3 +41,14 @@ Deno.test('postTokenForm — 503 transient, invalid_grant auth, other errors gen
   await assertRejects(() => postTokenForm('u', {}, fakeFetch(400, { error: 'invalid_grant' })), MailAuthError);
   await assertRejects(() => postTokenForm('u', {}, fakeFetch(400, { error: 'invalid_client' })), Error, 'token endpoint error: invalid_client');
 });
+
+Deno.test('regression — the token request carries a timeout so a hung endpoint cannot hold the whole sync run', async () => {
+  let signal: AbortSignal | null | undefined;
+  const capture = ((_url: string, init?: RequestInit) => {
+    signal = init?.signal;
+    return Promise.resolve(new Response('{}', { status: 200 }));
+  }) as typeof fetch;
+  await postTokenForm('u', {}, capture);
+  assertEquals(signal instanceof AbortSignal, true);
+});
+

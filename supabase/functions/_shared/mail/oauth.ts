@@ -1,4 +1,4 @@
-import { MailAuthError, MailTransientError } from './types.ts';
+import { MailAuthError, MailTransientError, PROVIDER_TIMEOUT_MS } from './types.ts';
 
 export type TokenJson = Record<string, unknown>;
 
@@ -10,6 +10,7 @@ export async function postTokenForm(url: string, params: Record<string, string>,
       method: 'POST',
       headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
       body: new URLSearchParams(params).toString(),
+      signal: AbortSignal.timeout(PROVIDER_TIMEOUT_MS),
     });
   } catch {
     throw new MailTransientError('token endpoint unreachable');

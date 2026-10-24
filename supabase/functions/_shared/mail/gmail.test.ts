@@ -229,3 +229,19 @@ Deno.test('regression — an unclassified 4xx on one message skips that message 
   const page = await provider.fetchNew('at', cursor);
   assertEquals(page.emails.map((e) => e.messageId), ['ok']);
 });
+
+Deno.test('regression — Gmail requests carry a timeout so a hung connection cannot hold the whole sync run', async () => {
+  let signal: AbortSignal | null | undefined;
+  const provider = createGmailProvider({
+    clientId: 'c',
+    clientSecret: 's',
+    addresses: ADDR,
+    fetchImpl: ((_url: string, init?: RequestInit) => {
+      signal = init?.signal;
+      return Promise.resolve(new Response('{}', { status: 401 }));
+    }) as typeof fetch,
+  });
+  await assertRejects(() => provider.fetchNew('at', cursor), MailAuthError);
+  assertEquals(signal instanceof AbortSignal, true);
+});
+
