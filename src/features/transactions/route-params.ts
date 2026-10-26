@@ -3,13 +3,13 @@ import { DEFAULT_FILTERS, UNCATEGORIZED, type RangePeriod, type TransactionFilte
 type Param = string | string[] | undefined;
 
 /** Lo que Historial pasa a `router.navigate` para abrir Movimientos ya filtrado. */
-export interface TransactionRouteParams {
+export type TransactionRouteParams = {
   from?: string;
   to?: string;
   label?: string;
   period?: 'all';
   categoryId?: string;
-}
+};
 
 const ISO_INSTANT = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d{3})?Z$/;
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
