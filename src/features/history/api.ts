@@ -1,6 +1,6 @@
 import { toIsoDate, type LocalDate } from '@/lib/dates';
 import { supabase } from '@/lib/supabase';
-import { sortCategorySpending, toCategorySpending, type CategorySpending } from './categories';
+import { toCategoryBreakdown, type CategoryBreakdownData } from './categories';
 import type { Granularity } from './granularity';
 import { toHistoryBucket, type HistoryBucket } from './mapping';
 
@@ -15,12 +15,15 @@ export async function fetchHistory(granularity: Granularity, first: LocalDate, l
   return (data ?? []).map(toHistoryBucket);
 }
 
-/** Gasto por categoría en un rango de fechas locales (fin exclusivo); `null` = todo el historial. Ya ordenado. */
-export async function fetchCategorySpending(range: { from: string; to: string } | null): Promise<CategorySpending[]> {
-  // Sin rango = todo el historial: se llama sin argumentos (los parámetros de la RPC tienen default null).
-  const { data, error } = await supabase.rpc('get_category_spending', range ? { p_from: range.from, p_to: range.to } : {});
+/** Rango de fechas locales `YYYY-MM-DD` (fin exclusivo) o `'all'` (todo el historial). */
+export type CategoryRange = { from: string; to: string } | 'all';
+
+/** Gasto por categoría de un rango o de todo el historial, ya ordenado, con el total de ese mismo conjunto. */
+export async function fetchCategorySpending(range: CategoryRange): Promise<CategoryBreakdownData> {
+  // 'all' = todo el historial: se llama sin argumentos (los parámetros de la RPC tienen default null).
+  const { data, error } = await supabase.rpc('get_category_spending', range === 'all' ? {} : { p_from: range.from, p_to: range.to });
   if (error) throw error;
-  return sortCategorySpending((data ?? []).map(toCategorySpending));
+  return toCategoryBreakdown(data ?? []);
 }
 
 /** Total de todo el historial: fecha del primer gasto (`null` si no hay), suma y cantidad de gastos. */

@@ -15,7 +15,7 @@ const LOAD_ERROR = 'No se pudo cargar tu historial. Tira hacia abajo para reinte
 export function AllTimeHistory() {
   const timeZone = useTimeZone();
   const overall = useSpendingOverall();
-  const categories = useCategorySpending(null);
+  const categories = useCategorySpending('all');
 
   if (overall.isPending) return <PlaceholderRows count={4} />;
   if (overall.isError) {
@@ -37,7 +37,6 @@ export function AllTimeHistory() {
       />
       <CategoryBreakdown
         query={categories}
-        total={totalDop}
         onPressCategory={(categoryId) =>
           router.navigate({ pathname: '/transactions', params: movementParams('all', categoryId, timeZone) })
         }

@@ -26,6 +26,19 @@ export function toCategorySpending(row: {
   };
 }
 
+/** Desglose de un rango: filas ordenadas y el total del rango, que la RPC calcula en SQL (0 sin filas). */
+export interface CategoryBreakdownData {
+  items: CategorySpending[];
+  total: number;
+}
+
+type CategorySpendingRpcRow = Parameters<typeof toCategorySpending>[0] & { period_total: number };
+
+/** Filas de la RPC a desglose ordenado. El total es `period_total` (igual en todas las filas), no una suma local. */
+export function toCategoryBreakdown(rows: readonly CategorySpendingRpcRow[]): CategoryBreakdownData {
+  return { items: sortCategorySpending(rows.map(toCategorySpending)), total: rows[0]?.period_total ?? 0 };
+}
+
 /** Mayor gasto primero; empate por nombre y luego id; "Sin categoría" siempre al final. */
 export function sortCategorySpending(items: readonly CategorySpending[]): CategorySpending[] {
   return [...items].sort((a, b) => {

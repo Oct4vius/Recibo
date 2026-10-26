@@ -286,7 +286,7 @@ isOneToOne: false
                            },
 "get_category_spending":
 { Args: { "p_from"?: string,"p_to"?: string }; Returns: {
-              "category_id": string,"category_name": string,"total_dop": number,"tx_count": number
+              "category_id": string,"category_name": string,"period_total": number,"total_dop": number,"tx_count": number
             }[]
                            },
 "get_history":

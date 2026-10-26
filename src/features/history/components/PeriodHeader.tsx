@@ -17,7 +17,11 @@ export function PeriodHeader({ title, current, totalDop, txCount, onViewMovement
   return (
     <View style={{ marginBottom: 12 }}>
       <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-        <Text accessibilityRole="header" style={{ fontFamily: fonts.display, fontSize: typeScale.displaySm, color: colors.paper }}>
+        <Text
+          accessibilityRole="header"
+          numberOfLines={1}
+          style={{ flexShrink: 1, fontFamily: fonts.display, fontSize: typeScale.displaySm, color: colors.paper }}
+        >
           {title}
         </Text>
         {current ? (

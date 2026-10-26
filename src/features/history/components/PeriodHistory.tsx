@@ -84,7 +84,6 @@ export function PeriodHistory({ granularity }: { granularity: Granularity }) {
               />
               <CategoryBreakdown
                 query={categories}
-                total={selectedBucket.totalDop}
                 onPressCategory={(categoryId) => openMovements(selectedBucket, categoryId)}
               />
             </>

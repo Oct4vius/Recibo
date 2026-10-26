@@ -1,5 +1,5 @@
 begin;
-select plan(16);
+select plan(18);
 
 -- Aísla las pruebas de cualquier tasa del BCRD que haya en la base (se revierte con la transacción).
 delete from public.usd_rates;
@@ -47,6 +47,16 @@ select is(
   (select sum(total_dop) from public.get_category_spending('2026-10-01', '2026-11-01')),
   (select total_dop from public.get_history('month', '2026-10-01', '2026-10-01')),
   'the breakdown adds up to the get_history total of the same month'
+);
+select results_eq(
+  $$select distinct period_total from public.get_category_spending('2026-10-01', '2026-11-01')$$,
+  $$select total_dop from public.get_history('month', '2026-10-01', '2026-10-01')$$,
+  'period_total on every october row equals the get_history month total'
+);
+select results_eq(
+  $$select distinct period_total from public.get_category_spending(null, null)$$,
+  $$values (3350.00::numeric)$$,
+  'period_total on every all-time row equals the all-time total'
 );
 select results_eq(
   $$select category_name, total_dop, tx_count from public.get_category_spending(null, null) order by total_dop desc$$,

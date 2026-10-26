@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { breakdownRange, movementParams, shareOf, sortCategorySpending, toCategorySpending } from '@/features/history/categories';
+import { breakdownRange, movementParams, shareOf, sortCategorySpending, toCategoryBreakdown, toCategorySpending } from '@/features/history/categories';
 import { localDate } from '@/lib/dates';
 
 const TZ = 'America/Santo_Domingo';
@@ -64,5 +64,23 @@ describe('movementParams', () => {
     });
     expect('categoryId' in movementParams(target, undefined, TZ)).toBe(false);
     expect(movementParams(target, null, TZ).categoryId).toBe('none');
+  });
+});
+
+describe('toCategoryBreakdown', () => {
+  const row = (id: string | null, name: string | null, total: number) => ({
+    category_id: id,
+    category_name: name,
+    total_dop: total,
+    tx_count: 1,
+    period_total: 1800,
+  });
+  it('sorts the rows and takes the total from period_total', () => {
+    const result = toCategoryBreakdown([row(null, null, 250), row('x', 'Comida', 300), row('y', 'Super', 1250)]);
+    expect(result.items.map((i) => i.name)).toEqual(['Super', 'Comida', 'Sin categoría']);
+    expect(result.total).toBe(1800);
+  });
+  it('has total 0 without rows', () => {
+    expect(toCategoryBreakdown([])).toEqual({ items: [], total: 0 });
   });
 });

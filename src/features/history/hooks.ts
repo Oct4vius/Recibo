@@ -1,7 +1,7 @@
 import { keepPreviousData, useQuery } from '@tanstack/react-query';
 import { useTimeZone } from '@/features/profile/hooks';
 import { toIsoDate, toLocalDate } from '@/lib/dates';
-import { fetchCategorySpending, fetchHistory, fetchSpendingOverall } from './api';
+import { fetchCategorySpending, type CategoryRange, fetchHistory, fetchSpendingOverall } from './api';
 import type { Granularity } from './granularity';
 import { historyKeys } from './keys';
 import { historyWindow } from './window';
@@ -13,18 +13,20 @@ export function useHistory(granularity: Granularity, offset: number) {
     queryKey: historyKeys.window(granularity, toIsoDate(window.first), timeZone),
     // La granularidad viaja con los datos: mientras se muestran los anteriores, sus etiquetas y rangos siguen siendo coherentes.
     queryFn: async () => ({ granularity, buckets: await fetchHistory(granularity, window.first, window.last) }),
-    // Al cambiar de ventana o granularidad el gráfico sigue montado y las barras se ajustan a los datos nuevos.
+    // Al cambiar de ventana el gráfico sigue montado y las barras se ajustan a los datos nuevos; un cambio de granularidad lo remonta (HistoryScreen).
     placeholderData: keepPreviousData,
   });
   return { window, query };
 }
 
-/** Desglose por categoría del rango (`null` = todo el historial). Conserva el anterior mientras llega el nuevo. */
-export function useCategorySpending(range: { from: string; to: string } | null) {
+/** Desglose por categoría del rango (`'all'` = todo el historial; `null` = sin período elegido: no consulta). Conserva el anterior mientras llega el nuevo. */
+export function useCategorySpending(range: CategoryRange | null) {
   const timeZone = useTimeZone();
   return useQuery({
-    queryKey: historyKeys.categories(range?.from ?? null, range?.to ?? null, timeZone),
-    queryFn: () => fetchCategorySpending(range),
+    // Con `null` la consulta está desactivada: la llave solo importa con rango.
+    queryKey: historyKeys.categories(range ?? 'all', timeZone),
+    queryFn: () => fetchCategorySpending(range ?? 'all'),
+    enabled: range !== null,
     placeholderData: keepPreviousData,
   });
 }
