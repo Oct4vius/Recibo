@@ -433,7 +433,9 @@ Receta completa con herramientas (descargar sin procesar, anonimizar, desplegar 
 - **Agregados (home, historial, presupuesto) → RPC SQL**, no traer filas y sumar
   en el cliente. Ej.: `get_spending_summary(period, ref_date)`,
   `get_history(granularity, from, to)`. Toda RPC con rango lo acota en el servidor: `get_history` rechaza (22023)
-  rangos nulos, invertidos o de más de 520 períodos.
+  rangos nulos, invertidos o de más de 520 períodos. `get_category_spending(from, to)` (fechas locales, `to`
+  exclusivo, null/null = todo; rango a medias, invertido o vacío → 22023) y `get_spending_overall()` (primera fecha,
+  total y cantidad; sin gastos `(null, 0, 0)`).
 - **PostgREST recorta a 1000 filas** silenciosamente. Listados de
   `transactions` siempre paginados (`.range()` + `count: 'exact'`; Movimientos usa keyset, ver Convenciones de la app).
   Nunca asumir que `.select('*')` devuelve todo.

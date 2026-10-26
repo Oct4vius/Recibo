@@ -212,11 +212,17 @@ isOneToOne: false
           Views: {
             "spending_transactions": {
                   Row: {
-                    "amount": number | null,"amount_dop": number | null,"currency": Database["public"]['Enums']["currency_code"] | null,"occurred_at": string | null,"user_id": string | null
+                    "amount": number | null,"amount_dop": number | null,"category_id": string | null,"currency": Database["public"]['Enums']["currency_code"] | null,"occurred_at": string | null,"user_id": string | null
                   }
                   ComputedFields: never
                   Relationships: [
-                    
+                    {
+      foreignKeyName: "transactions_category_id_fkey"
+      columns: ["category_id"]
+isOneToOne: false
+      referencedRelation: "categories"
+      referencedColumns: ["id"]
+    }
                   ]
                 },"transactions_with_rate": {
                   Row: {
@@ -278,9 +284,19 @@ isOneToOne: false
               "budget_id": string,"period": Database["public"]['Enums']["budget_period"],"period_start": string,"threshold": number
             }[]
                            },
+"get_category_spending":
+{ Args: { "p_from": string,"p_to": string }; Returns: {
+              "category_id": string,"category_name": string,"total_dop": number,"tx_count": number
+            }[]
+                           },
 "get_history":
 { Args: { "p_from": string,"p_granularity": string,"p_to": string }; Returns: {
               "bucket_start": string,"total_dop": number,"tx_count": number
+            }[]
+                           },
+"get_spending_overall":
+{ Args: Record<PropertyKey, never>; Returns: {
+              "first_date": string,"total_dop": number,"tx_count": number
             }[]
                            },
 "get_spending_summary":
