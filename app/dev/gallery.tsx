@@ -20,6 +20,8 @@ import { SlamSheet } from '@/components/SlamSheet';
 import { SlantPanel } from '@/components/SlantPanel';
 import { TextField } from '@/components/TextField';
 import { DeviceAlertsBlocked } from '@/features/notifications/components/DeviceAlertsBlocked';
+import { CategorySpendingRow } from '@/features/history/components/CategorySpendingRow';
+import { PeriodHeader } from '@/features/history/components/PeriodHeader';
 import { formatAmountInput, pressKey } from '@/features/transactions/amount-input';
 import { colors, fonts, typeScale } from '@/theme/tokens';
 
@@ -77,6 +79,15 @@ export default function GalleryScreen() {
           onPress={() => setSelected(i)}
         />
       ))}
+
+      <Section name="Desglose por categoría" />
+      <CategorySpendingRow item={{ categoryId: 'a', name: 'Supermercado', totalDop: 1500, txCount: 2 }} total={2600} onPress={() => undefined} />
+      <CategorySpendingRow item={{ categoryId: null, name: 'Sin categoría', totalDop: 1000, txCount: 1 }} total={2600} onPress={() => undefined} />
+      <CategorySpendingRow item={{ categoryId: 'b', name: 'Suscripciones', totalDop: 10, txCount: 1 }} total={100000} onPress={() => undefined} />
+
+      <Section name="Encabezado de período" />
+      <PeriodHeader title="05 OCT – 11 OCT" current totalDop={4275.72} txCount={7} onViewMovements={() => undefined} />
+      <PeriodHeader title="SEPTIEMBRE 2026" current={false} totalDop={18340} txCount={1} onViewMovements={() => undefined} />
 
       <Section name="Paneles (usa el botón para alternar el estilo)" />
       <SlantPanel key={jagged ? 'jagged' : 'slanted'} color="blood" jagged={jagged}>
