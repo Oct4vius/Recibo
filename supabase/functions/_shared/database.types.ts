@@ -285,7 +285,7 @@ isOneToOne: false
             }[]
                            },
 "get_category_spending":
-{ Args: { "p_from": string,"p_to": string }; Returns: {
+{ Args: { "p_from"?: string,"p_to"?: string }; Returns: {
               "category_id": string,"category_name": string,"total_dop": number,"tx_count": number
             }[]
                            },

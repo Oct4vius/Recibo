@@ -19,7 +19,7 @@ where w.is_ignored = false
   and w.type in ('card_purchase', 'atm_withdrawal', 'transfer_out')
   and coalesce(c.counts_as_spending, true);
 
-create or replace function public.get_category_spending(p_from date, p_to date)
+create or replace function public.get_category_spending(p_from date default null, p_to date default null)
 returns table (category_id uuid, category_name text, total_dop numeric, tx_count integer)
 language plpgsql
 stable

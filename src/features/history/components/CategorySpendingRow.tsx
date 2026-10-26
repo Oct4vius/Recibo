@@ -55,7 +55,7 @@ export const CategorySpendingRow = memo(function CategorySpendingRow({ item, tot
             <Text numberOfLines={1} style={{ flexShrink: 1, fontFamily: fonts.bodyStrong, fontSize: typeScale.body, color: colors.paper }}>
               {item.name}
             </Text>
-            <View style={{ marginLeft: 12 }}>
+            <View style={{ marginLeft: 12, flexShrink: 0 }}>
               <Amount value={item.totalDop} currency="DOP" />
             </View>
           </View>

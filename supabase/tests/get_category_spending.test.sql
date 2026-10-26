@@ -1,5 +1,5 @@
 begin;
-select plan(15);
+select plan(16);
 
 -- Aísla las pruebas de cualquier tasa del BCRD que haya en la base (se revierte con la transacción).
 delete from public.usd_rates;
@@ -52,6 +52,12 @@ select results_eq(
   $$select category_name, total_dop, tx_count from public.get_category_spending(null, null) order by total_dop desc$$,
   $$values ('Supermercado'::text, 1500.00::numeric, 2), ('Comida', 1300.00, 2), ('Mascotas', 300.00, 1), (null, 250.00, 1)$$,
   'null/null is all time'
+);
+-- regression: PostgREST llama sin argumentos cuando falta el rango (todo el historial)
+select results_eq(
+  $$select category_name, total_dop, tx_count from public.get_category_spending() order by total_dop desc$$,
+  $$select category_name, total_dop, tx_count from public.get_category_spending(null, null) order by total_dop desc$$,
+  'no arguments returns the same all-time rows as null/null'
 );
 select results_eq(
   $$select first_date, total_dop, tx_count from public.get_spending_overall()$$,

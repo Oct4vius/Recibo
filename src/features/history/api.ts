@@ -17,11 +17,8 @@ export async function fetchHistory(granularity: Granularity, first: LocalDate, l
 
 /** Gasto por categoría en un rango de fechas locales (fin exclusivo); `null` = todo el historial. Ya ordenado. */
 export async function fetchCategorySpending(range: { from: string; to: string } | null): Promise<CategorySpending[]> {
-  // La RPC acepta null/null (todo el historial) aunque los tipos generados los pidan como string.
-  const { data, error } = await supabase.rpc('get_category_spending', {
-    p_from: range?.from as string,
-    p_to: range?.to as string,
-  });
+  // Sin rango = todo el historial: se llama sin argumentos (los parámetros de la RPC tienen default null).
+  const { data, error } = await supabase.rpc('get_category_spending', range ? { p_from: range.from, p_to: range.to } : {});
   if (error) throw error;
   return sortCategorySpending((data ?? []).map(toCategorySpending));
 }
