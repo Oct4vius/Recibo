@@ -11,7 +11,7 @@ import { toIsoDate, toLocalDate } from '@/lib/dates';
 import { colors, fonts, typeScale } from '@/theme/tokens';
 import { GRANULARITIES, type Granularity } from '../granularity';
 import { useHistory } from '../hooks';
-import { bucketLabel, expenseCountLabel, GRANULARITY_LABELS } from '../labels';
+import { bucketLabel, expenseCountLabel, VIEW_LABELS } from '../labels';
 import { type HistorySelection, selectedStartFor, windowKeyOf } from '../selection';
 import { bucketRange, periodStartOf } from '../window';
 import { HistoryChart } from './HistoryChart';
@@ -57,7 +57,7 @@ export function HistoryScreen() {
     >
       <View style={{ flexDirection: 'row', marginBottom: 12 }}>
         {GRANULARITIES.map((option) => (
-          <SkewChip key={option} label={GRANULARITY_LABELS[option]} selected={granularity === option} onPress={() => choose(option)} />
+          <SkewChip key={option} label={VIEW_LABELS[option]} selected={granularity === option} onPress={() => choose(option)} />
         ))}
       </View>
       {query.isPending ? <PlaceholderRows count={4} /> : null}
