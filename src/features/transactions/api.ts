@@ -1,6 +1,6 @@
 import { supabase } from '@/lib/supabase';
 import type { Currency } from '@/types/database';
-import { periodRange, type TransactionFilters } from './filters';
+import { periodRange, UNCATEGORIZED, type TransactionFilters } from './filters';
 import { keysetFilter, type PageCursor } from './keyset';
 import { toListItem, type TransactionListItem, type TransactionRow } from './mapping';
 
@@ -26,7 +26,8 @@ export async function fetchTransactionPage(
   let query = supabase.from(LIST_SOURCE).select(LIST_COLUMNS, cursor ? undefined : { count: 'exact' });
   if (range.from) query = query.gte('occurred_at', range.from);
   if (range.to) query = query.lt('occurred_at', range.to);
-  if (filters.categoryId) query = query.eq('category_id', filters.categoryId);
+  if (filters.categoryId === UNCATEGORIZED) query = query.is('category_id', null);
+  else if (filters.categoryId) query = query.eq('category_id', filters.categoryId);
   if (filters.currency) query = query.eq('currency', filters.currency);
   if (filters.bankCode) query = query.eq('bank_code', filters.bankCode);
   if (filters.review) query = query.eq('ignored_reason', 'unmatched_reversal').is('reviewed_at', null);

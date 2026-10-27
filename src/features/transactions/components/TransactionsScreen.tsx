@@ -9,7 +9,7 @@ import { SectionHeader } from '@/components/SectionHeader';
 import { useTimeZone } from '@/features/profile/hooks';
 import { colors, fonts, typeScale } from '@/theme/tokens';
 import { DEFAULT_FILTERS, emptyMessage, type TransactionFilters } from '../filters';
-import { CLEARED_RANGE_PARAMS, rangeFromParams } from '../route-params';
+import { CLEARED_RANGE_PARAMS, filtersFromParams } from '../route-params';
 import { groupByDay, type ListEntry } from '../grouping';
 import { useExpenseSheet, useTransactionList } from '../hooks';
 import type { TransactionListItem } from '../mapping';
@@ -27,15 +27,22 @@ export function TransactionsScreen() {
   const timeZone = useTimeZone();
   const list = useTransactionList(filters);
   const { openNew, openEdit, notice, sheet } = useExpenseSheet();
-  const params = useLocalSearchParams<{ from?: string; to?: string; label?: string }>();
-  // Historial navega con ?from&to&label: se convierte en filtro una vez y se limpian los parámetros.
+  const params = useLocalSearchParams<{ from?: string; to?: string; label?: string; period?: string; categoryId?: string }>();
+  // Historial navega con ?from&to&label o ?period=all, y opcionalmente &categoryId: se convierte en filtros una vez y se
+  // limpian los parámetros.
   useEffect(() => {
-    const range = rangeFromParams({ from: params.from, to: params.to, label: params.label });
-    if (!range) return;
+    const next = filtersFromParams({
+      from: params.from,
+      to: params.to,
+      label: params.label,
+      period: params.period,
+      categoryId: params.categoryId,
+    });
+    if (!next) return;
     // eslint-disable-next-line react-hooks/set-state-in-effect -- sincroniza un parámetro de navegación (sistema externo) con el estado
-    setFilters({ ...DEFAULT_FILTERS, period: range });
+    setFilters(next);
     router.setParams(CLEARED_RANGE_PARAMS);
-  }, [params.from, params.to, params.label]);
+  }, [params.from, params.to, params.label, params.period, params.categoryId]);
 
   const entries = useMemo(
     () => groupByDay(list.data?.pages.flatMap((page) => page.items) ?? [], new Date(), timeZone),

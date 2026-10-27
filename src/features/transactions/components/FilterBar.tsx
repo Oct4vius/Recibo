@@ -5,7 +5,7 @@ import { SkewChip } from '@/components/SkewChip';
 import { useCategories } from '@/features/categories/hooks';
 import { colors, fonts, typeScale } from '@/theme/tokens';
 import { BANK_CODES, CURRENCIES, type BankCode, type Currency } from '@/types/database';
-import { BANK_LABELS, countLabel, CURRENCY_LABELS, isRange, PERIOD_LABELS, PRESET_PERIODS, type TransactionFilters } from '../filters';
+import { BANK_LABELS, countLabel, CURRENCY_LABELS, isRange, PERIOD_LABELS, PRESET_PERIODS, UNCATEGORIZED, type TransactionFilters } from '../filters';
 
 const CURRENCY_OPTIONS: readonly Option<Currency>[] = CURRENCIES.map((value) => ({ value, label: CURRENCY_LABELS[value] }));
 const BANK_OPTIONS: readonly Option<BankCode>[] = BANK_CODES.map((value) => ({ value, label: BANK_LABELS[value] }));
@@ -23,8 +23,11 @@ interface Props {
 export function FilterBar({ filters, onChange, count }: Props) {
   const [sheet, setSheet] = useState<SheetName | null>(null);
   const categories = useCategories().data ?? [];
-  const categoryOptions = categories.map((category) => ({ value: category.id, label: category.name }));
-  const categoryName = categories.find((category) => category.id === filters.categoryId)?.name;
+  const categoryOptions = [
+    ...categories.map((category) => ({ value: category.id, label: category.name })),
+    { value: UNCATEGORIZED, label: 'Sin categoría' },
+  ];
+  const categoryName = categoryOptions.find((option) => option.value === filters.categoryId)?.label;
   const close = () => setSheet(null);
   return (
     <View style={{ marginBottom: 12 }}>

@@ -21,8 +21,12 @@ export function isRange(period: Period): period is RangePeriod {
   return typeof period === 'object';
 }
 
+/** Valor de `categoryId` que significa "sin categoría" (no es un uuid). */
+export const UNCATEGORIZED = 'none';
+
 export interface TransactionFilters {
   period: Period;
+  /** Id de categoría, `UNCATEGORIZED` para los que no tienen, o null para todas. */
   categoryId: string | null;
   currency: Currency | null;
   bankCode: BankCode | null;
