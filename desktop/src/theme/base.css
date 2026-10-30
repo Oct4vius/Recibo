@@ -36,8 +36,22 @@ button:disabled { cursor: default; opacity: 0.7; }
   .btn-primary:hover:not(:disabled) { background: var(--accent-dark); }
 }
 
+.btn-secondary {
+  background: var(--surface); color: var(--text); border: 1px solid var(--border-strong);
+  border-radius: 10px; padding: 10px 20px; font-weight: 600;
+}
+.btn-icon {
+  width: 44px; padding: 0; background: var(--surface); color: var(--nav-text);
+  border: 1px solid var(--border-strong); border-radius: 10px; font-size: 24px; line-height: 1;
+}
+.btn-icon:disabled { opacity: 0.35; }
+@media (hover: hover) and (pointer: fine) {
+  .btn-secondary:hover:not(:disabled), .btn-icon:hover:not(:disabled) { background: var(--bg); }
+}
+
 @media (prefers-reduced-motion: reduce) {
   button:active:not(:disabled) { transform: none; }
+  .budget-fill { transition: none; }
 }
 
 /* Carga inicial: fondo cálido con el logotipo centrado. */
