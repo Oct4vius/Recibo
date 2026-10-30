@@ -1,3 +1,5 @@
+mod login;
+
 use keyring::{Entry, Error};
 
 const SERVICE: &str = "recibo-desktop";
@@ -34,7 +36,15 @@ fn secret_delete(key: String) -> Result<(), String> {
 pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_http::init())
-        .invoke_handler(tauri::generate_handler![secret_get, secret_set, secret_delete])
+        .manage(login::LoginState::default())
+        .invoke_handler(tauri::generate_handler![
+            secret_get,
+            secret_set,
+            secret_delete,
+            login::login_listen,
+            login::login_wait,
+            login::login_cancel
+        ])
         .run(tauri::generate_context!())
         .expect("error while running Recibo");
 }

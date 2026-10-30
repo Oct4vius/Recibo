@@ -2651,6 +2651,8 @@ dependencies = [
  "tauri",
  "tauri-build",
  "tauri-plugin-http",
+ "tokio",
+ "url",
 ]
 
 [[package]]
