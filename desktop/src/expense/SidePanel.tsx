@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type ReactNode } from 'react';
+import { useEffect, useId, useRef, useState, type ReactNode } from 'react';
 import { createPortal } from 'react-dom';
 import './side-panel.css';
 
@@ -21,7 +21,7 @@ export function SidePanel({ open, title, onClose, children }: SidePanelProps) {
   const opener = useRef<HTMLElement | null>(null);
   const onCloseRef = useRef(onClose);
   onCloseRef.current = onClose;
-  const titleId = 'side-panel-title';
+  const titleId = useId();
 
   useEffect(() => {
     if (open) {

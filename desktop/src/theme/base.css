@@ -71,7 +71,7 @@ button:disabled { cursor: default; opacity: 0.7; }
   min-height: 44px; padding: 8px 12px; border: 1px solid var(--border-strong); border-radius: 10px;
   background: var(--surface); font-weight: 400;
 }
-.form-error { color: var(--danger); font-size: 17px; }
+.form-error { color: var(--text); font-size: 17px; font-weight: 600; }
 
 /* Estructura: columna fija + contenido */
 .shell { height: 100%; display: flex; }

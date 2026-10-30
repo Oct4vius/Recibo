@@ -36,4 +36,4 @@
 
 .placeholder { background: var(--track); border-radius: 8px; max-width: 100%; }
 .error-line { display: flex; align-items: center; gap: 16px; margin: 24px 0; }
-.error-line p { color: var(--danger); }
+.error-line p { color: var(--text); font-weight: 600; }

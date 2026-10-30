@@ -58,6 +58,8 @@ export function useMonthData() {
     monthlyLimit: budgets.data?.month ?? null,
     budgetsReady: budgets.isSuccess,
     failed: failed.length > 0,
+    // Una consulta con error sigue en `error` mientras se vuelve a pedir; isFetching dice que está en curso.
+    retrying: failed.some((q) => q.isFetching),
     retry: () => {
       failed.forEach((q) => void q.refetch());
     },

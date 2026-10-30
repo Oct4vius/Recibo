@@ -35,7 +35,7 @@ export function AddExpenseForm({ timeZone, onSaved, onCancel }: AddExpenseFormPr
     },
   });
   const set = (patch: Partial<ExpenseForm>) => setForm((current) => ({ ...current, ...patch }));
-  const canSave = userId !== null && canSaveExpense(form) && !save.isPending;
+  const canSave = userId !== null && canSaveExpense(form, today) && !save.isPending;
 
   return (
     <form

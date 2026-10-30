@@ -21,8 +21,9 @@ export function sanitizeAmountText(text: string): string {
   return dot === -1 ? cleaned : cleaned.slice(0, dot + 1) + cleaned.slice(dot + 1).replace(/\./g, '');
 }
 
-export function canSaveExpense(form: Pick<ExpenseForm, 'amountText' | 'currency' | 'date'>): boolean {
-  if (!AMOUNT_SHAPE.test(form.amountText) || form.date === '') return false;
+/** `todayIso` es hoy (YYYY-MM-DD) en la zona del perfil; las fechas ISO se comparan como texto. */
+export function canSaveExpense(form: Pick<ExpenseForm, 'amountText' | 'currency' | 'date'>, todayIso: string): boolean {
+  if (!AMOUNT_SHAPE.test(form.amountText) || form.date === '' || form.date > todayIso) return false;
   return textToCents(form.amountText) > 0;
 }
 

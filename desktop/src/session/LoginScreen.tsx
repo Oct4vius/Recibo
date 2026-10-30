@@ -1,5 +1,6 @@
 import { useState, type FormEvent } from 'react';
 import { signIn } from '@/features/auth/api';
+import { Button } from '../ui/Button';
 
 export function LoginScreen() {
   const [email, setEmail] = useState('');
@@ -33,9 +34,9 @@ export function LoginScreen() {
           Contraseña
           <input type="password" autoComplete="current-password" value={password} onChange={(e) => setPassword(e.target.value)} required />
         </label>
-        <button type="submit" className="btn-primary" disabled={pending}>
+        <Button variant="primary" type="submit" disabled={pending}>
           {pending ? 'Entrando…' : 'Entrar'}
-        </button>
+        </Button>
         {error ? <p role="alert" className="form-error">{error}</p> : null}
       </form>
     </div>

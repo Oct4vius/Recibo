@@ -10,5 +10,5 @@ export default defineConfig({
   envPrefix: 'EXPO_PUBLIC_',
   resolve: { alias: aliases, dedupe },
   clearScreen: false,
-  server: { port: 1420, strictPort: true, fs: { allow: ['..'] } },
+  server: { port: 1420, strictPort: true, fs: { allow: ['.', '../src', '../supabase/functions/_shared'] } },
 });

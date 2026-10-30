@@ -583,6 +583,7 @@ SQL nace con tests. Las pantallas no se testean en v1.
 
 ### Definition of Done
 - El cambio trae **sus** tests en el mismo PR — nunca "los agrego después".
+- Si el cambio toca `src/`, también `bun run desktop:check` (la app de escritorio reutiliza esos módulos).
 - Respeta SOLID y DRY (sección "Principios de diseño"): sin ramas por banco en
   el orquestador, sin regex ni fórmulas de dinero duplicadas, dependencias
   inyectadas en la lógica de negocio.

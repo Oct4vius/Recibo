@@ -39,7 +39,7 @@ export function MonthScreen(_props: MonthScreenProps) {
         onAddExpense={() => setAdding(true)}
       />
       {month.failed ? (
-        <ErrorLine onRetry={month.retry} />
+        <ErrorLine onRetry={month.retry} retrying={month.retrying} />
       ) : (
         <>
           {month.isCurrent && summary && month.budgetsReady && (

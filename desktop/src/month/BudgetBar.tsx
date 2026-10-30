@@ -1,4 +1,4 @@
-﻿import { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { budgetLine } from './month-text';
 
 /** Ya se llenó una vez en esta sesión: al volver al mes actual la barra aparece llena, sin animar de nuevo. */
