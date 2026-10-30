@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useTimeZone } from '@/features/profile/hooks';
 import { groupByDay } from '@/features/transactions/grouping';
 import { useTransactionList } from '@/features/transactions/hooks';
+import type { TransactionListItem } from '@/features/transactions/mapping';
 import { monthStart, toLocalDate } from '@/lib/dates';
 import { AddExpensePanel } from '../expense/AddExpensePanel';
 import { Button } from '../ui/Button';
@@ -9,6 +10,7 @@ import { ErrorLine } from '../ui/ErrorLine';
 import { Notice } from '../ui/Notice';
 import { Placeholder } from '../ui/Placeholder';
 import { useNotice } from '../ui/use-notice';
+import { MovementPanel } from './MovementPanel';
 import { MovementRow } from './MovementRow';
 import { MovementsFilters } from './MovementsFilters';
 import { dayHeading, emptyMovementsText } from './movements-text';
@@ -25,6 +27,9 @@ export function MovementsScreen({ initial }: MovementsScreenProps) {
   const current = monthStart(toLocalDate(new Date(), timeZone));
   const [view, setView] = useState<MovementsView>(() => initial ?? defaultMovementsView(current));
   const [adding, setAdding] = useState(false);
+  // El movimiento se conserva al cerrar el panel para que no se vacíe mientras sale.
+  const [selected, setSelected] = useState<TransactionListItem | null>(null);
+  const [selectedOpen, setSelectedOpen] = useState(false);
   const { notice, show } = useNotice();
   const list = useTransactionList(toFilters(view, timeZone));
 
@@ -61,7 +66,10 @@ export function MovementsScreen({ initial }: MovementsScreenProps) {
                 </li>
               ) : (
                 <li key={entry.key}>
-                  <MovementRow item={entry.item} onPress={() => undefined} />
+                  <MovementRow item={entry.item} onPress={(movement) => {
+                      setSelected(movement);
+                      setSelectedOpen(true);
+                    }} />
                 </li>
               ),
             )}
@@ -83,6 +91,16 @@ export function MovementsScreen({ initial }: MovementsScreenProps) {
         onSaved={() => {
           setAdding(false);
           show('Gasto guardado');
+        }}
+      />
+      <MovementPanel
+        item={selected}
+        open={selectedOpen}
+        timeZone={timeZone}
+        onClose={() => setSelectedOpen(false)}
+        onDone={(message) => {
+          setSelectedOpen(false);
+          show(message);
         }}
       />
       <Notice message={notice} />

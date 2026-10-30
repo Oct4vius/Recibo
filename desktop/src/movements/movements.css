@@ -34,3 +34,17 @@
 .movement-muted .movement-title, .movement-muted .movement-amount { color: var(--text-muted); }
 .movements-placeholders { display: flex; flex-direction: column; gap: 8px; margin-top: 12px; }
 .movements-more { margin: 20px 0; }
+
+/* Panel de un movimiento */
+.movement-summary { display: flex; flex-direction: column; gap: 2px; }
+.movement-summary-title { font-size: 20px; font-weight: 600; }
+.movement-summary-amount { font-size: 28px; font-weight: 700; font-variant-numeric: tabular-nums; }
+.movement-summary-detail { color: var(--text-muted); }
+.rule-offer { display: flex; align-items: flex-start; gap: 10px; min-height: 44px; font-weight: 600; }
+.rule-offer input { width: 22px; height: 22px; flex: none; margin-top: 2px; accent-color: var(--accent); }
+.movement-actions { display: flex; flex-direction: column; gap: 12px; border-top: 1px solid var(--border); padding-top: 18px; }
+.movement-action { display: flex; flex-direction: column; gap: 8px; }
+.confirm { display: flex; flex-direction: column; gap: 8px; }
+.confirm-question { font-weight: 600; }
+.confirm-detail { color: var(--text-muted); }
+.confirm-actions { display: flex; gap: 12px; }
