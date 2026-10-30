@@ -45,6 +45,10 @@ export function SessionProvider({ children }: { children: ReactNode }) {
       if (event !== 'INITIAL_SESSION') setSession(next);
       setPhase((current) => phaseAfterEvent(current, event, next, userSignedOut));
       if (event === 'SIGNED_OUT') queryClient.clear();
+      // Fuera del callback de auth: lo que falló con el token vencido se vuelve a pedir con el nuevo.
+      if (event === 'TOKEN_REFRESHED') {
+        setTimeout(() => void queryClient.refetchQueries({ type: 'active', predicate: (q) => q.state.status === 'error' }), 0);
+      }
     });
     return () => {
       active = false;

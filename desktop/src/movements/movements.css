@@ -7,7 +7,7 @@
 .filter-select { display: flex; flex-direction: column; gap: 4px; font-weight: 600; font-size: 15px; }
 .filter-select select {
   min-height: 44px; padding: 8px 12px; border: 1px solid var(--border-strong); border-radius: 10px;
-  background: var(--surface); font-weight: 400;
+  background: var(--surface); font: inherit; font-weight: 400;
 }
 .filters-count { color: var(--text-muted); font-size: 15px; min-height: 22px; }
 

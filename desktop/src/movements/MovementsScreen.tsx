@@ -58,6 +58,7 @@ export function MovementsScreen({ initial }: MovementsScreenProps) {
         <p className="empty">{emptyMovementsText(view)}</p>
       ) : (
         <>
+          {list.isRefetchError && <ErrorLine onRetry={() => void list.refetch()} retrying={list.isFetching} />}
           <ul className="movements-list">
             {entries.map((entry) =>
               entry.kind === 'header' ? (
@@ -66,10 +67,13 @@ export function MovementsScreen({ initial }: MovementsScreenProps) {
                 </li>
               ) : (
                 <li key={entry.key}>
-                  <MovementRow item={entry.item} onPress={(movement) => {
+                  <MovementRow
+                    item={entry.item}
+                    onPress={(movement) => {
                       setSelected(movement);
                       setSelectedOpen(true);
-                    }} />
+                    }}
+                  />
                 </li>
               ),
             )}

@@ -4,9 +4,12 @@ import { createRoot } from 'react-dom/client';
 import './theme/tokens.css';
 import './theme/base.css';
 import { queryClient } from '@/lib/queryClient';
+import { setupQueryClient } from './query-setup';
 import { SessionProvider } from './session/SessionProvider';
 import { ErrorBoundary } from './ui/ErrorBoundary';
 import { Shell } from './shell/Shell';
+
+setupQueryClient(queryClient);
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>

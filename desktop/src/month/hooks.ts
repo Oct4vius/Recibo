@@ -1,9 +1,8 @@
 import { keepPreviousData, useQuery } from '@tanstack/react-query';
 import { useState } from 'react';
 import { useActiveBudgets } from '@/features/budgets/hooks';
-import { fetchCategorySpending } from '@/features/history/api';
 import { breakdownRange } from '@/features/history/categories';
-import { historyKeys } from '@/features/history/keys';
+import { useCategorySpending } from '@/features/history/hooks';
 import { useTimeZone } from '@/features/profile/hooks';
 import { fetchSpendingSummary } from '@/features/summary/api';
 import { summaryKeys } from '@/features/summary/keys';
@@ -26,11 +25,7 @@ export function useMonthData() {
     queryFn: () => fetchSpendingSummary('month', startIso),
     placeholderData: keepPreviousData,
   });
-  const categories = useQuery({
-    queryKey: historyKeys.categories(range, timeZone),
-    queryFn: () => fetchCategorySpending(range),
-    placeholderData: keepPreviousData,
-  });
+  const categories = useCategorySpending(range);
   const budgets = useActiveBudgets();
 
   const failed = [summary, categories, ...(isCurrent ? [budgets] : [])].filter((q) => q.isError);

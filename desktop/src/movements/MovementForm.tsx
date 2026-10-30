@@ -44,7 +44,7 @@ export function MovementForm({ item, timeZone, saving, failed, busy, onSave, onC
     originalCategoryId: original.categoryId,
   });
   const categoryName = categories.data?.find((category) => category.id === form.categoryId)?.name ?? '';
-  const canSave = canSaveExpense(form, today) && !busy;
+  const canSave = (item.source !== 'manual' || canSaveExpense(form, today)) && !busy;
   const change = (patch: Partial<ExpenseForm>) => setForm((current) => ({ ...current, ...patch }));
 
   return (

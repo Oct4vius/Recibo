@@ -3,6 +3,8 @@ import { useUpdateAlertThresholds } from '@/features/notifications/threshold-hoo
 import { ALERT_THRESHOLDS, nextThresholds, type AlertThreshold } from '@/features/profile/alerts';
 import { useProfile } from '@/features/profile/hooks';
 import { SAVE_ERROR } from '@/features/transactions/messages';
+import { ErrorLine } from '../ui/ErrorLine';
+import { Placeholder } from '../ui/Placeholder';
 import { thresholdLabel } from './budget-text';
 
 /**
@@ -23,17 +25,23 @@ export function AlertThresholds() {
   return (
     <section className="budget-block" aria-label="Avisos">
       <h2>Avisos</h2>
-      {ALERT_THRESHOLDS.map((threshold) => (
-        <label key={threshold} className="threshold">
-          <input
-            type="checkbox"
-            checked={shown.includes(threshold)}
-            disabled={!profile.data || update.isPending}
-            onChange={(event) => toggle(threshold, event.target.checked)}
-          />
-          {thresholdLabel(threshold)}
-        </label>
-      ))}
+      {profile.isError && !profile.data ? (
+        <ErrorLine onRetry={() => void profile.refetch()} retrying={profile.isFetching} />
+      ) : profile.isPending ? (
+        <Placeholder width={220} height={44} />
+      ) : (
+        ALERT_THRESHOLDS.map((threshold) => (
+          <label key={threshold} className="threshold">
+            <input
+              type="checkbox"
+              checked={shown.includes(threshold)}
+              disabled={update.isPending}
+              onChange={(event) => toggle(threshold, event.target.checked)}
+            />
+            {thresholdLabel(threshold)}
+          </label>
+        ))
+      )}
       {error && (
         <p className="form-error" role="alert">
           {error}

@@ -13,6 +13,8 @@ describe('phaseAfterLoad', () => {
   it('token rechazado es expired', () => expect(phaseAfterLoad('loading', { session: null, error: dead })).toBe('expired'));
   it('un fallo del almacén no deja la app cargando', () => expect(phaseAfterLoad('loading', { session: null, error: new Error('keyring') })).toBe('expired'));
   it('una carga tardía no pisa una sesión ya abierta', () => expect(phaseAfterLoad('signed-in', { session: null, error: retryable })).toBe('signed-in'));
+  it('expired con la sesión aún nula sigue expired', () => expect(phaseAfterLoad('expired', { session: null, error: null })).toBe('expired'));
+  it('offline con token muerto pasa a expired', () => expect(phaseAfterLoad('offline', { session: null, error: dead })).toBe('expired'));
   it('offline vuelve a entrar', () => expect(phaseAfterLoad('offline', { session, error: null })).toBe('signed-in'));
 });
 
@@ -23,5 +25,7 @@ describe('phaseAfterEvent', () => {
   });
   it('SIGNED_OUT por la usuaria es el inicio limpio', () => expect(phaseAfterEvent('signed-in', 'SIGNED_OUT', null, true)).toBe('signed-out'));
   it('SIGNED_OUT sin pedirlo es expired', () => expect(phaseAfterEvent('signed-in', 'SIGNED_OUT', null, false)).toBe('expired'));
+  it('SIGNED_OUT sin pedirlo desde signed-out es expired (arranque con token muerto)', () => expect(phaseAfterEvent('signed-out', 'SIGNED_OUT', null, false)).toBe('expired'));
+  it('un evento distinto de SIGNED_OUT sin sesión conserva la fase', () => expect(phaseAfterEvent('offline', 'TOKEN_REFRESHED', null, false)).toBe('offline'));
   it('TOKEN_REFRESHED saca de offline', () => expect(phaseAfterEvent('offline', 'TOKEN_REFRESHED', session, false)).toBe('signed-in'));
 });

@@ -1,5 +1,7 @@
-import { useActiveBudgets } from '@/features/budgets/hooks';
+import { useState } from 'react';
+import { useActiveBudgets, useRemoveBudget, useSaveBudget } from '@/features/budgets/hooks';
 import { useSpendingSummary } from '@/features/summary/hooks';
+import { SAVE_ERROR } from '@/features/transactions/messages';
 import type { BudgetPeriod } from '@/types/database';
 import { BudgetBar } from '../month/BudgetBar';
 import { ErrorLine } from '../ui/ErrorLine';
@@ -18,6 +20,18 @@ export function BudgetBlock({ period, onNotice }: BudgetBlockProps) {
   const budgets = useActiveBudgets();
   const failed = [summary, budgets].filter((q) => q.isError);
   const limit = budgets.data?.[period] ?? null;
+  const save = useSaveBudget();
+  const remove = useRemoveBudget();
+  const [error, setError] = useState<string | null>(null);
+
+  const onSave = (limitCents: number) => {
+    setError(null);
+    save.mutate({ period, limitCents }, { onSuccess: () => onNotice('Presupuesto guardado'), onError: () => setError(SAVE_ERROR) });
+  };
+  const onRemove = () => {
+    setError(null);
+    remove.mutate(period, { onSuccess: () => onNotice('Presupuesto quitado'), onError: () => setError(SAVE_ERROR) });
+  };
 
   return (
     <section className="budget-block" aria-label={BUDGET_TITLES[period]}>
@@ -36,7 +50,16 @@ export function BudgetBlock({ period, onNotice }: BudgetBlockProps) {
       ) : (
         <>
           <BudgetBar spentDop={summary.data.totalDop} limitDop={limit} fillKey={`budget-${period}`} />
-          <BudgetLimitForm key={String(limit)} period={period} limit={limit} onNotice={onNotice} />
+          <BudgetLimitForm
+            key={String(limit)}
+            period={period}
+            limit={limit}
+            saving={save.isPending}
+            removing={remove.isPending}
+            error={error}
+            onSave={onSave}
+            onRemove={onRemove}
+          />
         </>
       )}
     </section>

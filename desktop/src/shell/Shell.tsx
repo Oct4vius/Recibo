@@ -20,6 +20,7 @@ export function Shell() {
       <main className="content">
         {route.section === 'month' ? (
           <MonthScreen
+            key={route.visit}
             onOpenCategory={(categoryId, start) => setRoute((r) => openMovements(r, viewForCategory(start, categoryId)))}
             onOpenBudget={() => setRoute((r) => selectSection(r, 'budget'))}
           />

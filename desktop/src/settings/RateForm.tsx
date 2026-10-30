@@ -1,25 +1,25 @@
 import { useState, type FormEvent } from 'react';
-import { useUpdateProfile } from '@/features/profile/hooks';
 import { textToCents } from '@/features/transactions/amount-input';
-import { SAVE_ERROR } from '@/features/transactions/messages';
 import '../budget/budget.css';
 import { limitText } from '../budget/budget-text';
 import { Button } from '../ui/Button';
 import { isAmountText, sanitizeAmountText } from '../ui/amount-text';
 
-export function RateForm({ rate, onNotice }: { rate: number; onNotice: (message: string) => void }) {
+interface RateFormProps {
+  rate: number;
+  saving: boolean;
+  error: string | null;
+  /** El guardado vive en RateSection: este formulario se remonta (key) al cambiar la tasa y perdería el aviso. */
+  onSave: (usdRate: number) => void;
+}
+
+export function RateForm({ rate, saving, error, onSave }: RateFormProps) {
   const [text, setText] = useState(limitText(rate));
-  const [error, setError] = useState<string | null>(null);
-  const update = useUpdateProfile();
 
   const submit = (event: FormEvent) => {
     event.preventDefault();
-    if (!isAmountText(text) || update.isPending) return;
-    setError(null);
-    update.mutate(
-      { usd_rate: textToCents(text) / 100 },
-      { onSuccess: () => onNotice('Tasa guardada'), onError: () => setError(SAVE_ERROR) },
-    );
+    if (!isAmountText(text) || saving) return;
+    onSave(textToCents(text) / 100);
   };
 
   return (
@@ -35,8 +35,8 @@ export function RateForm({ rate, onNotice }: { rate: number; onNotice: (message:
         />
       </label>
       <div className="budget-actions">
-        <Button type="submit" disabled={!isAmountText(text) || update.isPending}>
-          {update.isPending ? 'Guardando…' : 'Guardar'}
+        <Button type="submit" disabled={!isAmountText(text) || saving}>
+          {saving ? 'Guardando…' : 'Guardar'}
         </Button>
       </div>
       {error && (
