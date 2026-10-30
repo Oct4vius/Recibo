@@ -20,7 +20,7 @@ async function outlookLogin(): Promise<{ accessToken: string; email: string }> {
   const clientId = process.env.EXPO_PUBLIC_MS_CLIENT_ID;
   if (!clientId) throw new Error('Falta EXPO_PUBLIC_MS_CLIENT_ID en .env.local');
   const state = randomUUID();
-  const { verifier, challenge } = createPkce();
+  const { verifier, challenge } = await createPkce();
   const loginUrl = authorizeUrl(clientId, challenge, state);
   console.log(`Abriendo el inicio de sesión de Microsoft… Si no se abre, abre esta URL:
 ${loginUrl}`);

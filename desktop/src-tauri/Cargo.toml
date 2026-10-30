@@ -1,6 +1,6 @@
 [package]
 name = "recibo-desktop"
-version = "0.1.0"
+version = "1.0.0"
 description = "Recibo para Windows"
 edition = "2021"
 
@@ -12,5 +12,15 @@ crate-type = ["staticlib", "cdylib", "rlib"]
 tauri-build = { version = "2", features = [] }
 
 [dependencies]
-tauri = { version = "2", features = [] }
+tauri = { version = "2", features = ["tray-icon"] }
 keyring = { version = "3", features = ["windows-native"] }
+tauri-plugin-http = "2"
+tokio = { version = "1", features = ["net", "time", "io-util", "sync", "macros"] }
+url = "2"
+tauri-plugin-opener = "2"
+tauri-plugin-single-instance = "2"
+tauri-plugin-autostart = "2"
+tauri-plugin-notification = "2"
+tauri-plugin-updater = "2"
+tauri-plugin-process = "2"
+serde_json = "1"

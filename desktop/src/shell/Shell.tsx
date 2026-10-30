@@ -1,23 +1,33 @@
-import { useState } from 'react';
+import { listen } from '@tauri-apps/api/event';
+import { useEffect, useState } from 'react';
+import { useLocalDay } from '../alerts/use-local-day';
+import { useBudgetAlerts } from '../alerts/use-budget-alerts';
+import { useTimeZone } from '@/features/profile/hooks';
+import { AccountsScreen } from '../accounts/AccountsScreen';
 import { BudgetScreen } from '../budget/BudgetScreen';
 import { HistoryScreen } from '../history/HistoryScreen';
 import { viewForCategory } from '../movements/movements-view';
 import { MovementsScreen } from '../movements/MovementsScreen';
 import { MonthScreen } from '../month/MonthScreen';
 import { SettingsScreen } from '../settings/SettingsScreen';
-import { ComingSoon } from './ComingSoon';
 import { openMovements, selectSection, START_ROUTE, type ShellRoute } from './navigation';
 import { Sidebar } from './Sidebar';
-import { SECTIONS } from './sections';
 
 export function Shell() {
   const [route, setRoute] = useState<ShellRoute>(START_ROUTE);
-  const label = SECTIONS.find((s) => s.id === route.section)?.label;
+  const day = useLocalDay(useTimeZone());
+  useBudgetAlerts();
+
+  // Rust emite `open-month` al tocar un aviso de Windows.
+  useEffect(() => {
+    const unlisten = listen('open-month', () => setRoute((r) => selectSection(r, 'month')));
+    return () => void unlisten.then((off) => off());
+  }, []);
 
   return (
     <div className="shell">
       <Sidebar active={route.section} onSelect={(section) => setRoute((r) => selectSection(r, section))} />
-      <main className="content">
+      <main className="content" key={day}>
         {route.section === 'month' ? (
           <MonthScreen
             key={route.visit}
@@ -30,13 +40,10 @@ export function Shell() {
           <HistoryScreen onOpenMovements={(view) => setRoute((r) => openMovements(r, view))} />
         ) : route.section === 'budget' ? (
           <BudgetScreen />
-        ) : route.section === 'settings' ? (
-          <SettingsScreen />
+        ) : route.section === 'accounts' ? (
+          <AccountsScreen />
         ) : (
-          <>
-            <h1>{label}</h1>
-            <ComingSoon />
-          </>
+          <SettingsScreen />
         )}
       </main>
     </div>

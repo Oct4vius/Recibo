@@ -1,9 +1,9 @@
 import { createServer } from 'node:http';
 import { spawn } from 'node:child_process';
 
-export const LOOPBACK_PORT = 53682;
-/** Se registra `http://localhost:53682/callback` en el cliente OAuth (Microsoft no ignora el puerto en cuentas personales). */
-export const LOOPBACK_REDIRECT = `http://localhost:${LOOPBACK_PORT}/callback`;
+import { LOOPBACK_PORT, LOOPBACK_REDIRECT } from '../../src/features/accounts/loopback-login';
+
+export { LOOPBACK_PORT, LOOPBACK_REDIRECT };
 
 /** Espera el redirect en localhost y devuelve el código (valida `state`). Nunca lo imprime. */
 export function waitForCode(state: string, timeoutMs = 300_000): Promise<string> {

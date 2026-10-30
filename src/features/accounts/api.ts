@@ -14,7 +14,7 @@ export async function fetchLinkedAccounts(): Promise<LinkedAccount[]> {
 /** Outlook manda el código PKCE; Gmail, el `serverAuthCode` del SDK de Google. */
 export type LinkAccountInput =
   | { provider: 'outlook'; code: string; codeVerifier: string; redirectUri: string }
-  | { provider: 'gmail'; code: string };
+  | { provider: 'gmail'; code: string; redirectUri?: string };
 
 /** Envía el código a link-account; la app nunca canjea el código ni ve tokens. */
 export async function linkAccount(input: LinkAccountInput): Promise<void> {

@@ -13,7 +13,7 @@ async function main(): Promise<void> {
   if (!clientId) throw new Error('Falta EXPO_PUBLIC_MS_CLIENT_ID en .env.local');
   const session = await devSession(target);
 
-  const { verifier, challenge } = createPkce();
+  const { verifier, challenge } = await createPkce();
   const state = randomUUID();
   const loginUrl = authorizeUrl(clientId, challenge, state);
   // La URL no lleva secretos (el challenge es un hash del verifier); sirve si el navegador no se abre solo.

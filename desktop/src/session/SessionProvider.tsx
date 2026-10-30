@@ -1,6 +1,9 @@
+import { invoke } from '@tauri-apps/api/core';
 import { useQueryClient } from '@tanstack/react-query';
 import type { Session } from '@supabase/supabase-js';
 import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react';
+import { desktopPort } from '../alerts/desktop-port';
+import { disableDeviceAlerts } from '@/features/notifications/flows';
 import { SessionContext, type SessionState } from '@/features/auth/session-context';
 import { supabase } from '@/lib/supabase';
 import icon from '../../src-tauri/icons/128x128@2x.png';
@@ -45,6 +48,8 @@ export function SessionProvider({ children }: { children: ReactNode }) {
       if (event !== 'INITIAL_SESSION') setSession(next);
       setPhase((current) => phaseAfterEvent(current, event, next, userSignedOut));
       if (event === 'SIGNED_OUT') queryClient.clear();
+      // Solo si la usuaria cerró sesión: una sesión vencida es la misma persona y no pierde sus avisos.
+      if (userSignedOut) void disableDeviceAlerts(desktopPort).catch(() => undefined);
       // Fuera del callback de auth: lo que falló con el token vencido se vuelve a pedir con el nuevo.
       if (event === 'TOKEN_REFRESHED') {
         setTimeout(() => void queryClient.refetchQueries({ type: 'active', predicate: (q) => q.state.status === 'error' }), 0);
@@ -67,6 +72,11 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     };
   }, [phase, reload]);
 
+  // Con la ventana escondida (bandeja, arranque de Windows) la pantalla de entrada no se vería.
+  useEffect(() => {
+    if (phase === 'expired' || phase === 'signed-out') void invoke('show_window').catch(() => undefined);
+  }, [phase]);
+
   const value = useMemo<SessionState>(() => ({ session, loading: false }), [session]);
 
   switch (phase) {
@@ -74,6 +84,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
       return (
         <div className="splash">
           <img src={icon} alt="Recibo" />
+          <p>Abriendo Recibo…</p>
         </div>
       );
     case 'offline':

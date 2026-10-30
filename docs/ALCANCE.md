@@ -289,6 +289,10 @@ Entra al alcance el 2026-10-30, para una sola usuaria. Es un cliente Tauri en
 guardada en el Administrador de credenciales de Windows. Sigue sin haber registro
 público ni versión web.
 
+La app de escritorio queda completa: sesión, movimientos, historial, presupuesto,
+cuentas de correo, avisos como notificaciones de Windows, bandeja, actualizaciones
+dentro de la app e instalador publicado por GitHub Actions (`docs/escritorio-publicar.md`).
+
 ## 9. Criterio de éxito v1
 
 Con Gmail y Outlook vinculados, una compra con tarjeta de cualquiera de los

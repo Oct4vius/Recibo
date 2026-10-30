@@ -6,8 +6,8 @@ describe('ms-login', () => {
   it('encodes base64url without padding', () => {
     expect(base64Url(new Uint8Array([251, 255, 191]))).toBe('-_-_');
   });
-  it('derives the S256 challenge from the verifier (RFC 7636)', () => {
-    const { verifier, challenge } = createPkce();
+  it('derives the S256 challenge from the verifier (RFC 7636)', async () => {
+    const { verifier, challenge } = await createPkce();
     expect(verifier).toMatch(/^[A-Za-z0-9_-]{43}$/);
     expect(challenge).toBe(base64Url(createHash('sha256').update(verifier).digest()));
   });

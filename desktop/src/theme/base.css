@@ -61,6 +61,8 @@ button:disabled { cursor: default; opacity: 0.7; }
 /* Carga inicial: fondo cálido con el logotipo centrado. */
 .splash { height: 100%; display: flex; align-items: center; justify-content: center; }
 .splash img { width: 96px; height: 96px; }
+.splash:not(.offline) { flex-direction: column; gap: 16px; }
+.splash p { font-size: 18px; color: var(--text-muted); }
 .splash.offline { flex-direction: column; gap: 12px; padding: 24px; text-align: center; }
 .splash.offline h1 { font-size: 28px; }
 .splash.offline p { font-size: 18px; }
@@ -94,9 +96,10 @@ button:disabled { cursor: default; opacity: 0.7; }
 @media (hover: hover) and (pointer: fine) {
   .nav-item:hover:not([aria-current='page']) { background: var(--bg); }
 }
-.content { flex: 1; min-width: 0; padding: 28px 34px; overflow-y: auto; }
+.app-frame { height: 100%; display: flex; flex-direction: column; }
+.app-body { flex: 1; min-height: 0; }
+.content { flex: 1; min-height: 0; min-width: 0; padding: 28px 34px; overflow-y: auto; }
 .content h1 { font-size: 24px; }
-.coming-soon { color: var(--text-muted); }
 
 /* Aviso breve arriba */
 .notice-slot { position: fixed; top: 16px; left: 0; right: 0; display: flex; justify-content: center; pointer-events: none; z-index: 20; }
