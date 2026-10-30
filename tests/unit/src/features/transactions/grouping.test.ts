@@ -27,4 +27,11 @@ describe('groupByDay', () => {
   it('returns an empty list for no items', () => {
     expect(groupByDay([], now, SD)).toEqual([]);
   });
+  it('uses the label it receives', () => {
+    const items = [item('a', '2026-10-07T01:00:00Z'), item('c', '2026-10-06T03:59:00Z'), item('d', '2026-10-01T15:00:00Z')];
+    const titles = groupByDay(items, now, SD, (_date, relative) => relative ?? 'otro')
+      .filter((e) => e.kind === 'header')
+      .map((e) => e.title);
+    expect(titles).toEqual(['today', 'yesterday', 'otro']);
+  });
 });

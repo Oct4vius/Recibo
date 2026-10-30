@@ -2,7 +2,7 @@ import { useState, type FormEvent } from 'react';
 import { signIn } from '@/features/auth/api';
 import { Button } from '../ui/Button';
 
-export function LoginScreen() {
+export function LoginScreen({ expired = false }: { expired?: boolean }) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [pending, setPending] = useState(false);
@@ -26,6 +26,7 @@ export function LoginScreen() {
     <div className="login">
       <form className="login-card" onSubmit={submit}>
         <h1>Recibo</h1>
+        {expired ? <p>Vuelve a escribir tu contraseña</p> : null}
         <label className="field">
           Correo
           <input type="email" autoFocus autoComplete="username" value={email} onChange={(e) => setEmail(e.target.value)} required />

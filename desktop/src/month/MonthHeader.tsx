@@ -1,6 +1,7 @@
 import { formatMoney } from '@/lib/money';
 import { Button } from '../ui/Button';
 import { Placeholder } from '../ui/Placeholder';
+import { MonthNav } from './MonthNav';
 
 interface MonthHeaderProps {
   title: string;
@@ -17,15 +18,7 @@ export function MonthHeader({ title, totalDop, countLine, canGoNext, onPrevious,
   return (
     <header className="month-header">
       <div>
-        <div className="month-nav">
-          <Button variant="icon" aria-label="Mes anterior" onClick={onPrevious}>
-            ‹
-          </Button>
-          <h1>{title}</h1>
-          <Button variant="icon" aria-label="Mes siguiente" onClick={onNext} disabled={!canGoNext}>
-            ›
-          </Button>
-        </div>
+        <MonthNav title={title} heading="h1" canGoNext={canGoNext} onPrevious={onPrevious} onNext={onNext} />
         {totalDop === null ? (
           <div className="month-total-slot">
             <Placeholder width={260} height={48} />

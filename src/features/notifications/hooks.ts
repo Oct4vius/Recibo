@@ -1,11 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useEffect } from 'react';
 import { AppState } from 'react-native';
-import { useUserId } from '@/features/auth/hooks';
-import { updateProfile } from '@/features/profile/api';
-import { profileKeys } from '@/features/profile/keys';
-import { silenceBudgetAlerts } from './api';
-import { disableDeviceAlerts, enableDeviceAlerts, saveAlertThresholds } from './flows';
+import { disableDeviceAlerts, enableDeviceAlerts } from './flows';
 import { notificationKeys } from './keys';
 import { nativePort } from './native-port';
 import type { PermissionState } from './state';
@@ -37,19 +33,5 @@ export function useToggleDeviceAlerts() {
   return useMutation<PermissionState | void, Error, boolean>({
     mutationFn: (on) => (on ? enableDeviceAlerts(nativePort) : disableDeviceAlerts(nativePort)),
     onSettled: () => queryClient.invalidateQueries({ queryKey: notificationKeys.all }),
-  });
-}
-
-export function useUpdateAlertThresholds() {
-  const queryClient = useQueryClient();
-  const userId = useUserId();
-  return useMutation({
-    mutationFn: ({ thresholds, turnedOn }: { thresholds: number[]; turnedOn: boolean }) =>
-      saveAlertThresholds(
-        { silence: silenceBudgetAlerts, save: (t) => updateProfile(userId, { alert_thresholds: t }) },
-        thresholds,
-        turnedOn,
-      ),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: profileKeys.all }),
   });
 }

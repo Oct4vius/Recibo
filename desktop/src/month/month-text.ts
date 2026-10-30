@@ -15,6 +15,11 @@ export function expenseCountLine(count: number, isCurrent: boolean, start: Local
   return `${expenseCountLabel(count)} en ${monthName(start.month)}`;
 }
 
+/** Lista de categorías vacía. */
+export function noSpendingText(isCurrent: boolean, start: LocalDate): string {
+  return isCurrent ? 'Aún no hay gastos este mes.' : `No hubo gastos en ${monthName(start.month)}.`;
+}
+
 export interface BudgetLine {
   text: string;
   /** Porción de la barra, entre 0 y 1. */

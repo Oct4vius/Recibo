@@ -1,24 +1,26 @@
-import { useEffect, useState } from 'react';
+import { Button } from '../ui/Button';
+import { useFillOnce } from '../ui/use-fill-once';
 import { budgetLine } from './month-text';
 
-/** Ya se llenó una vez en esta sesión: al volver al mes actual la barra aparece llena, sin animar de nuevo. */
-let played = false;
+interface BudgetBarProps {
+  spentDop: number;
+  limitDop: number | null;
+  /** Lleva a Presupuesto desde el aviso de "sin presupuesto"; sin él (ya en Presupuesto) no hay botón. */
+  onOpenBudget?: () => void;
+  /** Cada barra se llena una vez por clave; Presupuesto pasa una por período. */
+  fillKey?: string;
+}
 
 /** Barra del presupuesto mensual: se llena una sola vez por sesión de la app. */
-export function BudgetBar({ spentDop, limitDop }: { spentDop: number; limitDop: number | null }) {
+export function BudgetBar({ spentDop, limitDop, onOpenBudget, fillKey = 'budget-month' }: BudgetBarProps) {
   const { text, fill, over } = budgetLine(spentDop, limitDop);
-  const [armed, setArmed] = useState(played);
-  useEffect(() => {
-    const id = requestAnimationFrame(() => {
-      played = true;
-      setArmed(true);
-    });
-    return () => cancelAnimationFrame(id);
-  }, []);
+  const hasLimit = limitDop !== null && limitDop > 0;
+  // Con enabled = hasLimit, un presupuesto puesto después sí se anima.
+  const armed = useFillOnce(fillKey, hasLimit);
 
   return (
     <div className="budget">
-      {limitDop !== null && limitDop > 0 && (
+      {hasLimit && (
         <div className="budget-track">
           <div
             className={over ? 'budget-fill budget-fill-over' : 'budget-fill'}
@@ -27,6 +29,11 @@ export function BudgetBar({ spentDop, limitDop }: { spentDop: number; limitDop: 
         </div>
       )}
       <p className="budget-text">{text}</p>
+      {!hasLimit && onOpenBudget && (
+        <Button variant="secondary" className="budget-set" onClick={onOpenBudget}>
+          Poner un presupuesto
+        </Button>
+      )}
     </div>
   );
 }

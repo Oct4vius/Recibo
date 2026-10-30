@@ -10,22 +10,31 @@ interface SidePanelProps {
   open: boolean;
   title: string;
   onClose: () => void;
+  /** Mientras es true hay un guardado en curso: Esc y el clic en el fondo no cierran. */
+  busy?: boolean;
   children: ReactNode;
 }
 
 /** Panel lateral reutilizable: fondo atenuado, Esc/fondo cierran, Tab queda dentro y el foco vuelve a quien lo abrió. */
-export function SidePanel({ open, title, onClose, children }: SidePanelProps) {
+export function SidePanel({ open, title, onClose, busy = false, children }: SidePanelProps) {
   const [mounted, setMounted] = useState(open);
   const [shown, setShown] = useState(false);
   const panelRef = useRef<HTMLDivElement>(null);
   const opener = useRef<HTMLElement | null>(null);
   const onCloseRef = useRef(onClose);
-  onCloseRef.current = onClose;
+  const busyRef = useRef(busy);
   const titleId = useId();
+
+  // Los refs se actualizan tras el render (no durante): el listener de teclado lee siempre lo último.
+  useEffect(() => {
+    onCloseRef.current = onClose;
+    busyRef.current = busy;
+  });
 
   useEffect(() => {
     if (open) {
       opener.current = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- monta al abrir; la salida se anima antes de desmontar
       setMounted(true);
       // Un frame después de montar, para que la entrada se anime desde el estado oculto.
       const frame = requestAnimationFrame(() => setShown(true));
@@ -45,7 +54,7 @@ export function SidePanel({ open, title, onClose, children }: SidePanelProps) {
     function onKeyDown(event: KeyboardEvent) {
       if (event.key === 'Escape') {
         event.preventDefault();
-        onCloseRef.current();
+        if (!busyRef.current) onCloseRef.current();
         return;
       }
       if (event.key !== 'Tab' || !panelRef.current) return;
@@ -72,7 +81,7 @@ export function SidePanel({ open, title, onClose, children }: SidePanelProps) {
   if (!mounted) return null;
   return createPortal(
     <div className={`side-panel-root${shown && open ? ' side-panel-shown' : ''}`}>
-      <div className="side-panel-backdrop" onClick={onClose} />
+      <div className="side-panel-backdrop" onClick={busy ? undefined : onClose} />
       <div ref={panelRef} className="side-panel" role="dialog" aria-modal="true" aria-labelledby={titleId}>
         <h2 id={titleId} className="side-panel-title">
           {title}
