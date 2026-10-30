@@ -15,3 +15,8 @@ export function nextMonth(start: LocalDate, current: LocalDate): LocalDate | nul
   const beyond = next.year > currentStart.year || (next.year === currentStart.year && next.month > currentStart.month);
   return beyond ? null : next;
 }
+
+/** Qué mes queda fijado al avanzar: null si `next` es el actual (vuelve a seguir al mes de hoy). */
+export function selectionAfterNext(next: LocalDate, current: LocalDate): LocalDate | null {
+  return isSameDate(next, monthStart(current)) ? null : next;
+}

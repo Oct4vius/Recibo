@@ -8,7 +8,7 @@ import { useTimeZone } from '@/features/profile/hooks';
 import { fetchSpendingSummary } from '@/features/summary/api';
 import { summaryKeys } from '@/features/summary/keys';
 import { isSameDate, monthStart, toIsoDate, toLocalDate, type LocalDate } from '@/lib/dates';
-import { nextMonth, previousMonth } from './month-nav';
+import { nextMonth, previousMonth, selectionAfterNext } from './month-nav';
 
 /** Mes elegido, sus consultas y la navegación. `null` en el estado = el mes actual (sigue a la zona del perfil). */
 export function useMonthData() {
@@ -41,7 +41,7 @@ export function useMonthData() {
     canGoNext: next !== null,
     goPrevious: () => setSelected(previousMonth(start)),
     goNext: () => {
-      if (next) setSelected(next);
+      if (next) setSelected(selectionAfterNext(next, current));
     },
     summary,
     categories,

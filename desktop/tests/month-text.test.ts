@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { localDate } from '@/lib/dates';
-import { budgetLine, expenseCountLine, monthTitle } from '@desktop/month/month-text';
+import { budgetLine, expenseCountLine, monthTitle, noSpendingText } from '@desktop/month/month-text';
 
 describe('monthTitle', () => {
   it('capitalizes the month and adds the year', () => {
@@ -40,5 +40,12 @@ describe('budgetLine', () => {
     const none = { text: 'Aún no tienes presupuesto', fill: 0, over: false };
     expect(budgetLine(1000, null)).toEqual(none);
     expect(budgetLine(1000, 0)).toEqual(none);
+  });
+});
+
+describe('noSpendingText', () => {
+  it('words the empty list by month', () => {
+    expect(noSpendingText(true, localDate(2026, 10, 1))).toBe('Aún no hay gastos este mes.');
+    expect(noSpendingText(false, localDate(2026, 9, 1))).toBe('No hubo gastos en septiembre.');
   });
 });

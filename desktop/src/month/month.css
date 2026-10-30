@@ -1,7 +1,7 @@
 .month-screen { max-width: 760px; }
 .month-header { display: flex; justify-content: space-between; align-items: flex-start; gap: 24px; }
 .month-nav { display: flex; align-items: center; gap: 10px; }
-.month-nav h1 { font-size: 20px; }
+.month-nav-title { font-size: 20px; }
 .month-total, .month-total-slot { margin: 6px 0 2px; }
 .month-total {
   font-size: 48px; font-weight: 700; letter-spacing: -0.02em; line-height: 1.15;
@@ -17,17 +17,22 @@
 }
 .budget-fill-over { background: var(--danger); }
 .budget-text { font-size: 17px; color: var(--nav-text); margin-top: 6px; }
+.budget-set { margin-top: 10px; }
 
 .section-title { font-size: 18px; font-weight: 600; margin: 26px 0 10px; }
 .budget + section .section-title { margin-top: 0; }
 .cat-list { list-style: none; margin: 0; padding: 0; }
 .cat {
-  display: grid; grid-template-columns: 1fr 140px; gap: 4px 16px; align-items: center;
-  padding: 10px 0; border-bottom: 1px solid var(--border);
+  width: 100%; display: grid; grid-template-columns: 1fr 140px; gap: 4px 16px; align-items: center;
+  padding: 10px 8px; border: 0; border-bottom: 1px solid var(--border); border-radius: 8px;
+  background: transparent; text-align: left;
+}
+@media (hover: hover) and (pointer: fine) {
+  .cat:hover { background: var(--surface); }
 }
 .cat-amount { text-align: right; font-weight: 600; font-variant-numeric: tabular-nums; font-style: normal; }
-.cat-track { height: 8px; border-radius: 4px; background: var(--track); overflow: hidden; }
-.cat-fill { height: 100%; background: var(--accent); opacity: 0.7; border-radius: 4px; transform-origin: left; }
+.cat-track { display: block; height: 8px; border-radius: 4px; background: var(--track); overflow: hidden; }
+.cat-fill { display: block; height: 100%; background: var(--accent); opacity: 0.7; border-radius: 4px; transform-origin: left; }
 .cat-pct { text-align: right; font-size: 15px; color: var(--text-muted); }
 .cat-none .cat-name { color: var(--text-muted); }
 .cat-none .cat-fill { background: var(--text-muted); opacity: 0.45; }
