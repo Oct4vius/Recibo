@@ -11,10 +11,14 @@ export function LoginScreen() {
     e.preventDefault();
     setPending(true);
     setError(null);
-    const message = await signIn(email, password);
-    setPending(false);
-    // Si salió bien, SessionProvider recibe SIGNED_IN y cambia de pantalla.
-    setError(message);
+    try {
+      // Si salió bien, SessionProvider recibe SIGNED_IN y cambia de pantalla.
+      setError(await signIn(email, password));
+    } catch {
+      setError('No se pudo entrar. Revisa tu internet.');
+    } finally {
+      setPending(false);
+    }
   }
 
   return (
