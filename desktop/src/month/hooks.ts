@@ -1,28 +1,18 @@
 import { keepPreviousData, useQuery } from '@tanstack/react-query';
 import { useState } from 'react';
-import { fetchActiveBudgets } from '@/features/budgets/api';
-import { budgetKeys } from '@/features/budgets/keys';
+import { useActiveBudgets } from '@/features/budgets/hooks';
 import { fetchCategorySpending } from '@/features/history/api';
 import { breakdownRange } from '@/features/history/categories';
 import { historyKeys } from '@/features/history/keys';
-import { fetchProfile } from '@/features/profile/api';
-import { profileKeys } from '@/features/profile/keys';
+import { useTimeZone } from '@/features/profile/hooks';
 import { fetchSpendingSummary } from '@/features/summary/api';
 import { summaryKeys } from '@/features/summary/keys';
-import { DEFAULT_TIME_ZONE, isSameDate, monthStart, toIsoDate, toLocalDate, type LocalDate } from '@/lib/dates';
-import { useSession } from '../session/SessionProvider';
+import { isSameDate, monthStart, toIsoDate, toLocalDate, type LocalDate } from '@/lib/dates';
 import { nextMonth, previousMonth } from './month-nav';
 
 /** Mes elegido, sus consultas y la navegación. `null` en el estado = el mes actual (sigue a la zona del perfil). */
 export function useMonthData() {
-  const { userId } = useSession();
-  const profile = useQuery({
-    queryKey: profileKeys.me(userId ?? ''),
-    queryFn: () => fetchProfile(userId ?? ''),
-    enabled: userId !== null,
-    staleTime: 5 * 60_000,
-  });
-  const timeZone = profile.data?.timeZone ?? DEFAULT_TIME_ZONE;
+  const timeZone = useTimeZone();
   const current = monthStart(toLocalDate(new Date(), timeZone));
   const [selected, setSelected] = useState<LocalDate | null>(null);
   const start = selected ?? current;
@@ -41,7 +31,7 @@ export function useMonthData() {
     queryFn: () => fetchCategorySpending(range),
     placeholderData: keepPreviousData,
   });
-  const budgets = useQuery({ queryKey: budgetKeys.active(), queryFn: fetchActiveBudgets });
+  const budgets = useActiveBudgets();
 
   const failed = [summary, categories, ...(isCurrent ? [budgets] : [])].filter((q) => q.isError);
   return {

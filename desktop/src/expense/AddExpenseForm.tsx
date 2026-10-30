@@ -1,13 +1,10 @@
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useState } from 'react';
-import { fetchCategories } from '@/features/categories/api';
-import { categoryKeys } from '@/features/categories/keys';
-import { createExpense } from '@/features/transactions/api';
-import { invalidateSpending } from '@/features/transactions/invalidate';
+import { useCategories } from '@/features/categories/hooks';
+import { useCreateExpense } from '@/features/transactions/hooks';
+import { SAVE_ERROR } from '@/features/transactions/messages';
 import { toIsoDate, toLocalDate } from '@/lib/dates';
 import { currencySymbol } from '@/lib/money';
 import type { Currency } from '@/types/database';
-import { useSession } from '../session/SessionProvider';
 import { Button } from '../ui/Button';
 import { canSaveExpense, sanitizeAmountText, toNewExpense, type ExpenseForm } from './expense-form';
 import './add-expense.css';
@@ -22,27 +19,19 @@ interface AddExpenseFormProps {
 
 /** Campos y guardado del gasto. Vive dentro del panel: al cerrarse se desmonta y el siguiente gasto empieza limpio. */
 export function AddExpenseForm({ timeZone, onSaved, onCancel }: AddExpenseFormProps) {
-  const { userId } = useSession();
-  const queryClient = useQueryClient();
   const today = toIsoDate(toLocalDate(new Date(), timeZone));
   const [form, setForm] = useState<ExpenseForm>({ amountText: '', currency: 'DOP', merchant: '', categoryId: null, date: today });
-  const categories = useQuery({ queryKey: categoryKeys.list(), queryFn: fetchCategories, staleTime: 5 * 60_000 });
-  const save = useMutation({
-    mutationFn: () => createExpense(toNewExpense(form, timeZone), userId ?? ''),
-    onSuccess: () => {
-      invalidateSpending(queryClient);
-      onSaved();
-    },
-  });
+  const categories = useCategories();
+  const save = useCreateExpense();
   const set = (patch: Partial<ExpenseForm>) => setForm((current) => ({ ...current, ...patch }));
-  const canSave = userId !== null && canSaveExpense(form, today) && !save.isPending;
+  const canSave = canSaveExpense(form, today) && !save.isPending;
 
   return (
     <form
       className="expense-form"
       onSubmit={(event) => {
         event.preventDefault();
-        if (canSave) save.mutate();
+        if (canSave) save.mutate(toNewExpense(form, timeZone), { onSuccess: onSaved });
       }}
     >
       <label className="field">
@@ -96,7 +85,7 @@ export function AddExpenseForm({ timeZone, onSaved, onCancel }: AddExpenseFormPr
       </label>
       {save.isError && (
         <p className="form-error" role="alert">
-          No se pudo guardar. Revisa tu internet.
+          {SAVE_ERROR}
         </p>
       )}
       <div className="expense-actions">

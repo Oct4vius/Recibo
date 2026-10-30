@@ -1,20 +1,11 @@
 import { useQueryClient } from '@tanstack/react-query';
 import type { Session } from '@supabase/supabase-js';
-import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
+import { useEffect, useMemo, useState, type ReactNode } from 'react';
+import { SessionContext, type SessionState } from '@/features/auth/session-context';
 import { supabase } from '@/lib/supabase';
 import icon from '../../src-tauri/icons/128x128@2x.png';
 import { LoginScreen } from './LoginScreen';
 import { sessionView, type SessionView } from './session-state';
-
-type SessionValue = { view: SessionView; userId: string | null };
-
-const SessionContext = createContext<SessionValue | null>(null);
-
-export function useSession(): SessionValue {
-  const value = useContext(SessionContext);
-  if (!value) throw new Error('useSession fuera de SessionProvider');
-  return value;
-}
 
 /** Lee la sesión guardada, la mantiene al día y muestra carga, inicio de sesión o la app. */
 export function SessionProvider({ children }: { children: ReactNode }) {
@@ -41,7 +32,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
   }, [queryClient]);
 
   const view = sessionView({ loaded, session });
-  const value = useMemo<SessionValue>(() => ({ view, userId: session?.user.id ?? null }), [view, session]);
+  const value = useMemo<SessionState>(() => ({ session, loading: false }), [session]);
 
   if (view === 'loading') {
     return (
