@@ -1,9 +1,16 @@
 use tauri::menu::{Menu, MenuItem};
 use tauri::tray::{MouseButton, MouseButtonState, TrayIconBuilder, TrayIconEvent};
-use tauri::{AppHandle, Manager};
+use std::time::Duration;
+use tauri::{AppHandle, Emitter, Manager};
+use tauri_plugin_notification::NotificationExt;
 
 /// Argumento con el que Windows abre la app al encender la computadora.
 pub const HIDDEN_ARG: &str = "--hidden";
+
+/// Cada cuánto la ventana revisa los avisos de presupuesto, esté a la vista o no.
+pub const ALERTS_TICK_SECS: u64 = 900;
+/// `actionId` que el plugin informa al tocar el cuerpo de un aviso.
+const TAP_ACTION: &str = "tap";
 
 const OPEN_ID: &str = "open";
 const QUIT_ID: &str = "quit";
@@ -20,6 +27,33 @@ pub fn show_main(app: &AppHandle) {
         let _ = window.unminimize();
         let _ = window.set_focus();
     }
+}
+
+/// `true` si la acción es un toque sobre el aviso (y no uno de sus botones).
+pub fn is_tap(action_id: &str) -> bool {
+    action_id == TAP_ACTION
+}
+
+/// Al tocar un aviso: trae la ventana al frente y le pide abrir Este mes. Debe registrarse antes de mostrar avisos.
+pub fn open_month_on_tap(app: &AppHandle) -> tauri_plugin_notification::Result<()> {
+    let handle = app.clone();
+    app.notification().on_action(move |performed| {
+        if is_tap(performed.action_id()) {
+            show_main(&handle);
+            let _ = handle.emit("open-month", ());
+        }
+    })
+}
+
+/// Pulso de 15 min: la ventana revisa los avisos aunque nadie la mire.
+pub fn start_alerts_tick(app: &AppHandle) {
+    let handle = app.clone();
+    tauri::async_runtime::spawn(async move {
+        loop {
+            tokio::time::sleep(Duration::from_secs(ALERTS_TICK_SECS)).await;
+            let _ = handle.emit("alerts-tick", ());
+        }
+    });
 }
 
 /// Ícono junto al reloj: clic izquierdo abre la ventana; el menú tiene Abrir y Salir.
@@ -61,6 +95,12 @@ mod tests {
     #[test]
     fn normal_start_shows_window() {
         assert!(!starts_hidden(&["recibo.exe".into()]));
+    }
+
+    #[test]
+    fn only_the_body_click_opens_the_month() {
+        assert!(is_tap("tap"));
+        assert!(!is_tap("dismiss"));
     }
 
     #[test]

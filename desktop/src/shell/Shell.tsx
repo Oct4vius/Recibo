@@ -1,4 +1,8 @@
-import { useState } from 'react';
+import { listen } from '@tauri-apps/api/event';
+import { useEffect, useState } from 'react';
+import { useLocalDay } from '../alerts/use-local-day';
+import { useBudgetAlerts } from '../alerts/use-budget-alerts';
+import { useTimeZone } from '@/features/profile/hooks';
 import { AccountsScreen } from '../accounts/AccountsScreen';
 import { BudgetScreen } from '../budget/BudgetScreen';
 import { HistoryScreen } from '../history/HistoryScreen';
@@ -11,11 +15,19 @@ import { Sidebar } from './Sidebar';
 
 export function Shell() {
   const [route, setRoute] = useState<ShellRoute>(START_ROUTE);
+  const day = useLocalDay(useTimeZone());
+  useBudgetAlerts();
+
+  // Rust emite `open-month` al tocar un aviso de Windows.
+  useEffect(() => {
+    const unlisten = listen('open-month', () => setRoute((r) => selectSection(r, 'month')));
+    return () => void unlisten.then((off) => off());
+  }, []);
 
   return (
     <div className="shell">
       <Sidebar active={route.section} onSelect={(section) => setRoute((r) => selectSection(r, section))} />
-      <main className="content">
+      <main className="content" key={day}>
         {route.section === 'month' ? (
           <MonthScreen
             key={route.visit}

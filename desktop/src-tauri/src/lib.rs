@@ -47,8 +47,11 @@ pub fn run() {
         ))
         .plugin(tauri_plugin_http::init())
         .plugin(tauri_plugin_opener::init())
+        .plugin(tauri_plugin_notification::init())
         .manage(login::LoginState::default())
         .setup(|app| {
+            shell::open_month_on_tap(app.handle())?;
+            shell::start_alerts_tick(app.handle());
             shell::build_tray(app)?;
             let args: Vec<String> = std::env::args().collect();
             if !shell::starts_hidden(&args) {
