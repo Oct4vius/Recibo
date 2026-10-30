@@ -84,6 +84,7 @@ export function AccountsScreen() {
         gmailAvailable={Boolean(GMAIL_CLIENT_ID)}
         busy={waiting || link.isPending}
         waiting={waiting}
+        linking={link.isPending}
         onConnect={(provider) => void connect(provider)}
         onCancel={() => void nativeLoginPort.cancel().catch(() => {})}
       />

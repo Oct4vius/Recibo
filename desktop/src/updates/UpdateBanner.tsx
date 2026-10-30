@@ -1,3 +1,4 @@
+import { invoke } from '@tauri-apps/api/core';
 import { relaunch } from '@tauri-apps/plugin-process';
 import { check, type Update } from '@tauri-apps/plugin-updater';
 import { useEffect, useRef, useState } from 'react';
@@ -17,9 +18,10 @@ export function UpdateBanner() {
     const run = () => {
       const now = Date.now();
       if (!shouldCheckUpdate(lastAt.current, now)) return;
-      lastAt.current = now;
       check()
         .then((found) => {
+          // Solo una revisión lograda frena las siguientes: un fallo al arrancar no bloquea 6 horas.
+          lastAt.current = now;
           if (found) setUpdate(found);
         })
         .catch(() => undefined);
@@ -33,10 +35,14 @@ export function UpdateBanner() {
 
   const install = () => {
     setPhase('installing');
-    update
-      .downloadAndInstall()
+    // El instalador reenvía los argumentos (p. ej. --hidden): la marca hace que la ventana vuelva a verse.
+    invoke('mark_update_restart')
+      .then(() => update.downloadAndInstall())
       .then(() => relaunch())
-      .catch(() => setPhase('failed'));
+      .catch(() => {
+        void invoke('clear_update_restart').catch(() => undefined);
+        setPhase('failed');
+      });
   };
 
   return (

@@ -8,9 +8,12 @@ import { createAlertPreference } from './alert-preference';
 
 const preference = createAlertPreference(window.localStorage);
 
-/** Windows no distingue "no pedido" de "negado" en `isPermissionGranted`: sin permiso se trata como bloqueado. */
+/**
+ * En Windows el plugin siempre informa el permiso como concedido: no hay diálogo de permiso, y un bloqueo hecho
+ * en la Configuración de Windows no se puede detectar (el aviso simplemente no aparece).
+ */
 async function readPermission(): Promise<PermissionState> {
-  return (await isPermissionGranted()) ? 'granted' : 'denied';
+  return (await isPermissionGranted()) ? 'granted' : 'undetermined';
 }
 
 /** Implementación de escritorio del puerto: localStorage, avisos de Windows y las mismas RPC del teléfono. */
@@ -24,9 +27,7 @@ export const desktopPort: AlertsPort = {
   readPermission,
   async requestPermission() {
     if (await isPermissionGranted()) return 'granted';
-    const result = await requestPermission();
-    if (result === 'granted') return 'granted';
-    return result === 'denied' ? 'denied' : 'undetermined';
+    return (await requestPermission()) === 'granted' ? 'granted' : 'undetermined';
   },
   claim: claimBudgetAlerts,
   silence: silenceBudgetAlerts,

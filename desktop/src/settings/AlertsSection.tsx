@@ -41,7 +41,6 @@ export function AlertsSection() {
           Avisos en esta computadora
         </label>
       )}
-      {view?.blocked && !toggle.isPending && <p className="settings-sub">Windows tiene bloqueados los avisos de Recibo.</p>}
       {toggle.isError && <p className="form-error">{SAVE_ERROR}</p>}
       <p className="settings-sub">Pueden tardar unos minutos en llegar.</p>
     </section>

@@ -1,3 +1,4 @@
+import { invoke } from '@tauri-apps/api/core';
 import { useQueryClient } from '@tanstack/react-query';
 import type { Session } from '@supabase/supabase-js';
 import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react';
@@ -70,6 +71,11 @@ export function SessionProvider({ children }: { children: ReactNode }) {
       clearInterval(id);
     };
   }, [phase, reload]);
+
+  // Con la ventana escondida (bandeja, arranque de Windows) la pantalla de entrada no se vería.
+  useEffect(() => {
+    if (phase === 'expired' || phase === 'signed-out') void invoke('show_window').catch(() => undefined);
+  }, [phase]);
 
   const value = useMemo<SessionState>(() => ({ session, loading: false }), [session]);
 

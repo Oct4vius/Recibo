@@ -1,5 +1,6 @@
 use tauri::menu::{Menu, MenuItem};
 use tauri::tray::{MouseButton, MouseButtonState, TrayIconBuilder, TrayIconEvent};
+use std::path::Path;
 use std::time::Duration;
 use tauri::{AppHandle, Emitter, Manager};
 use tauri_plugin_notification::NotificationExt;
@@ -18,6 +19,25 @@ const QUIT_ID: &str = "quit";
 /// `true` si la app arrancó sola con Windows: queda junto al reloj, sin ventana.
 pub fn starts_hidden(args: &[String]) -> bool {
     args.iter().any(|arg| arg == HIDDEN_ARG)
+}
+
+const UPDATE_MARKER: &str = "update-restart";
+
+/// `true` si la ventana debe verse al arrancar: siempre, salvo un arranque de Windows (`--hidden`)
+/// que no viene de una actualización (el instalador reenvía los argumentos del proceso anterior).
+pub fn should_show(args: &[String], restarted_by_update: bool) -> bool {
+    !starts_hidden(args) || restarted_by_update
+}
+
+/// Deja la marca de "reinicio por actualización" en `dir`.
+pub fn write_update_marker(dir: &Path) -> std::io::Result<()> {
+    std::fs::create_dir_all(dir)?;
+    std::fs::write(dir.join(UPDATE_MARKER), b"1")
+}
+
+/// Borra la marca; `true` si existía. Una marca sobrante solo muestra la ventana una vez.
+pub fn take_update_marker(dir: &Path) -> bool {
+    std::fs::remove_file(dir.join(UPDATE_MARKER)).is_ok()
 }
 
 /// Muestra la ventana principal, la restaura si estaba minimizada y la enfoca.
@@ -101,6 +121,26 @@ mod tests {
     fn only_the_body_click_opens_the_month() {
         assert!(is_tap("tap"));
         assert!(!is_tap("dismiss"));
+    }
+
+    #[test]
+    fn should_show_covers_the_four_combinations() {
+        let normal = vec!["recibo.exe".to_string()];
+        let hidden = vec!["recibo.exe".to_string(), "--hidden".to_string()];
+        assert!(should_show(&normal, false));
+        assert!(should_show(&normal, true));
+        assert!(!should_show(&hidden, false));
+        assert!(should_show(&hidden, true));
+    }
+
+    #[test]
+    fn update_marker_is_taken_once() {
+        let dir = std::env::temp_dir().join(format!("recibo-marker-{}", std::process::id()));
+        assert!(!take_update_marker(&dir));
+        write_update_marker(&dir).unwrap();
+        assert!(take_update_marker(&dir));
+        assert!(!take_update_marker(&dir));
+        let _ = std::fs::remove_dir_all(&dir);
     }
 
     #[test]

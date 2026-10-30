@@ -7,11 +7,13 @@ interface ConnectButtonsProps {
   busy: boolean;
   /** Esperando que la persona termine en el navegador. */
   waiting: boolean;
+  /** El servidor está guardando la cuenta (`link-account`). */
+  linking: boolean;
   onConnect: (provider: MailProviderName) => void;
   onCancel: () => void;
 }
 
-export function ConnectButtons({ gmailAvailable, busy, waiting, onConnect, onCancel }: ConnectButtonsProps) {
+export function ConnectButtons({ gmailAvailable, busy, waiting, linking, onConnect, onCancel }: ConnectButtonsProps) {
   return (
     <div className="connect">
       <div className="connect-buttons">
@@ -24,6 +26,7 @@ export function ConnectButtons({ gmailAvailable, busy, waiting, onConnect, onCan
           Conectar Outlook
         </Button>
       </div>
+      {linking && <p className="connect-linking">Conectando tu correo…</p>}
       {waiting && (
         <div className="connect-waiting">
           <p>Termina de entrar en la ventana del navegador…</p>
