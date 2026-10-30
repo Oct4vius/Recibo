@@ -55,7 +55,7 @@ export function MovementsScreen({ initial }: MovementsScreenProps) {
           ))}
         </div>
       ) : entries.length === 0 ? (
-        <p className="empty">{emptyMovementsText(view, current)}</p>
+        <p className="empty">{emptyMovementsText(view)}</p>
       ) : (
         <>
           <ul className="movements-list">

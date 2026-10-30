@@ -25,7 +25,7 @@ export function presentMovement(item: TransactionListItem): RowPresentation {
 }
 
 /** Mensaje de lista vacía según lo que la limita. */
-export function emptyMovementsText(view: MovementsView, _current: LocalDate): string {
+export function emptyMovementsText(view: MovementsView): string {
   if (view.categoryId !== null || view.bankCode !== null || view.review) return 'No hay movimientos con estos filtros.';
   const { scope } = view;
   if (scope.kind === 'all') return 'Todavía no hay movimientos.';

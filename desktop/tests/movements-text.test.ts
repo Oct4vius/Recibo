@@ -44,12 +44,12 @@ describe('presentMovement', () => {
 describe('emptyMovementsText', () => {
   it('says what limits the list', () => {
     const view = defaultMovementsView(oct);
-    expect(emptyMovementsText(view, oct)).toBe('No hay movimientos en octubre.');
-    expect(emptyMovementsText({ ...view, bankCode: 'bhd' }, oct)).toBe('No hay movimientos con estos filtros.');
-    expect(emptyMovementsText({ ...view, scope: { kind: 'all' } }, oct)).toBe('Todavía no hay movimientos.');
+    expect(emptyMovementsText(view)).toBe('No hay movimientos en octubre.');
+    expect(emptyMovementsText({ ...view, bankCode: 'bhd' })).toBe('No hay movimientos con estos filtros.');
+    expect(emptyMovementsText({ ...view, scope: { kind: 'all' } })).toBe('Todavía no hay movimientos.');
   });
   it('a range scope names the period generically', () => {
     const scope = { kind: 'range' as const, period: monthPeriod(oct, 'America/Santo_Domingo') };
-    expect(emptyMovementsText({ ...defaultMovementsView(oct), scope }, oct)).toBe('No hay movimientos en este período.');
+    expect(emptyMovementsText({ ...defaultMovementsView(oct), scope })).toBe('No hay movimientos en este período.');
   });
 });

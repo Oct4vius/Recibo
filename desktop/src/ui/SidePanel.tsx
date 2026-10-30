@@ -22,14 +22,19 @@ export function SidePanel({ open, title, onClose, busy = false, children }: Side
   const panelRef = useRef<HTMLDivElement>(null);
   const opener = useRef<HTMLElement | null>(null);
   const onCloseRef = useRef(onClose);
-  onCloseRef.current = onClose;
   const busyRef = useRef(busy);
-  busyRef.current = busy;
   const titleId = useId();
+
+  // Los refs se actualizan tras el render (no durante): el listener de teclado lee siempre lo último.
+  useEffect(() => {
+    onCloseRef.current = onClose;
+    busyRef.current = busy;
+  });
 
   useEffect(() => {
     if (open) {
       opener.current = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- monta al abrir; la salida se anima antes de desmontar
       setMounted(true);
       // Un frame después de montar, para que la entrada se anime desde el estado oculto.
       const frame = requestAnimationFrame(() => setShown(true));

@@ -38,6 +38,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     let active = true;
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- lectura inicial de la sesión guardada (sistema externo)
     void reload(() => active);
     const { data } = supabase.auth.onAuthStateChange((event, next) => {
       const userSignedOut = event === 'SIGNED_OUT' ? takeUserSignOut() : false;

@@ -47,7 +47,7 @@ bunx eas-cli build --profile development --platform android   # APK de desarroll
 bunx eas-cli build --profile production --platform android    # APK final (1.0.0)
 bun run verify:bundle              # empaqueta Android sin dispositivo (verificación de Metro/Babel/NativeWind)
 bun run desktop:dev                # app de escritorio (Tauri); requiere Rust + Build Tools de Visual Studio y bun install en desktop/
-bun run desktop:check              # typecheck + Vitest de desktop/ (no entra en `bun run check`)
+bun run desktop:check              # typecheck + lint + Vitest de desktop/ (no entra en `bun run check`)
 ```
 Pins por compatibilidad (no "actualizar" a ciegas): TypeScript `~6.0` (typescript-eslint, que usa
 `eslint-config-expo`, aún no soporta TS 7) y ESLint `^9` (`eslint-plugin-react` falla con ESLint 10).
@@ -96,6 +96,9 @@ supabase/
     fetch-usd-rates/       # invocada por pg_cron; lee la tasa de venta del BCRD y la guarda en usd_rates
                            #   (cada función: handler.ts testeable con dependencias inyectadas + index.ts delgado)
 desktop/                   # app de Windows (Tauri 2 + Vite + React): reutiliza src/ por el alias `@`; solo reemplaza @/lib/supabase y @/lib/env
+                           #   desktop/src/{session,shell,month,movements,history,budget,settings,expense,ui}: una carpeta por sección
+                           #   (sesión, marco, Este mes, Movimientos, Meses anteriores, Presupuesto, Ajustes, gasto manual, UI genérica).
+                           #   `notifications/hooks.ts` es solo del teléfono; `features/*/hooks.ts` no importan nada nativo (escritorio los usa)
 scripts/                   # herramientas de desarrollo (Bun); scripts/lib/{loopback,google-login,dev-session,anonymize,raw-mail}.ts
 tests/unit/                # Vitest para src/ (espeja la ruta)
 fixtures-raw/<bank>/       # .eml reales anonimizados, SOLO locales (gitignored); fuente de las fixtures
