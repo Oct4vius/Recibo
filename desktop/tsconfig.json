@@ -14,6 +14,7 @@
     "isolatedModules": true,
     "types": ["vite/client"],
     "paths": {
+      "@tanstack/react-query": ["./node_modules/@tanstack/react-query"],
       "@/lib/supabase": ["./src/lib/supabase.ts"],
       "@/lib/env": ["./src/lib/env.ts"],
       "@/*": ["../src/*"],
