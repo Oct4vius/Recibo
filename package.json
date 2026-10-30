@@ -23,7 +23,9 @@
     "dev:link-gmail": "bun scripts/dev-link-gmail.ts",
     "dev:sync": "bun scripts/dev-sync.ts",
     "dev:download-eml": "bun scripts/dev-download-eml.ts",
-    "eml:anonymize": "bun scripts/anonymize-eml.ts"
+    "eml:anonymize": "bun scripts/anonymize-eml.ts",
+    "desktop:dev": "bun run --cwd desktop tauri dev",
+    "desktop:check": "bun run --cwd desktop typecheck && bun run --cwd desktop test"
   },
   "devDependencies": {
     "@types/aes-js": "^3.1.4",
