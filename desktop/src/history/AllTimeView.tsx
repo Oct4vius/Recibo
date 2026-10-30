@@ -26,11 +26,15 @@ export function AllTimeView({ onOpenMovements }: { onOpenMovements: (view: Movem
       <Button variant="secondary" className="history-open" onClick={() => onOpenMovements(viewForAllTime(undefined))}>
         Ver estos gastos
       </Button>
-      <CategoryList
-        data={categories.data}
-        emptyText="Sin gastos en este período."
-        onOpen={(categoryId) => onOpenMovements(viewForAllTime(categoryId))}
-      />
+      {categories.isError ? (
+        <ErrorLine onRetry={() => void categories.refetch()} retrying={categories.isFetching} />
+      ) : (
+        <CategoryList
+          data={categories.data}
+          emptyText="Sin gastos en este período."
+          onOpen={(categoryId) => onOpenMovements(viewForAllTime(categoryId))}
+        />
+      )}
     </>
   );
 }

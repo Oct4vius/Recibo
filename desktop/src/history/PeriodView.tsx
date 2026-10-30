@@ -88,11 +88,15 @@ export function PeriodView({ granularity, onOpenMovements }: PeriodViewProps) {
           >
             Ver estos gastos
           </Button>
-          <CategoryList
-            data={breakdown}
-            emptyText="Sin gastos en este período."
-            onOpen={(categoryId) => onOpenMovements(viewForPeriod(shown, selectedBucket.start, categoryId, timeZone))}
-          />
+          {categories.isError ? (
+            <ErrorLine onRetry={() => void categories.refetch()} retrying={categories.isFetching} />
+          ) : (
+            <CategoryList
+              data={breakdown}
+              emptyText="Sin gastos en este período."
+              onOpen={(categoryId) => onOpenMovements(viewForPeriod(shown, selectedBucket.start, categoryId, timeZone))}
+            />
+          )}
         </>
       )}
     </>
