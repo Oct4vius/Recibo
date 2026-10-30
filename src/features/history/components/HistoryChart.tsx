@@ -1,8 +1,7 @@
 import { Text, View } from 'react-native';
-import { Amount } from '@/components/Amount';
 import { colors, fonts, typeScale } from '@/theme/tokens';
 import type { Granularity } from '../granularity';
-import { axisLabels, bucketAccessibilityLabel, bucketLabel } from '../labels';
+import { axisLabels, bucketAccessibilityLabel } from '../labels';
 import type { HistoryBucket } from '../mapping';
 import { barRatios } from '../scale';
 import { HistoryBar } from './HistoryBar';
@@ -20,23 +19,13 @@ interface Props {
   onSelect: (startIso: string) => void;
 }
 
-/** Barras de una sola serie: grises, la actual en rojo, la elegida en blanco. Arriba, el monto de la elegida (o la actual). */
+/** Barras de una sola serie: grises, la actual en rojo, la elegida en blanco. El período elegido se muestra en PeriodHeader. */
 export function HistoryChart({ granularity, buckets, currentIso, selectedIso, onSelect }: Props) {
   const ratios = barRatios(buckets.map((bucket) => bucket.totalDop));
   const axis = axisLabels(granularity, buckets.map((bucket) => bucket.start));
-  const featured =
-    buckets.find((bucket) => bucket.startIso === selectedIso) ??
-    buckets.find((bucket) => bucket.startIso === currentIso) ??
-    buckets[buckets.length - 1];
   const caption = { fontFamily: fonts.body, fontSize: typeScale.caption, color: colors.ash } as const;
   return (
     <View style={{ marginBottom: 8 }}>
-      {featured ? (
-        <View style={{ marginBottom: 8 }}>
-          <Text style={caption}>{bucketLabel(granularity, featured.start)}</Text>
-          <Amount value={featured.totalDop} currency="DOP" size="large" />
-        </View>
-      ) : null}
       <View style={{ flexDirection: 'row', alignItems: 'flex-end', height: CHART_HEIGHT, borderBottomWidth: 2, borderBottomColor: colors.ash }}>
         {buckets.map((bucket, i) => (
           // Clave por posición: la barra persiste al cambiar de ventana y anima a su nueva altura.

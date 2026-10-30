@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { countLabel, DEFAULT_FILTERS, emptyMessage, periodRange } from '@/features/transactions/filters';
+import { countLabel, DEFAULT_FILTERS, emptyMessage, periodRange, UNCATEGORIZED } from '@/features/transactions/filters';
 
 const SD = 'America/Santo_Domingo';
 
@@ -47,6 +47,7 @@ describe('emptyMessage', () => {
   });
   it('points at the filters when any other filter is on', () => {
     expect(emptyMessage({ ...DEFAULT_FILTERS, review: true })).toBe('No hay movimientos con estos filtros.');
+    expect(emptyMessage({ ...DEFAULT_FILTERS, categoryId: UNCATEGORIZED })).toBe('No hay movimientos con estos filtros.');
     expect(emptyMessage({ ...DEFAULT_FILTERS, period: 'all', currency: 'USD' })).toBe('No hay movimientos con estos filtros.');
   });
 });

@@ -1,5 +1,6 @@
 import { supabase } from '@/lib/supabase';
 import { authErrorMessage, currentPasswordErrorMessage, passwordUpdateErrorMessage } from './errors';
+import { passwordUpdate } from './password';
 
 /** Inicia sesión. Devuelve el mensaje de error en español, o `null` si salió bien. */
 export async function signIn(email: string, password: string): Promise<string | null> {
@@ -19,6 +20,6 @@ export async function signOut(): Promise<void> {
 export async function changePassword(email: string, current: string, next: string): Promise<string | null> {
   const check = await supabase.auth.signInWithPassword({ email, password: current });
   if (check.error) return currentPasswordErrorMessage(check.error);
-  const { error } = await supabase.auth.updateUser({ password: next });
+  const { error } = await supabase.auth.updateUser(passwordUpdate(current, next));
   return passwordUpdateErrorMessage(error);
 }

@@ -27,6 +27,17 @@ export interface SyncLog {
   error: string | null;
 }
 
+/**
+ * La base rechazó el valor de una fila (un check, un desborde, un NUL…): reintentar lo mismo vuelve a fallar.
+ * Cualquier otro error del repositorio se reintenta entero en la próxima corrida.
+ */
+export class DataRejectedError extends Error {
+  constructor(message: string, readonly code: string) {
+    super(message);
+    this.name = 'DataRejectedError';
+  }
+}
+
 /** Lo único que la orquestación necesita de la base. Los tests usan una implementación en memoria. */
 export interface SyncRepository {
   readToken(accountId: string): Promise<string | null>;

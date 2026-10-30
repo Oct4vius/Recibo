@@ -3,7 +3,7 @@ import type { RawEmail } from '../parsers/index.ts';
 import { nextCursor, OVERLAP_MS, PAGE_SIZE } from './cursor.ts';
 import { refreshTokens } from './microsoft-auth.ts';
 import { bankSenderAddresses, senderFilter } from './sender-query.ts';
-import { MailAuthError, MailTransientError, type MailProvider, type Page, type SyncCursor } from './types.ts';
+import { MailAuthError, MailTransientError, PROVIDER_TIMEOUT_MS, type MailProvider, type Page, type SyncCursor } from './types.ts';
 
 const GRAPH_MESSAGES = 'https://graph.microsoft.com/v1.0/me/messages';
 export { OVERLAP_MS, PAGE_SIZE } from './cursor.ts';
@@ -51,7 +51,10 @@ export function createGraphProvider(config: {
     const url = cursor.next ?? firstPageUrl(addresses, cursor);
     let response: Response;
     try {
-      response = await fetchImpl(url, { headers: { Authorization: `Bearer ${accessToken}`, Prefer: 'IdType="ImmutableId"' } });
+      response = await fetchImpl(url, {
+        headers: { Authorization: `Bearer ${accessToken}`, Prefer: 'IdType="ImmutableId"' },
+        signal: AbortSignal.timeout(PROVIDER_TIMEOUT_MS),
+      });
     } catch {
       throw new MailTransientError('graph unreachable');
     }

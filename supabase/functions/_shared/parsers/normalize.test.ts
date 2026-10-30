@@ -140,3 +140,46 @@ Deno.test('htmlToText — block elements inside a cell do not break the row (con
     + '</table>';
   assertEquals(htmlToText(html), 'Monto: | RD$ 3,500.00\nDescripción:');
 });
+
+// Entradas hostiles no deben costar tiempo cuadrático ni producir valores que la base rechace (un solo correo así
+// bloqueaba la sincronización de la cuenta).
+const LINEAR_BUDGET_MS = 1500;
+
+Deno.test('regression — htmlToText is linear on unclosed tags, comments, scripts and <br', () => {
+  const n = 200_000;
+  const cases: [string, string][] = [
+    ['unclosed <', '<'.repeat(n)],
+    ['unclosed comments', '<!--'.repeat(n / 4)],
+    ['unclosed scripts', '<script>'.repeat(n / 8)],
+    ['unclosed br', '<br'.repeat(n / 3)],
+    ['many empty cells', '<tr>' + '<td></td>'.repeat(n / 9) + '<td>x</td></tr>'],
+  ];
+  for (const [label, html] of cases) {
+    const start = performance.now();
+    htmlToText(html);
+    const ms = performance.now() - start;
+    if (ms > LINEAR_BUDGET_MS) throw new Error(`${label}: ${ms.toFixed(0)} ms for ${html.length} chars`);
+  }
+});
+
+Deno.test('htmlToText — unclosed markup is kept as text, not swallowed', () => {
+  assertEquals(htmlToText('a <b c'), 'a <b c');
+  assertEquals(htmlToText('<p>x</p><!-- never closed'), 'x\n<!-- never closed');
+  assertEquals(htmlToText('<script>alert(1)'), 'alert(1)');
+  assertEquals(htmlToText('<td>a</td><td>b</td><td></td><td></td>'), 'a | b');
+});
+
+Deno.test('regression — parseAmount rejects zero and amounts that do not fit numeric(14,2)', () => {
+  assertEquals(parseAmount('$0.00'), null);
+  assertEquals(parseAmount('RD$ 0'), null);
+  assertEquals(parseAmount('$1,000,000,000,000.00'), null);
+  assertEquals(parseAmount('99999999999999999999'), null);
+  assertEquals(parseAmount('$999,999,999,999.99'), { amount: 999999999999.99, currency: null });
+  assertEquals(parseAmount('$0.01'), { amount: 0.01, currency: null });
+});
+
+Deno.test('regression — decodeEntities never produces a lone surrogate', () => {
+  assertEquals(decodeEntities('&#xD800;'), '&#xD800;');
+  assertEquals(decodeEntities('&#57343;'), '&#57343;');
+  assertEquals(decodeEntities('&#x1F600;'), '\u{1F600}');
+});

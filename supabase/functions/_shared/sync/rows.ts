@@ -43,13 +43,18 @@ export interface UnparsedEmail {
 /** En puntos de código, igual que `length()` de Postgres en el CHECK de `unparsed_emails.snippet`. */
 export const SNIPPET_LENGTH = 500;
 
+/** Quita NUL y surrogates sueltos: Postgres rechaza ambos en jsonb y text, y la página entera fallaría. */
+function postgresSafe(s: string): string {
+  return s.replaceAll('\u0000', '').replace(/[\ud800-\udbff](?![\udc00-\udfff])|(?<![\ud800-\udbff])[\udc00-\udfff]/g, '');
+}
+
 export function toUnparsed(email: RawEmail, bankCode: BankCode): UnparsedEmail {
   return {
     message_id: email.messageId,
     bank_code: bankCode,
-    subject: email.subject,
+    subject: postgresSafe(email.subject),
     // Por puntos de código: un emoji partido deja un surrogate suelto que Postgres rechaza en jsonb.
-    snippet: Array.from(email.text).slice(0, SNIPPET_LENGTH).join(''),
+    snippet: Array.from(postgresSafe(email.text)).slice(0, SNIPPET_LENGTH).join(''),
     received_at: email.receivedAt,
   };
 }

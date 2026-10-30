@@ -8,14 +8,14 @@ export const BCRD_RATES_URL =
 const DAILY_SHEET = 'Diaria';
 const FETCH_TIMEOUT_MS = 30_000;
 // Etiquetas de mes sin ambigüedad (español del archivo actual e inglés por si cambia el idioma).
-const MONTHS: Record<string, number> = {
+const MONTHS = new Map<string, number>(Object.entries({
   ene: 1, jan: 1, feb: 2, mar: 3, abr: 4, apr: 4, may: 5, jun: 6, jul: 7, ago: 8, aug: 8,
   sep: 9, sept: 9, oct: 10, nov: 11, dic: 12, dec: 12,
-};
+}));
 
 /** `Ene `, `Jan`, `Sept` → 1..12; null si la etiqueta no es un mes conocido. */
 export function monthNumber(label: string | number | undefined): number | null {
-  return MONTHS[normalizeLabel(label)] ?? null;
+  return MONTHS.get(normalizeLabel(label)) ?? null;
 }
 
 function normalizeLabel(value: string | number | undefined): string {

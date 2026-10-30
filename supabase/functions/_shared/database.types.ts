@@ -212,11 +212,17 @@ isOneToOne: false
           Views: {
             "spending_transactions": {
                   Row: {
-                    "amount": number | null,"amount_dop": number | null,"currency": Database["public"]['Enums']["currency_code"] | null,"occurred_at": string | null,"user_id": string | null
+                    "amount": number | null,"amount_dop": number | null,"category_id": string | null,"currency": Database["public"]['Enums']["currency_code"] | null,"occurred_at": string | null,"user_id": string | null
                   }
                   ComputedFields: never
                   Relationships: [
-                    
+                    {
+      foreignKeyName: "transactions_category_id_fkey"
+      columns: ["category_id"]
+isOneToOne: false
+      referencedRelation: "categories"
+      referencedColumns: ["id"]
+    }
                   ]
                 },"transactions_with_rate": {
                   Row: {
@@ -253,9 +259,44 @@ isOneToOne: false
                 }
           }
           Functions: {
-            "get_history":
+            "budget_period_bounds":
+{ Args: { "p_period": Database["public"]['Enums']["budget_period"],"p_ref": string }; Returns: {
+              "period_end": string,"period_start": string
+            }[]
+                           },
+"budget_progress":
+{ Args: { "p_today"?: string,"p_user": string }; Returns: {
+              "budget_id": string,"limit_amount": number,"period": Database["public"]['Enums']["budget_period"],"period_start": string,"spent_dop": number
+            }[]
+                           },
+"claim_budget_alerts":
+{ Args: Record<PropertyKey, never>; Returns: {
+              "period": Database["public"]['Enums']["budget_period"],"threshold": number
+            }[]
+                           },
+"claim_budget_alerts_at":
+{ Args: { "p_today"?: string,"p_user": string }; Returns: {
+              "period": Database["public"]['Enums']["budget_period"],"threshold": number
+            }[]
+                           },
+"crossed_budget_thresholds":
+{ Args: { "p_today"?: string,"p_user": string }; Returns: {
+              "budget_id": string,"period": Database["public"]['Enums']["budget_period"],"period_start": string,"threshold": number
+            }[]
+                           },
+"get_category_spending":
+{ Args: { "p_from"?: string,"p_to"?: string }; Returns: {
+              "category_id": string,"category_name": string,"period_total": number,"total_dop": number,"tx_count": number
+            }[]
+                           },
+"get_history":
 { Args: { "p_from": string,"p_granularity": string,"p_to": string }; Returns: {
               "bucket_start": string,"total_dop": number,"tx_count": number
+            }[]
+                           },
+"get_spending_overall":
+{ Args: Record<PropertyKey, never>; Returns: {
+              "first_date": string,"total_dop": number,"tx_count": number
             }[]
                            },
 "get_spending_summary":
@@ -278,6 +319,9 @@ isOneToOne: false
 "link_mail_account":
 { Args: { "p_email": string,"p_provider": Database["public"]['Enums']["mail_provider"],"p_refresh_token": string,"p_user_id": string }; Returns: string
                            },
+"lock_down_rls_auto_enable":
+{ Args: Record<PropertyKey, never>; Returns: undefined
+                           },
 "mail_account_token":
 { Args: { "p_account_id": string }; Returns: string
                            },
@@ -291,6 +335,12 @@ isOneToOne: false
                            },
 "set_mail_account_token":
 { Args: { "p_account_id": string,"p_token": string }; Returns: undefined
+                           },
+"silence_budget_alerts":
+{ Args: Record<PropertyKey, never>; Returns: undefined
+                           },
+"silence_budget_alerts_at":
+{ Args: { "p_budget"?: string,"p_today"?: string,"p_user": string }; Returns: undefined
                            },
 "unlink_mail_account":
 { Args: { "p_account_id": string,"p_user_id": string }; Returns: boolean

@@ -90,3 +90,17 @@ Deno.test('regression — a 200 whose body is not JSON is transient, not a gener
   const provider = createGraphProvider({ clientId: 'c', addresses: ['alertas@bhd.com.do'], fetchImpl });
   await assertRejects(() => provider.fetchNew('at', cursor), MailTransientError);
 });
+
+Deno.test('regression — Graph requests carry a timeout so a hung connection cannot hold the whole sync run', async () => {
+  let signal: AbortSignal | null | undefined;
+  const provider = createGraphProvider({
+    clientId: 'c',
+    fetchImpl: ((_url: string, init?: RequestInit) => {
+      signal = init?.signal;
+      return Promise.resolve(new Response('{}', { status: 401 }));
+    }) as typeof fetch,
+  });
+  await assertRejects(() => provider.fetchNew('at', cursor), MailAuthError);
+  assertEquals(signal instanceof AbortSignal, true);
+});
+

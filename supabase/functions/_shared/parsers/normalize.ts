@@ -12,7 +12,8 @@ export function decodeEntities(s: string): string {
     if (code[0] === '#') {
       const isHex = code[1] === 'x' || code[1] === 'X';
       const n = isHex ? parseInt(code.slice(2), 16) : parseInt(code.slice(1), 10);
-      return Number.isFinite(n) && n > 0 && n <= 0x10ffff ? String.fromCodePoint(n) : match;
+      const isSurrogate = n >= 0xd800 && n <= 0xdfff;
+      return Number.isFinite(n) && n > 0 && n <= 0x10ffff && !isSurrogate ? String.fromCodePoint(n) : match;
     }
     return NAMED_ENTITIES[code] ?? match;
   });
@@ -20,7 +21,64 @@ export function decodeEntities(s: string): string {
 
 /** Separador temporal de filas; \s no lo matchea, así que sobrevive al colapso de espacios. */
 const ROW_BREAK = '\u0000';
-const BLOCK_END = /<br\b[^>]*>|<\/(?:tr|p|div|li|h[1-6]|table|thead|tbody|ul|ol)\s*>/gi;
+const BLOCK_END = /^(?:<br\b[^>]*>|<\/(?:tr|p|div|li|h[1-6]|table|thead|tbody|ul|ol)\s*>)$/i;
+const CELL_END = /^<\/t[dh]\s*>$/i;
+const RAW_TEXT_OPEN = /^<(script|style)\b/i;
+
+/**
+ * Quita comentarios, script/style y etiquetas en una sola pasada lineal: cada búsqueda de cierre avanza el cursor o,
+ * si no hay cierre, se recuerda que no lo habrá más adelante. Con regex globales, un correo con miles de "<" sin cerrar
+ * costaba tiempo cuadrático y frenaba sync-mail para todas las cuentas. Mismo resultado que las regex en HTML válido:
+ * comentarios y script/style fuera, celdas → " | ", bloques → ROW_BREAK, el resto de etiquetas → " ".
+ */
+function stripMarkup(html: string): string {
+  const parts: string[] = [];
+  let noCommentEnd = false;
+  const noRawTextEnd = new Set<string>();
+  let i = 0;
+  while (i < html.length) {
+    const lt = html.indexOf('<', i);
+    if (lt === -1) break;
+    parts.push(html.slice(i, lt));
+    if (!noCommentEnd && html.startsWith('<!--', lt)) {
+      const end = html.indexOf('-->', lt + 4);
+      if (end !== -1) {
+        i = end + 3;
+        continue;
+      }
+      noCommentEnd = true;
+    }
+    const gt = html.indexOf('>', lt + 1);
+    if (gt === -1) {
+      // Ningún ">" más adelante: el resto no tiene etiquetas y queda como texto.
+      i = lt;
+      break;
+    }
+    const tag = html.slice(lt, gt + 1);
+    const rawText = tag.match(RAW_TEXT_OPEN)?.[1].toLowerCase();
+    if (rawText && !noRawTextEnd.has(rawText)) {
+      const close = new RegExp(`</${rawText}\\s*>`, 'gi');
+      close.lastIndex = gt + 1;
+      const found = close.exec(html);
+      if (found) {
+        i = found.index + found[0].length;
+        continue;
+      }
+      noRawTextEnd.add(rawText);
+    }
+    parts.push(CELL_END.test(tag) ? ' | ' : BLOCK_END.test(tag) ? ROW_BREAK : ' ');
+    i = gt + 1;
+  }
+  parts.push(html.slice(i));
+  return parts.join('');
+}
+
+/** Quita los pipes y espacios del final de una fila sin regex (la regex equivalente era cuadrática con muchas celdas). */
+function trimTrailingPipes(row: string): string {
+  let end = row.length;
+  while (end > 0 && (row[end - 1] === '|' || /\s/.test(row[end - 1]))) end--;
+  return row.slice(0, end).trim();
+}
 
 /**
  * HTML del banco → texto estable para los parsers.
@@ -31,14 +89,7 @@ const BLOCK_END = /<br\b[^>]*>|<\/(?:tr|p|div|li|h[1-6]|table|thead|tbody|ul|ol)
  * - Una línea que empieza con "|" se fusiona con la fila anterior (bloques dentro de una celda).
  */
 export function htmlToText(html: string): string {
-  const withMarkers = html
-    .replace(/<!--[\s\S]*?-->/g, '')
-    .replace(/<(script|style)\b[^>]*>[\s\S]*?<\/\1\s*>/gi, '')
-    .replace(/<\/t[dh]\s*>/gi, ' | ')
-    .replace(BLOCK_END, ROW_BREAK)
-    .replace(/<[^>]+>/g, ' ');
-
-  const decoded = decodeEntities(withMarkers).replace(/[\s\u00a0]+/g, ' ');
+  const decoded = decodeEntities(stripMarkup(html)).replace(/[\s\u00a0]+/g, ' ');
 
   const lines = decoded
     .split(ROW_BREAK)
@@ -57,7 +108,7 @@ export function htmlToText(html: string): string {
   }
 
   return rows
-    .map((row) => row.replace(/(\s*\|)+\s*$/, '').trim())
+    .map(trimTrailingPipes)
     .filter((row) => row.length > 0)
     .join('\n');
 }
@@ -76,13 +127,20 @@ export function currencyFromCode(code: string): Currency | null {
 /**
  * "$275.72" → 275.72 (sin moneda); "RD$ 3,500.00" → 3500 DOP; "US$ 12.00" → 12 USD.
  * Máximo 2 decimales. Cálculo en centavos enteros.
+ * Solo montos que `transactions.amount` acepta (> 0 y que caben en numeric(14,2)); fuera de eso → null y el correo cae
+ * en unparsed_emails, en vez de que la base rechace la página entera y la cuenta deje de sincronizar.
  */
+const MAX_INTEGER_DIGITS = 12;
+
 export function parseAmount(raw: string): { amount: number; currency: Currency | null } | null {
   const compact = raw.replace(/\s+/g, '');
   const m = compact.match(/^(RD\$|US\$|DOP|USD|\$)?(\d{1,3}(?:,\d{3})*|\d+)(?:\.(\d{1,2}))?$/i);
   if (!m) return null;
   const [, prefix, intPart, fracPart] = m;
-  const cents = Number(intPart.replace(/,/g, '')) * 100 + Number((fracPart ?? '').padEnd(2, '0'));
+  const digits = intPart.replace(/,/g, '').replace(/^0+(?=\d)/, '');
+  if (digits.length > MAX_INTEGER_DIGITS) return null;
+  const cents = Number(digits) * 100 + Number((fracPart ?? '').padEnd(2, '0'));
+  if (cents <= 0) return null;
   const currency = prefix && prefix !== '$' ? currencyFromCode(prefix) : null;
   return { amount: cents / 100, currency };
 }

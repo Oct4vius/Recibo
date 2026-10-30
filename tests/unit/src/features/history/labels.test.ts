@@ -1,5 +1,14 @@
 import { describe, expect, it } from 'vitest';
-import { axisLabels, bucketAccessibilityLabel, bucketLabel, expenseCountLabel } from '@/features/history/labels';
+import {
+  axisLabels,
+  bucketAccessibilityLabel,
+  bucketLabel,
+  categoryAccessibilityLabel,
+  expenseCountLabel,
+  shareLabel,
+  sinceLabel,
+  VIEW_LABELS,
+} from '@/features/history/labels';
 import { localDate } from '@/lib/dates';
 
 describe('bucketLabel', () => {
@@ -48,5 +57,33 @@ describe('expenseCountLabel', () => {
     expect(expenseCountLabel(1)).toBe('1 gasto');
     expect(expenseCountLabel(3)).toBe('3 gastos');
     expect(expenseCountLabel(1234)).toBe('1,234 gastos');
+  });
+});
+
+describe('shareLabel', () => {
+  it('rounds, and shows <1 % for tiny shares', () => {
+    expect(shareLabel(0, 0)).toBe('0 %');
+    expect(shareLabel(320, 1000)).toBe('32 %');
+    expect(shareLabel(4, 1000)).toBe('<1 %');
+    expect(shareLabel(5, 1000)).toBe('1 %');
+  });
+});
+
+describe('sinceLabel', () => {
+  it('names the month and year of the first expense', () => {
+    expect(sinceLabel('2026-09-20')).toBe('DESDE SEPTIEMBRE 2026');
+  });
+});
+
+describe('categoryAccessibilityLabel', () => {
+  it('reads name, pesos, share and count', () => {
+    const top = { categoryId: 'c-id', name: 'Supermercado', totalDop: 1500, txCount: 2 };
+    expect(categoryAccessibilityLabel(top, 2650)).toBe('Supermercado: 1,500.00 pesos, 57 % del total, 2 gastos');
+  });
+});
+
+describe('VIEW_LABELS', () => {
+  it('labels every view', () => {
+    expect(VIEW_LABELS).toEqual({ week: 'Semana', month: 'Mes', year: 'Año', all: 'Todo' });
   });
 });
