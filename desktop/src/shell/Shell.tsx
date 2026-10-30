@@ -1,18 +1,16 @@
 import { useState } from 'react';
+import { AccountsScreen } from '../accounts/AccountsScreen';
 import { BudgetScreen } from '../budget/BudgetScreen';
 import { HistoryScreen } from '../history/HistoryScreen';
 import { viewForCategory } from '../movements/movements-view';
 import { MovementsScreen } from '../movements/MovementsScreen';
 import { MonthScreen } from '../month/MonthScreen';
 import { SettingsScreen } from '../settings/SettingsScreen';
-import { ComingSoon } from './ComingSoon';
 import { openMovements, selectSection, START_ROUTE, type ShellRoute } from './navigation';
 import { Sidebar } from './Sidebar';
-import { SECTIONS } from './sections';
 
 export function Shell() {
   const [route, setRoute] = useState<ShellRoute>(START_ROUTE);
-  const label = SECTIONS.find((s) => s.id === route.section)?.label;
 
   return (
     <div className="shell">
@@ -30,13 +28,10 @@ export function Shell() {
           <HistoryScreen onOpenMovements={(view) => setRoute((r) => openMovements(r, view))} />
         ) : route.section === 'budget' ? (
           <BudgetScreen />
-        ) : route.section === 'settings' ? (
-          <SettingsScreen />
+        ) : route.section === 'accounts' ? (
+          <AccountsScreen />
         ) : (
-          <>
-            <h1>{label}</h1>
-            <ComingSoon />
-          </>
+          <SettingsScreen />
         )}
       </main>
     </div>

@@ -6,6 +6,13 @@
   "permissions": [
     "core:default",
     {
+      "identifier": "opener:allow-open-url",
+      "allow": [
+        { "url": "https://login.microsoftonline.com/*" },
+        { "url": "https://accounts.google.com/*" }
+      ]
+    },
+    {
       "identifier": "http:default",
       "allow": [
         { "url": "https://*.supabase.co/functions/v1/*" },
