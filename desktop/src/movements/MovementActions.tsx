@@ -7,7 +7,6 @@ import { ConfirmButton } from '../ui/ConfirmButton';
 interface MovementActionsProps {
   item: TransactionListItem;
   busy: boolean;
-  deleting: boolean;
   failed: boolean;
   onToggleIgnored: () => void;
   onReview: () => void;
@@ -15,7 +14,7 @@ interface MovementActionsProps {
 }
 
 /** Lo que se puede hacer con el movimiento además de editarlo. */
-export function MovementActions({ item, busy, deleting, failed, onToggleIgnored, onReview, onDelete }: MovementActionsProps) {
+export function MovementActions({ item, busy, failed, onToggleIgnored, onReview, onDelete }: MovementActionsProps) {
   return (
     <div className="movement-actions">
       {needsReview(item) && (
@@ -37,7 +36,7 @@ export function MovementActions({ item, busy, deleting, failed, onToggleIgnored,
           question="¿Borrar este gasto?"
           detail="No se puede deshacer."
           confirmLabel="Sí, borrar"
-          pending={deleting}
+          pending={busy}
           onConfirm={onDelete}
         />
       )}

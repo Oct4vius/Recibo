@@ -81,7 +81,6 @@ export function MovementPanel({ item, open, timeZone, onClose, onDone }: Movemen
           <MovementActions
             item={item}
             busy={busy}
-            deleting={remove.isPending}
             failed={setIgnored.isError || markReviewed.isError || remove.isError}
             onToggleIgnored={() =>
               setIgnored.mutate(
