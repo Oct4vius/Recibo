@@ -45,6 +45,7 @@ export function useMonthData() {
 
   const failed = [summary, categories, ...(isCurrent ? [budgets] : [])].filter((q) => q.isError);
   return {
+    timeZone,
     start,
     isCurrent,
     canGoNext: next !== null,

@@ -1,5 +1,7 @@
-﻿import { useState } from 'react';
+import { useEffect, useState } from 'react';
+import { AddExpensePanel } from '../expense/AddExpensePanel';
 import { ErrorLine } from '../ui/ErrorLine';
+import { Notice } from '../ui/Notice';
 import { BudgetBar } from './BudgetBar';
 import { CategoryList } from './CategoryList';
 import { useMonthData } from './hooks';
@@ -14,8 +16,13 @@ interface MonthScreenProps {
 
 export function MonthScreen(_props: MonthScreenProps) {
   const month = useMonthData();
-  // La Task 6 muestra el panel de "Agregar gasto" con este estado.
-  const [, setAdding] = useState(false);
+  const [adding, setAdding] = useState(false);
+  const [saved, setSaved] = useState(false);
+  useEffect(() => {
+    if (!saved) return;
+    const timer = setTimeout(() => setSaved(false), 3000);
+    return () => clearTimeout(timer);
+  }, [saved]);
   // Con keepPreviousData, los datos del mes anterior no se muestran bajo el título nuevo: mientras son de relleno, bloques.
   const summary = month.summary.isPlaceholderData ? undefined : month.summary.data;
   const breakdown = month.categories.isPlaceholderData ? undefined : month.categories.data;
@@ -41,6 +48,16 @@ export function MonthScreen(_props: MonthScreenProps) {
           <CategoryList data={breakdown} isCurrent={month.isCurrent} start={month.start} />
         </>
       )}
+      <AddExpensePanel
+        open={adding}
+        timeZone={month.timeZone}
+        onClose={() => setAdding(false)}
+        onSaved={() => {
+          setAdding(false);
+          setSaved(true);
+        }}
+      />
+      <Notice message={saved ? 'Gasto guardado' : null} />
     </div>
   );
 }
