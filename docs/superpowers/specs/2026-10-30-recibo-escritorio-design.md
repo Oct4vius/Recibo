@@ -142,7 +142,8 @@ Propuesta de Claude, mostrada en la maqueta A:
 - **Junto al reloj:**
   - cerrar la ventana la oculta (la app sigue en el área de notificaciones);
   - el ícono tiene "Abrir Recibo" y "Salir";
-  - la app arranca con Windows (decisión de Claude, para que los avisos lleguen sin que ella la abra).
+  - abrir Recibo al encender la computadora es una opción en Ajustes, apagada por defecto (decisión del usuario). Si está
+    apagada, los avisos solo llegan después de abrir la app; encendida, arranca oculta junto al reloj.
 
 ### 3.7 Actualizaciones (decisión de Claude)
 - Se publican en GitHub Releases del repo, con el actualizador de Tauri (artefactos firmados con su clave, que es gratis).

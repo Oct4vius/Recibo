@@ -1,4 +1,5 @@
 mod login;
+mod shell;
 
 use keyring::{Entry, Error};
 
@@ -35,9 +36,33 @@ fn secret_delete(key: String) -> Result<(), String> {
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
+        // Debe ser el primer plugin: una segunda copia solo trae la primera al frente.
+        .plugin(tauri_plugin_single_instance::init(|app, _args, _cwd| {
+            shell::show_main(app);
+        }))
+        // Registrado, pero apagado: solo la casilla de Ajustes lo enciende.
+        .plugin(tauri_plugin_autostart::init(
+            tauri_plugin_autostart::MacosLauncher::LaunchAgent,
+            Some(vec![shell::HIDDEN_ARG]),
+        ))
         .plugin(tauri_plugin_http::init())
         .plugin(tauri_plugin_opener::init())
         .manage(login::LoginState::default())
+        .setup(|app| {
+            shell::build_tray(app)?;
+            let args: Vec<String> = std::env::args().collect();
+            if !shell::starts_hidden(&args) {
+                shell::show_main(app.handle());
+            }
+            Ok(())
+        })
+        .on_window_event(|window, event| {
+            // La X solo guarda la ventana junto al reloj; Salir está en el menú de la bandeja.
+            if let tauri::WindowEvent::CloseRequested { api, .. } = event {
+                api.prevent_close();
+                let _ = window.hide();
+            }
+        })
         .invoke_handler(tauri::generate_handler![
             secret_get,
             secret_set,

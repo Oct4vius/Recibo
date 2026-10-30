@@ -12,9 +12,11 @@ crate-type = ["staticlib", "cdylib", "rlib"]
 tauri-build = { version = "2", features = [] }
 
 [dependencies]
-tauri = { version = "2", features = [] }
+tauri = { version = "2", features = ["tray-icon"] }
 keyring = { version = "3", features = ["windows-native"] }
 tauri-plugin-http = "2"
 tokio = { version = "1", features = ["net", "time", "io-util", "sync", "macros"] }
 url = "2"
 tauri-plugin-opener = "2"
+tauri-plugin-single-instance = "2"
+tauri-plugin-autostart = "2"
