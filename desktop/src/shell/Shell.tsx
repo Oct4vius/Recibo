@@ -11,6 +11,7 @@ import { MovementsScreen } from '../movements/MovementsScreen';
 import { MonthScreen } from '../month/MonthScreen';
 import { SettingsScreen } from '../settings/SettingsScreen';
 import { openMovements, selectSection, START_ROUTE, type ShellRoute } from './navigation';
+import { UpdateBanner } from '../updates/UpdateBanner';
 import { Sidebar } from './Sidebar';
 
 export function Shell() {
@@ -27,6 +28,8 @@ export function Shell() {
   return (
     <div className="shell">
       <Sidebar active={route.section} onSelect={(section) => setRoute((r) => selectSection(r, section))} />
+      <div className="shell-main">
+      <UpdateBanner />
       <main className="content" key={day}>
         {route.section === 'month' ? (
           <MonthScreen
@@ -46,6 +49,7 @@ export function Shell() {
           <SettingsScreen />
         )}
       </main>
+      </div>
     </div>
   );
 }

@@ -1,0 +1,10 @@
+.update-banner {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 10px 24px;
+  background: var(--accent-soft);
+  border-bottom: 1px solid var(--border);
+  font-size: 17px;
+}
+.update-banner .btn-primary { min-height: 44px; }

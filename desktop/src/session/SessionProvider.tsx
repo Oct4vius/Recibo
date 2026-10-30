@@ -78,6 +78,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
       return (
         <div className="splash">
           <img src={icon} alt="Recibo" />
+          <p>Abriendo Recibo…</p>
         </div>
       );
     case 'offline':
