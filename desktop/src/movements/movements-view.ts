@@ -1,7 +1,9 @@
 import { isSameDate, monthStart, type LocalDate } from '@/lib/dates';
+import type { Granularity } from '@/features/history/granularity';
 import { bucketRange } from '@/features/history/window';
 import { DEFAULT_FILTERS, UNCATEGORIZED, type RangePeriod, type TransactionFilters } from '@/features/transactions/filters';
 import type { BankCode } from '@/types/database';
+import { periodTitle } from '../history/history-text';
 import { monthTitle } from '../month/month-text';
 
 export type MovementsScope =
@@ -40,6 +42,29 @@ export function categoryFilter(categoryId: string | null): string {
 
 export function viewForCategory(start: LocalDate, categoryId: string | null): MovementsView {
   return { ...defaultMovementsView(start), categoryId: categoryFilter(categoryId) };
+}
+
+/** `undefined` = sin filtro; `null` = "Sin categoría" (igual que `movementParams`). */
+function optionalCategoryFilter(categoryId: string | null | undefined): string | null {
+  return categoryId === undefined ? null : categoryFilter(categoryId);
+}
+
+/** Un mes abre con las flechas de mes; una semana o un año, como rango con su título. */
+export function viewForPeriod(
+  granularity: Granularity,
+  start: LocalDate,
+  categoryId: string | null | undefined,
+  timeZone: string,
+): MovementsView {
+  const base = defaultMovementsView(start);
+  const filter = optionalCategoryFilter(categoryId);
+  if (granularity === 'month') return { ...base, scope: { kind: 'month', start: monthStart(start) }, categoryId: filter };
+  const period: RangePeriod = { kind: 'range', ...bucketRange(granularity, start, timeZone), label: periodTitle(granularity, start) };
+  return { ...base, scope: { kind: 'range', period }, categoryId: filter };
+}
+
+export function viewForAllTime(categoryId: string | null | undefined): MovementsView {
+  return { scope: { kind: 'all' }, categoryId: optionalCategoryFilter(categoryId), bankCode: null, review: false };
 }
 
 /** El mes actual solo no cuenta como filtro. */

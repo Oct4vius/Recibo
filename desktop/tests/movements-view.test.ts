@@ -7,7 +7,9 @@ import {
   hasFilters,
   monthPeriod,
   toFilters,
+  viewForAllTime,
   viewForCategory,
+  viewForPeriod,
 } from '@desktop/movements/movements-view';
 
 const tz = 'America/Santo_Domingo';
@@ -49,5 +51,17 @@ describe('movements view', () => {
     expect(hasFilters({ ...base, scope: { kind: 'month', start: sep } }, oct)).toBe(true);
     expect(hasFilters({ ...base, bankCode: 'bhd' }, oct)).toBe(true);
     expect(hasFilters({ ...base, scope: { kind: 'all' } }, oct)).toBe(true);
+  });
+  it('a month opens with the month arrows', () =>
+    expect(viewForPeriod('month', sep, undefined, tz).scope).toEqual({ kind: 'month', start: sep }));
+  it('a week opens as a range with its title', () => {
+    const { scope } = viewForPeriod('week', localDate(2026, 10, 5), undefined, tz);
+    expect(scope).toMatchObject({ kind: 'range', period: { label: 'Semana del 5 al 11 de octubre' } });
+  });
+  it('undefined = no filter; null = uncategorized', () => {
+    expect(viewForAllTime(undefined).categoryId).toBeNull();
+    expect(viewForAllTime(null).categoryId).toBe(UNCATEGORIZED);
+    expect(viewForPeriod('year', sep, 'abc', tz).categoryId).toBe('abc');
+    expect(viewForPeriod('year', sep, null, tz).categoryId).toBe(UNCATEGORIZED);
   });
 });
