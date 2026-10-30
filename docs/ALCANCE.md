@@ -266,7 +266,7 @@ en `CLAUDE.md`.
 - IMAP o cualquier proveedor distinto de Gmail/Outlook.
 - Parseo con LLM.
 - Ingresos, salarios, inversiones.
-- Versión web.
+- Versión web (navegador). La app de escritorio para Windows es otra cosa: ver 8.2.
 - Integración directa con APIs bancarias.
 - Multi-idioma (UI solo en español).
 
@@ -280,6 +280,14 @@ en `CLAUDE.md`.
 - Plan B para Gmail si el OAuth sin verificar se vuelve un problema: Google Apps
   Script en la cuenta del usuario que reenvía los correos bancarios a una Edge
   Function. No cambia parsers ni base de datos.
+
+## 8.2 App de escritorio (Windows)
+
+Entra al alcance el 2026-10-30, para una sola usuaria. Es un cliente Tauri en
+`desktop/` que reutiliza la lógica pura de `src/` y la misma base de Supabase
+(anon key, RLS); no agrega backend ni servicios. La sesión se cifra con una clave
+guardada en el Administrador de credenciales de Windows. Sigue sin haber registro
+público ni versión web.
 
 ## 9. Criterio de éxito v1
 

@@ -1,0 +1,23 @@
+/* Única fuente de colores y movimiento. Ningún otro archivo escribe valores de color. */
+:root {
+  --bg: #faf8f4;
+  --surface: #ffffff;
+  --border: #e8e3da;
+  --border-strong: #dcd6cc;
+  --text: #1f1d1a;
+  --text-muted: #5f5a52;
+  --nav-text: #3b3832;
+  --accent: #2f7a50;
+  --accent-dark: #1d5a3a;
+  --accent-soft: #e7f0ea;
+  --on-accent: #ffffff;
+  --track: #ebe6dd;
+  --danger: #b3261e;
+  --shadow: rgba(0, 0, 0, 0.18);
+
+  --font: 'Segoe UI Variable', 'Segoe UI', system-ui, sans-serif;
+  --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
+  --dur-press: 120ms;
+  --dur-panel-in: 200ms;
+  --dur-panel-out: 150ms;
+}
