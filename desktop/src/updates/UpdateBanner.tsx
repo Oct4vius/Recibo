@@ -37,6 +37,7 @@ export function UpdateBanner() {
     setPhase('installing');
     // El instalador reenvía los argumentos (p. ej. --hidden): la marca hace que la ventana vuelva a verse.
     invoke('mark_update_restart')
+      .catch(() => undefined)
       .then(() => update.downloadAndInstall())
       .then(() => relaunch())
       .catch(() => {

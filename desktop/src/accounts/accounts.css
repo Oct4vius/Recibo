@@ -12,3 +12,4 @@
 .connect-buttons { display: flex; flex-wrap: wrap; gap: 12px; }
 .connect-waiting { display: flex; align-items: center; flex-wrap: wrap; gap: 12px; margin-top: 16px; }
 .accounts-screen > .form-error { margin-top: 12px; }
+.connect-linking { margin: 12px 0 0; font-size: 17px; }

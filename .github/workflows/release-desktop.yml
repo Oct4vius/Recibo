@@ -21,8 +21,8 @@ jobs:
       - name: Check tag matches version
         shell: bash
         run: |
-          conf=$(grep -m1 '"version"' desktop/src-tauri/tauri.conf.json | sed -E 's/.*"version": *"([^"]+)".*//')
-          cargo=$(grep -m1 '^version' desktop/src-tauri/Cargo.toml | sed -E 's/version *= *"([^"]+)".*//')
+          conf=$(node -p "require('./desktop/src-tauri/tauri.conf.json').version")
+          cargo=$(awk -F'"' '/^version/ {print $2; exit}' desktop/src-tauri/Cargo.toml)
           echo "tag=$GITHUB_REF_NAME conf=$conf cargo=$cargo"
           if [ "$GITHUB_REF_NAME" != "desktop-v$conf" ] || [ "$GITHUB_REF_NAME" != "desktop-v$cargo" ]; then
             echo "La etiqueta debe ser desktop-v<version> y coincidir con tauri.conf.json y Cargo.toml" >&2
@@ -34,6 +34,8 @@ jobs:
           bun-version: 1.3.14
 
       - uses: dtolnay/rust-toolchain@b725eda525362e7cf34af9a7243cac1e3f01a7ec # stable
+        with:
+          toolchain: stable
 
       # La raíz aporta las dependencias del código compartido (../src).
       - name: Install dependencies (root)
