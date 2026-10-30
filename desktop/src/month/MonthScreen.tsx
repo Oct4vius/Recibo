@@ -1,4 +1,4 @@
-import { useState } from 'react';
+﻿import { useState } from 'react';
 import { ErrorLine } from '../ui/ErrorLine';
 import { BudgetBar } from './BudgetBar';
 import { CategoryList } from './CategoryList';
@@ -16,7 +16,9 @@ export function MonthScreen(_props: MonthScreenProps) {
   const month = useMonthData();
   // La Task 6 muestra el panel de "Agregar gasto" con este estado.
   const [, setAdding] = useState(false);
-  const summary = month.summary.data;
+  // Con keepPreviousData, los datos del mes anterior no se muestran bajo el título nuevo: mientras son de relleno, bloques.
+  const summary = month.summary.isPlaceholderData ? undefined : month.summary.data;
+  const breakdown = month.categories.isPlaceholderData ? undefined : month.categories.data;
 
   return (
     <div className="month-screen">
@@ -33,10 +35,10 @@ export function MonthScreen(_props: MonthScreenProps) {
         <ErrorLine onRetry={month.retry} />
       ) : (
         <>
-          {month.isCurrent && summary && !month.summary.isPlaceholderData && month.budgetsReady && (
+          {month.isCurrent && summary && month.budgetsReady && (
             <BudgetBar spentDop={summary.totalDop} limitDop={month.monthlyLimit} />
           )}
-          <CategoryList data={month.categories.data} isCurrent={month.isCurrent} start={month.start} />
+          <CategoryList data={breakdown} isCurrent={month.isCurrent} start={month.start} />
         </>
       )}
     </div>
