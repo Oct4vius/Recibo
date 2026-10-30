@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { BudgetScreen } from '../budget/BudgetScreen';
 import { HistoryScreen } from '../history/HistoryScreen';
 import { viewForCategory } from '../movements/movements-view';
 import { MovementsScreen } from '../movements/MovementsScreen';
@@ -25,6 +26,8 @@ export function Shell() {
           <MovementsScreen key={route.visit} initial={route.movements} />
         ) : route.section === 'history' ? (
           <HistoryScreen onOpenMovements={(view) => setRoute((r) => openMovements(r, view))} />
+        ) : route.section === 'budget' ? (
+          <BudgetScreen />
         ) : (
           <>
             <h1>{label}</h1>

@@ -5,8 +5,8 @@ import { budgetLine } from './month-text';
 interface BudgetBarProps {
   spentDop: number;
   limitDop: number | null;
-  /** Lleva a Presupuesto desde el aviso de "sin presupuesto". */
-  onOpenBudget: () => void;
+  /** Lleva a Presupuesto desde el aviso de "sin presupuesto"; sin él (ya en Presupuesto) no hay botón. */
+  onOpenBudget?: () => void;
   /** Cada barra se llena una vez por clave; Presupuesto pasa una por período. */
   fillKey?: string;
 }
@@ -29,7 +29,7 @@ export function BudgetBar({ spentDop, limitDop, onOpenBudget, fillKey = 'budget-
         </div>
       )}
       <p className="budget-text">{text}</p>
-      {!hasLimit && (
+      {!hasLimit && onOpenBudget && (
         <Button variant="secondary" className="budget-set" onClick={onOpenBudget}>
           Poner un presupuesto
         </Button>

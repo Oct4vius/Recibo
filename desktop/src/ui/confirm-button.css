@@ -1,0 +1,4 @@
+.confirm { display: flex; flex-direction: column; gap: 8px; }
+.confirm-question { font-weight: 600; }
+.confirm-detail { color: var(--text-muted); }
+.confirm-actions { display: flex; gap: 12px; }
