@@ -72,7 +72,7 @@ export function MovementsFilters({ view, current, count, onChange }: MovementsFi
             ))}
           </select>
         </label>
-        <Button variant="secondary" aria-pressed={view.review} className={view.review ? 'toggle-on' : undefined} onClick={() => set({ review: !view.review })}>
+        <Button variant="secondary" aria-pressed={view.review} onClick={() => set({ review: !view.review })}>
           Solo por revisar
         </Button>
         {hasFilters(view, current) && (

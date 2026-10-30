@@ -48,6 +48,10 @@ button:disabled { cursor: default; opacity: 0.7; }
 @media (hover: hover) and (pointer: fine) {
   .btn-secondary:hover:not(:disabled), .btn-icon:hover:not(:disabled) { background: var(--bg); }
 }
+/* Botón de alternar encendido; va después del hover para ganarle. */
+.btn-secondary[aria-pressed='true'], .btn-secondary[aria-pressed='true']:hover:not(:disabled) {
+  background: var(--accent-soft); color: var(--accent-dark); border-color: var(--accent);
+}
 
 @media (prefers-reduced-motion: reduce) {
   button:active:not(:disabled) { transform: none; }
