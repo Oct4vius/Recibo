@@ -8,7 +8,7 @@ import './budget.css';
 export function BudgetScreen() {
   const { notice, show } = useNotice();
   return (
-    <div className="budget-screen">
+    <div className="ticket budget-screen">
       <h1>Presupuesto</h1>
       {BUDGET_ORDER.map((period) => (
         <BudgetBlock key={period} period={period} onNotice={show} />

@@ -12,7 +12,7 @@ export function HistoryScreen({ onOpenMovements }: { onOpenMovements: (view: Mov
   const [view, setView] = useState<HistoryView>('month');
 
   return (
-    <div className="history-screen">
+    <div className="ticket history-screen">
       <h1>Meses anteriores</h1>
       <div className="history-views">
         {DESKTOP_VIEWS.map((id) => (

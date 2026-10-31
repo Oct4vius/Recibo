@@ -9,6 +9,8 @@ import { Button } from '../ui/Button';
 import { ErrorLine } from '../ui/ErrorLine';
 import { Notice } from '../ui/Notice';
 import { Placeholder } from '../ui/Placeholder';
+import { Stamp } from '../ui/Stamp';
+import { showsStamp } from '../ui/stamp-rule';
 import { useNotice } from '../ui/use-notice';
 import { MovementPanel } from './MovementPanel';
 import { MovementRow } from './MovementRow';
@@ -30,7 +32,7 @@ export function MovementsScreen({ initial }: MovementsScreenProps) {
   // El movimiento se conserva al cerrar el panel para que no se vacíe mientras sale.
   const [selected, setSelected] = useState<TransactionListItem | null>(null);
   const [selectedOpen, setSelectedOpen] = useState(false);
-  const { notice, show } = useNotice();
+  const { notice, noticeId, show } = useNotice();
   const list = useTransactionList(toFilters(view, timeZone));
 
   const items = list.data?.pages.flatMap((page) => page.items) ?? [];
@@ -38,7 +40,7 @@ export function MovementsScreen({ initial }: MovementsScreenProps) {
   const loadingFirst = list.isPending;
 
   return (
-    <div className="movements-screen">
+    <div className="ticket movements-screen">
       <header className="movements-header">
         <h1>Movimientos</h1>
         <Button variant="primary" onClick={() => setAdding(true)}>
@@ -107,6 +109,7 @@ export function MovementsScreen({ initial }: MovementsScreenProps) {
           show(message);
         }}
       />
+      {showsStamp(notice) && <Stamp key={noticeId} />}
       <Notice message={notice} />
     </div>
   );

@@ -65,7 +65,7 @@ debe tener **las demás funciones de Recibo** (pedido del usuario).
   - **Presupuesto**
   - **Mis correos**
   - **Ajustes**
-- La sección activa se marca con un fondo suave del color de acento.
+- La sección activa se marca con el color del papel, como una pestaña del ticket.
 - No hay menús desplegables ni submenús en la columna.
 - Maqueta de referencia (no versionada): `.superpowers/brainstorm/*/content/desktop-layout.html`, opción A.
 
@@ -153,6 +153,8 @@ Propuesta de Claude, mostrada en la maqueta A:
 
 ## 4. Estilo y movimiento (propuesta de Claude con los criterios de Emil Kowalski)
 
+- **Estilo "recibo"** (maqueta A, elegida por el usuario para que se vea más divertida): cada pantalla es un ticket de papel
+  con el borde de abajo rasgado, letra de ticket y líneas punteadas. Los paneles laterales conservan la letra normal.
 - **Colores:**
   - fondo claro y cálido, texto casi negro, contraste AA como mínimo;
   - **un solo color de acento**, un verde tranquilo, para la sección activa, los botones principales y las barras;
@@ -167,7 +169,8 @@ Propuesta de Claude, mostrada en la maqueta A:
   - los paneles laterales entran en unos 200 ms con un ease-out fuerte (`cubic-bezier(0.23, 1, 0.32, 1)`) y salen más
     rápido;
   - las barras se llenan una vez al cargar, sin rebote;
-  - nada entra escalonado ni se mueve por adorno;
+  - nada entra escalonado ni se mueve por adorno, salvo el sello "ANOTADO" al guardar un gasto: es poco frecuente y
+    confirma la acción;
   - con "reducir animaciones" de Windows (`prefers-reduced-motion`), solo cambios de opacidad.
 - **Hover** solo en computadoras con mouse (`@media (hover: hover)`): un cambio de fondo suave.
 - **Carga:** placeholders con la forma del contenido, nunca una pantalla en blanco. Errores en una frase clara con

@@ -12,7 +12,7 @@ import './settings.css';
 export function SettingsScreen() {
   const { notice, show } = useNotice();
   return (
-    <div className="settings-screen">
+    <div className="ticket settings-screen">
       <h1>Ajustes</h1>
       <CategoriesSection onNotice={show} />
       <RulesSection onNotice={show} />
