@@ -1,0 +1,9 @@
+.budget-screen { max-width: 640px; }
+.budget-block { margin: 28px 0 36px; }
+.budget-block h2 { font-size: 22px; margin-bottom: 4px; }
+.budget-placeholders { display: flex; flex-direction: column; gap: 10px; margin-top: 16px; }
+.budget-form { display: flex; flex-direction: column; gap: 14px; max-width: 340px; }
+.budget-amount { font-size: 28px; font-weight: 700; font-variant-numeric: tabular-nums; min-height: 56px; }
+.budget-actions { display: flex; flex-wrap: wrap; align-items: flex-start; gap: 12px; }
+.threshold { display: flex; align-items: center; gap: 10px; min-height: 44px; font-weight: 600; }
+.threshold input { width: 22px; height: 22px; flex: none; accent-color: var(--accent); }

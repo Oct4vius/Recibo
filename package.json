@@ -23,7 +23,11 @@
     "dev:link-gmail": "bun scripts/dev-link-gmail.ts",
     "dev:sync": "bun scripts/dev-sync.ts",
     "dev:download-eml": "bun scripts/dev-download-eml.ts",
-    "eml:anonymize": "bun scripts/anonymize-eml.ts"
+    "eml:anonymize": "bun scripts/anonymize-eml.ts",
+    "desktop:dev": "bun run --cwd desktop tauri dev",
+    "desktop:build-debug": "bun run --cwd desktop tauri build --debug --config src-tauri/tauri.debug.conf.json",
+    "desktop:rust-test": "cargo test --manifest-path desktop/src-tauri/Cargo.toml",
+    "desktop:check": "bun run --cwd desktop typecheck && bun run --cwd desktop lint && bun run --cwd desktop test"
   },
   "devDependencies": {
     "@types/aes-js": "^3.1.4",

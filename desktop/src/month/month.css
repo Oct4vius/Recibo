@@ -1,0 +1,47 @@
+.month-screen { max-width: 760px; }
+.month-header { display: flex; justify-content: space-between; align-items: flex-start; gap: 24px; }
+.month-nav { display: flex; align-items: center; gap: 10px; }
+.month-nav-title { font-size: 20px; }
+.month-total, .month-total-slot { margin: 6px 0 2px; }
+.month-total {
+  font-size: 46px; font-weight: 700; line-height: 1.15;
+  font-variant-numeric: tabular-nums; font-style: normal;
+}
+.month-count { font-size: 17px; color: var(--text-muted); }
+
+.budget { margin: 16px 0 26px; }
+.budget-track { height: 10px; border-radius: 2px; background: var(--track); overflow: hidden; }
+.budget-fill {
+  height: 100%; background: var(--accent); transform-origin: left;
+  transition: transform var(--dur-panel-in) var(--ease-out);
+}
+.budget-fill-over { background: var(--danger); }
+.budget-text { font-size: 17px; color: var(--nav-text); margin-top: 8px; text-align: center; }
+.budget-text::before { content: '*** ' / ''; }
+.budget-text::after { content: ' ***' / ''; }
+.budget-set { margin-top: 10px; }
+
+.section-title { font-size: 18px; font-weight: 600; margin: 26px 0 10px; }
+.budget + section .section-title { margin-top: 0; }
+.cat-list { list-style: none; margin: 0; padding: 0; }
+.cat {
+  width: 100%; display: grid; grid-template-columns: auto minmax(24px, 1fr) 5ch auto; gap: 4px 8px; align-items: baseline;
+  padding: 8px; border: 0; border-radius: 4px;
+  background: transparent; text-align: left;
+}
+@media (hover: hover) and (pointer: fine) {
+  .cat:hover { background: var(--bg); }
+}
+.cat-amount { grid-row: 1; grid-column: 4; text-align: right; font-weight: 600; font-variant-numeric: tabular-nums; font-style: normal; }
+.cat-dots { align-self: end; margin-bottom: 5px; border-bottom: 1.5px dotted var(--dots); }
+.cat-track { grid-row: 2; grid-column: 1 / -1; display: block; height: 6px; border-radius: 2px; background: var(--track); overflow: hidden; }
+.cat-fill { display: block; height: 100%; background: var(--accent); opacity: 0.7; transform-origin: left; }
+.cat-pct { grid-row: 1; grid-column: 3; text-align: right; font-size: 15px; color: var(--text-muted); }
+.cat-none .cat-name { color: var(--text-muted); }
+.cat-none .cat-fill { background: var(--text-muted); opacity: 0.45; }
+.cat-placeholders { display: flex; flex-direction: column; gap: 8px; }
+.empty { color: var(--text-muted); padding: 12px 0; }
+
+.placeholder { background: var(--track); border-radius: 4px; max-width: 100%; }
+.error-line { display: flex; align-items: center; gap: 16px; margin: 24px 0; }
+.error-line p { color: var(--text); font-weight: 600; }

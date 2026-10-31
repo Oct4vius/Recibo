@@ -1,0 +1,25 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "lib": ["ES2022", "DOM", "DOM.Iterable"],
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "jsx": "react-jsx",
+    "strict": true,
+    "noEmit": true,
+    "allowImportingTsExtensions": true,
+    "resolveJsonModule": true,
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "isolatedModules": true,
+    "types": ["vite/client"],
+    "paths": {
+      "@tanstack/react-query": ["./node_modules/@tanstack/react-query"],
+      "@/lib/supabase": ["./src/lib/supabase.ts"],
+      "@/lib/env": ["./src/lib/env.ts"],
+      "@/*": ["../src/*"],
+      "@desktop/*": ["./src/*"]
+    }
+  },
+  "include": ["src", "tests", "aliases.ts", "vite.config.ts", "vitest.config.ts"]
+}

@@ -1,0 +1,115 @@
+*, *::before, *::after { box-sizing: border-box; }
+
+html, body, #root { height: 100%; margin: 0; }
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font);
+  font-size: 17px;
+  line-height: 1.4;
+}
+
+h1, h2, p { margin: 0; }
+
+button, input { font: inherit; color: inherit; }
+
+button {
+  min-height: 44px;
+  cursor: pointer;
+  transition: transform var(--dur-press) var(--ease-out);
+}
+button:active:not(:disabled) { transform: scale(0.97); }
+button:disabled { cursor: default; opacity: 0.7; }
+
+:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
+
+.btn-primary {
+  background: var(--accent);
+  color: var(--on-accent);
+  border: 0;
+  border-radius: 6px;
+  padding: 10px 20px;
+  font-weight: 600;
+}
+@media (hover: hover) and (pointer: fine) {
+  .btn-primary:hover:not(:disabled) { background: var(--accent-dark); }
+}
+
+.btn-secondary {
+  background: var(--surface); color: var(--text); border: 1px solid var(--dots);
+  border-radius: 6px; padding: 10px 20px; font-weight: 600;
+}
+.btn-icon {
+  width: 44px; padding: 0; background: var(--surface); color: var(--nav-text);
+  border: 1px solid var(--dots); border-radius: 6px; font-size: 24px; line-height: 1;
+}
+.btn-icon:disabled { opacity: 0.35; }
+@media (hover: hover) and (pointer: fine) {
+  .btn-secondary:hover:not(:disabled), .btn-icon:hover:not(:disabled) { background: var(--bg); }
+}
+/* Botón de alternar encendido; va después del hover para ganarle. */
+.btn-secondary[aria-pressed='true'], .btn-secondary[aria-pressed='true']:hover:not(:disabled) {
+  background: var(--accent-soft); color: var(--accent-dark); border-color: var(--accent);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  button:active:not(:disabled) { transform: none; }
+  .budget-fill { transition: none; }
+}
+
+/* El papel: cada pantalla es un ticket con el borde de abajo rasgado. */
+.ticket { position: relative; background: var(--surface); padding: 26px 30px 34px; margin-bottom: 14px; font-family: var(--font-receipt); }
+.ticket::after {
+  content: ''; position: absolute; left: 0; right: 0; top: 100%; height: 8px;
+  background: conic-gradient(from -45deg at 50% 100%, var(--surface) 90deg, transparent 0) 0 0 / 16px 8px repeat-x;
+}
+.ticket h1, .ticket h2 { text-transform: uppercase; letter-spacing: 0.02em; }
+
+/* Carga inicial: fondo cálido con el logotipo centrado. */
+.splash { height: 100%; display: flex; align-items: center; justify-content: center; }
+.splash img { width: 96px; height: 96px; }
+.splash:not(.offline) { flex-direction: column; gap: 16px; }
+.splash p { font-size: 18px; color: var(--text-muted); }
+.splash.offline { flex-direction: column; gap: 12px; padding: 24px; text-align: center; }
+.splash.offline h1 { font-size: 28px; }
+.splash.offline p { font-size: 18px; }
+
+/* Inicio de sesión */
+.login { height: 100%; display: flex; align-items: center; justify-content: center; padding: 24px; }
+.login-card {
+  width: 100%; max-width: 380px; padding: 32px; display: flex; flex-direction: column; gap: 18px;
+}
+.login-card h1 { font-size: 32px; text-align: center; }
+.field { display: flex; flex-direction: column; gap: 6px; font-weight: 600; }
+.field input {
+  min-height: 44px; padding: 8px 12px; border: 1px solid var(--dots); border-radius: 6px;
+  background: var(--surface); font-weight: 400;
+}
+.form-error { color: var(--text); font-size: 17px; font-weight: 600; }
+
+/* Estructura: columna fija + contenido */
+.shell { height: 100%; display: flex; }
+.sidebar { width: 210px; flex: none; background: var(--sidebar); padding: 18px 12px; }
+.sidebar ul { list-style: none; margin: 0; padding: 0; }
+.nav-item {
+  width: 100%; display: flex; align-items: center; gap: 12px; padding: 12px 14px; margin-bottom: 4px;
+  border: 0; border-radius: 6px; background: transparent; color: var(--nav-text);
+  text-align: left; font-size: 17px;
+}
+.nav-item[aria-current='page'] { background: var(--surface); color: var(--text); font-weight: 600; }
+.nav-item svg { width: 22px; height: 22px; flex: none; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+@media (hover: hover) and (pointer: fine) {
+  .nav-item:hover:not([aria-current='page']) { background: var(--bg); }
+}
+.app-frame { height: 100%; display: flex; flex-direction: column; }
+.app-body { flex: 1; min-height: 0; }
+.content { flex: 1; min-height: 0; min-width: 0; padding: 28px 34px; overflow-y: auto; }
+.content h1 { font-size: 24px; }
+
+/* Aviso breve arriba */
+.notice-slot { position: fixed; top: 16px; left: 0; right: 0; display: flex; justify-content: center; pointer-events: none; z-index: 20; }
+.notice {
+  background: var(--accent-dark); color: var(--on-accent); border-radius: 6px; padding: 10px 20px;
+  font-weight: 600; box-shadow: 0 6px 20px var(--shadow);
+}

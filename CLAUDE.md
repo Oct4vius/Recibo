@@ -46,6 +46,10 @@ bun run start                      # Expo; requiere .env.local con EXPO_PUBLIC_*
 bunx eas-cli build --profile development --platform android   # APK de desarrollo; --profile preview = APK de prueba
 bunx eas-cli build --profile production --platform android    # APK final (1.0.0)
 bun run verify:bundle              # empaqueta Android sin dispositivo (verificación de Metro/Babel/NativeWind)
+bun run desktop:dev                # app de escritorio (Tauri); requiere Rust + Build Tools de Visual Studio y bun install en desktop/
+bun run desktop:check              # typecheck + lint + Vitest de desktop/ (no entra en `bun run check`)
+bun run desktop:rust-test          # cargo test de desktop/src-tauri (Rust puro)
+bun run desktop:build-debug        # instalador de prueba sin firma de actualizaciones (tauri.debug.conf.json); la release real es la Action `release-desktop` (docs/escritorio-publicar.md)
 ```
 Pins por compatibilidad (no "actualizar" a ciegas): TypeScript `~6.0` (typescript-eslint, que usa
 `eslint-config-expo`, aún no soporta TS 7) y ESLint `^9` (`eslint-plugin-react` falla con ESLint 10).
@@ -93,6 +97,12 @@ supabase/
     sync-mail/             # invocada por pg_cron; lee correos, parsea, ingesta, registra
     fetch-usd-rates/       # invocada por pg_cron; lee la tasa de venta del BCRD y la guarda en usd_rates
                            #   (cada función: handler.ts testeable con dependencias inyectadas + index.ts delgado)
+desktop/                   # app de Windows (Tauri 2 + Vite + React): reutiliza src/ por el alias `@`; solo reemplaza @/lib/supabase y @/lib/env
+                           #   desktop/src/{session,shell,month,movements,history,budget,settings,expense,ui}: una carpeta por sección
+                           #   (sesión, marco, Este mes, Movimientos, Meses anteriores, Presupuesto, Ajustes, gasto manual, UI genérica).
+                           #   `notifications/hooks.ts` es solo del teléfono; `features/*/hooks.ts` no importan nada nativo (escritorio los usa)
+                           #   desktop/src-tauri: Rust (ventana, bandeja, avisos, actualizaciones, arranque opcional con Windows)
+                           #   Las Edge Functions se llaman por `appFetch` (plugin http de Tauri): no tienen CORS, `fetch` del navegador falla
 scripts/                   # herramientas de desarrollo (Bun); scripts/lib/{loopback,google-login,dev-session,anonymize,raw-mail}.ts
 tests/unit/                # Vitest para src/ (espeja la ruta)
 fixtures-raw/<bank>/       # .eml reales anonimizados, SOLO locales (gitignored); fuente de las fixtures
@@ -580,6 +590,7 @@ SQL nace con tests. Las pantallas no se testean en v1.
 
 ### Definition of Done
 - El cambio trae **sus** tests en el mismo PR — nunca "los agrego después".
+- Si el cambio toca `src/`, también `bun run desktop:check` (la app de escritorio reutiliza esos módulos).
 - Respeta SOLID y DRY (sección "Principios de diseño"): sin ramas por banco en
   el orquestador, sin regex ni fórmulas de dinero duplicadas, dependencias
   inyectadas en la lógica de negocio.

@@ -50,3 +50,9 @@ docs/superpowers/plans/
 *.keystore
 credentials.json
 google-services.json
+
+# app de escritorio (Tauri)
+desktop/node_modules/
+desktop/dist/
+desktop/src-tauri/target/
+desktop/src-tauri/gen/

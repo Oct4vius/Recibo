@@ -1,0 +1,13 @@
+.expense-form { display: flex; flex-direction: column; gap: 18px; }
+.expense-form select, .expense-form .field input[type='date'] {
+  min-height: 44px; padding: 8px 12px; border: 1px solid var(--dots); border-radius: 6px;
+  background: var(--surface); font: inherit; font-weight: 400;
+}
+.expense-amount { font-family: var(--font-receipt); font-size: 32px; font-weight: 700; font-variant-numeric: tabular-nums; min-height: 60px; }
+.expense-currency { display: flex; gap: 8px; }
+.expense-currency-option {
+  flex: 1; border: 1px solid var(--dots); border-radius: 6px; background: var(--surface);
+  color: var(--text); font-weight: 600;
+}
+.expense-currency-option[aria-pressed='true'] { background: var(--accent-soft); border-color: var(--accent); color: var(--accent-dark); }
+.expense-actions { display: flex; gap: 12px; margin-top: 6px; }

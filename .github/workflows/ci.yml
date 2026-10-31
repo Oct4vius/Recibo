@@ -66,3 +66,38 @@ jobs:
 
       - name: Migrations + pgTAP
         run: bun run check:db
+
+  desktop:
+    name: desktop
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.3.14
+
+      # La raíz aporta las dependencias del código compartido (../src).
+      - name: Install dependencies (root)
+        run: bun install --frozen-lockfile
+
+      - name: Install dependencies (desktop)
+        run: bun install --frozen-lockfile
+        working-directory: desktop
+
+      - name: Typecheck
+        run: bun run typecheck
+        working-directory: desktop
+
+      - name: Lint
+        run: bun run lint
+        working-directory: desktop
+
+      - name: Unit tests (Vitest)
+        run: bun run test
+        working-directory: desktop
+
+      - name: Frontend build (Vite, sin Rust)
+        run: bun run build
+        working-directory: desktop

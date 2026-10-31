@@ -1,0 +1,17 @@
+.accounts-screen { max-width: 640px; }
+.accounts-list { list-style: none; margin: 16px 0 24px; padding: 0; }
+.account-row {
+  display: flex; flex-wrap: wrap; align-items: flex-start; justify-content: space-between; gap: 16px;
+  padding: 14px 8px; border-bottom: 1.5px dotted var(--dots);
+}
+.account-info { min-width: 0; flex: 1 1 240px; }
+/* La pregunta de confirmación es larga: va debajo del correo, a todo el ancho, sin aplastarlo. */
+.account-row > .confirm { flex: 1 1 100%; }
+.account-email { font-weight: 600; overflow-wrap: anywhere; }
+.account-status, .account-help { color: var(--text-muted); font-size: 15px; }
+.accounts-empty { color: var(--text-muted); margin: 16px 0 24px; }
+.accounts-placeholders { display: flex; flex-direction: column; gap: 8px; margin: 16px 0 24px; }
+.connect-buttons { display: flex; flex-wrap: wrap; gap: 12px; }
+.connect-waiting { display: flex; align-items: center; flex-wrap: wrap; gap: 12px; margin-top: 16px; }
+.accounts-screen > .form-error { margin-top: 12px; }
+.connect-linking { margin: 12px 0 0; font-size: 17px; }
