@@ -56,7 +56,7 @@ export function AccountsScreen() {
   const rows = accounts.data ? visibleAccounts(accounts.data) : [];
 
   return (
-    <div className="accounts-screen">
+    <div className="ticket accounts-screen">
       <h1>Mis correos</h1>
       {accounts.isError && !accounts.data ? (
         <ErrorLine onRetry={() => void accounts.refetch()} retrying={accounts.isFetching} />

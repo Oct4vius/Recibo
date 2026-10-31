@@ -24,7 +24,7 @@ export function LoginScreen({ expired = false }: { expired?: boolean }) {
 
   return (
     <div className="login">
-      <form className="login-card" onSubmit={submit}>
+      <form className="ticket login-card" onSubmit={submit}>
         <h1>Recibo</h1>
         {expired ? <p>Vuelve a escribir tu contraseña</p> : null}
         <label className="field">

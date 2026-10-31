@@ -3,6 +3,8 @@ import type { LocalDate } from '@/lib/dates';
 import { AddExpensePanel } from '../expense/AddExpensePanel';
 import { ErrorLine } from '../ui/ErrorLine';
 import { Notice } from '../ui/Notice';
+import { Stamp } from '../ui/Stamp';
+import { showsStamp } from '../ui/stamp-rule';
 import { useNotice } from '../ui/use-notice';
 import { BudgetBar } from './BudgetBar';
 import { CategoryList } from './CategoryList';
@@ -20,13 +22,13 @@ interface MonthScreenProps {
 export function MonthScreen({ onOpenCategory, onOpenBudget }: MonthScreenProps) {
   const month = useMonthData();
   const [adding, setAdding] = useState(false);
-  const { notice, show } = useNotice();
+  const { notice, noticeId, show } = useNotice();
   // Con keepPreviousData, los datos del mes anterior no se muestran bajo el título nuevo: mientras son de relleno, bloques.
   const summary = month.summary.isPlaceholderData ? undefined : month.summary.data;
   const breakdown = month.categories.isPlaceholderData ? undefined : month.categories.data;
 
   return (
-    <div className="month-screen">
+    <div className="ticket month-screen">
       <MonthHeader
         title={monthTitle(month.start)}
         totalDop={summary?.totalDop ?? null}
@@ -59,6 +61,7 @@ export function MonthScreen({ onOpenCategory, onOpenBudget }: MonthScreenProps) 
           show('Gasto guardado');
         }}
       />
+      {showsStamp(notice) && <Stamp key={noticeId} />}
       <Notice message={notice} />
     </div>
   );

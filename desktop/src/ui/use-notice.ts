@@ -11,5 +11,5 @@ export function useNotice() {
     return () => clearTimeout(timer);
   }, [current]);
   const show = useCallback((message: string) => setCurrent((previous) => ({ message, count: (previous?.count ?? 0) + 1 })), []);
-  return { notice: current?.message ?? null, show };
+  return { notice: current?.message ?? null, noticeId: current?.count ?? 0, show };
 }

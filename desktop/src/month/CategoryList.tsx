@@ -35,6 +35,7 @@ export function CategoryList({ data, emptyText, onOpen }: CategoryListProps) {
                 onClick={() => onOpen?.(item.categoryId)}
               >
                 <span className="cat-name">{item.name}</span>
+                <span className="cat-dots" aria-hidden="true" />
                 <span className="cat-amount">{formatMoney(item.totalDop, 'DOP')}</span>
                 <span className="cat-track">
                   <span className="cat-fill" style={{ transform: `scaleX(${shareOf(item.totalDop, data.total)})` }} />
