@@ -163,6 +163,12 @@ isOneToOne: false
       foreignKeyName: "transactions_reversed_by_fkey"
       columns: ["reversed_by"]
 isOneToOne: false
+      referencedRelation: "spending_transactions"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "transactions_reversed_by_fkey"
+      columns: ["reversed_by"]
+isOneToOne: false
       referencedRelation: "transactions"
       referencedColumns: ["id"]
     },{
@@ -212,7 +218,7 @@ isOneToOne: false
           Views: {
             "spending_transactions": {
                   Row: {
-                    "amount": number | null,"amount_dop": number | null,"category_id": string | null,"currency": Database["public"]['Enums']["currency_code"] | null,"occurred_at": string | null,"user_id": string | null
+                    "amount": number,"amount_dop": number | null,"category_id": string | null,"currency": Database["public"]['Enums']["currency_code"],"id": string,"merchant": string | null,"occurred_at": string,"user_id": string
                   }
                   ComputedFields: never
                   Relationships: [
@@ -226,7 +232,7 @@ isOneToOne: false
                   ]
                 },"transactions_with_rate": {
                   Row: {
-                    "amount": number | null,"amount_dop": number | null,"bank_code": Database["public"]['Enums']["bank_code"] | null,"card_last4": string | null,"category_id": string | null,"counterparty_last4": string | null,"created_at": string | null,"currency": Database["public"]['Enums']["currency_code"] | null,"id": string | null,"ignored_reason": Database["public"]['Enums']["ignored_reason"] | null,"is_ignored": boolean | null,"linked_account_id": string | null,"merchant": string | null,"message_id": string | null,"occurred_at": string | null,"raw_snippet": string | null,"reference": string | null,"reversed_by": string | null,"reviewed_at": string | null,"source": Database["public"]['Enums']["tx_source"] | null,"template_id": string | null,"type": Database["public"]['Enums']["tx_type"] | null,"updated_at": string | null,"usd_rate": number | null,"usd_rate_date": string | null,"usd_rate_origin": Database["public"]['Enums']["usd_rate_origin"] | null,"user_id": string | null
+                    "amount": number,"amount_dop": number | null,"bank_code": Database["public"]['Enums']["bank_code"] | null,"card_last4": string | null,"category_id": string | null,"counterparty_last4": string | null,"created_at": string,"currency": Database["public"]['Enums']["currency_code"],"id": string,"ignored_reason": Database["public"]['Enums']["ignored_reason"] | null,"is_ignored": boolean,"linked_account_id": string | null,"merchant": string | null,"message_id": string | null,"occurred_at": string,"raw_snippet": string | null,"reference": string | null,"reversed_by": string | null,"reviewed_at": string | null,"source": Database["public"]['Enums']["tx_source"],"template_id": string | null,"type": Database["public"]['Enums']["tx_type"],"updated_at": string,"usd_rate": number | null,"usd_rate_date": string | null,"usd_rate_origin": Database["public"]['Enums']["usd_rate_origin"] | null,"user_id": string
                   }
                   ComputedFields: never
                   Relationships: [
@@ -241,6 +247,12 @@ isOneToOne: false
       columns: ["linked_account_id"]
 isOneToOne: false
       referencedRelation: "linked_accounts"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "transactions_reversed_by_fkey"
+      columns: ["reversed_by"]
+isOneToOne: false
+      referencedRelation: "spending_transactions"
       referencedColumns: ["id"]
     },{
       foreignKeyName: "transactions_reversed_by_fkey"
@@ -292,6 +304,16 @@ isOneToOne: false
 "get_history":
 { Args: { "p_from": string,"p_granularity": string,"p_to": string }; Returns: {
               "bucket_start": string,"total_dop": number,"tx_count": number
+            }[]
+                           },
+"get_largest_uncategorized":
+{ Args: { "p_from": string,"p_to": string }; Returns: {
+              "amount": number,"amount_dop": number,"currency": Database["public"]['Enums']["currency_code"],"local_date": string,"merchant": string,"tx_id": string
+            }[]
+                           },
+"get_month_report":
+{ Args: { "p_month": string }; Returns: {
+              "amount": number,"amount_dop": number,"category_count": number,"category_id": string,"category_name": string,"category_total": number,"currency": Database["public"]['Enums']["currency_code"],"local_date": string,"merchant": string,"month_count": number,"month_total": number,"tx_id": string
             }[]
                            },
 "get_spending_overall":
