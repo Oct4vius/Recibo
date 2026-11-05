@@ -1,6 +1,7 @@
 import type { QueryClient } from '@tanstack/react-query';
 import { categoryKeys } from '@/features/categories/keys';
 import { historyKeys } from '@/features/history/keys';
+import { reportKeys } from '@/features/reports/keys';
 import { summaryKeys } from '@/features/summary/keys';
 import { transactionKeys } from './keys';
 
@@ -10,6 +11,7 @@ export function invalidateSpending(queryClient: QueryClient) {
     queryClient.invalidateQueries({ queryKey: transactionKeys.all }),
     queryClient.invalidateQueries({ queryKey: summaryKeys.all }),
     queryClient.invalidateQueries({ queryKey: historyKeys.all }),
+    queryClient.invalidateQueries({ queryKey: reportKeys.all }),
     queryClient.invalidateQueries({ queryKey: categoryKeys.recent() }),
   ]);
 }
