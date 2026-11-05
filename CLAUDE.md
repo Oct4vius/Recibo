@@ -63,7 +63,7 @@ app/                       # Expo Router: solo routing + layout, sin lógica
   (auth)/                  # login (registro cerrado: sin register ni reset)
   (tabs)/                  # home, transactions, history, budget, settings
 src/
-  features/<dominio>/      # auth, accounts, transactions, budgets, history, categories, rules, settings, summary, profile
+  features/<dominio>/      # auth, accounts, transactions, budgets, history, categories, rules, settings, summary, profile, reports
     api.ts                 #   queries/mutations (TanStack Query + supabase)
     components/            #   UI del dominio
     hooks.ts
@@ -101,7 +101,7 @@ desktop/                   # app de Windows (Tauri 2 + Vite + React): reutiliza 
                            #   desktop/src/{session,shell,month,movements,history,budget,reports,settings,expense,ui}: una carpeta por sección
                            #   (sesión, marco, Este mes, Movimientos, Meses anteriores, Presupuesto, Reportes (hojas imprimibles y PDF), Ajustes, gasto manual, UI genérica).
                            #   `notifications/hooks.ts` es solo del teléfono; `features/*/hooks.ts` no importan nada nativo (escritorio los usa)
-                           #   desktop/src-tauri: Rust (ventana, bandeja, avisos, actualizaciones, arranque opcional con Windows)
+                           #   desktop/src-tauri: Rust (ventana, bandeja, avisos, actualizaciones, arranque opcional con Windows, PDF de Reportes: `report_pdf.rs` con diálogo "Guardar como" + PrintToPdf de WebView2)
                            #   Las Edge Functions se llaman por `appFetch` (plugin http de Tauri): no tienen CORS, `fetch` del navegador falla
 scripts/                   # herramientas de desarrollo (Bun); scripts/lib/{loopback,google-login,dev-session,anonymize,raw-mail}.ts
 tests/unit/                # Vitest para src/ (espeja la ruta)
