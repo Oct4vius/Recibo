@@ -1,4 +1,5 @@
 mod login;
+mod report_pdf;
 mod shell;
 
 use keyring::{Entry, Error};
@@ -79,6 +80,8 @@ pub fn run() {
         .plugin(tauri_plugin_notification::init())
         .plugin(tauri_plugin_updater::Builder::new().build())
         .plugin(tauri_plugin_process::init())
+        // Solo lo usa Rust (Guardar en PDF): sin permisos `dialog:` para la ventana.
+        .plugin(tauri_plugin_dialog::init())
         .manage(login::LoginState::default())
         .setup(|app| {
             shell::open_month_on_tap(app.handle())?;
@@ -108,7 +111,8 @@ pub fn run() {
             show_window,
             login::login_listen,
             login::login_wait,
-            login::login_cancel
+            login::login_cancel,
+            report_pdf::save_report_pdf
         ])
         .run(tauri::generate_context!())
         .expect("error while running Recibo");
