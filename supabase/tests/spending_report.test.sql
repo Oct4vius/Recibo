@@ -1,5 +1,5 @@
 begin;
-select plan(21);
+select plan(24);
 
 -- Aísla las pruebas de cualquier tasa del BCRD que haya en la base (se revierte con la transacción).
 delete from public.usd_rates;
@@ -32,6 +32,8 @@ insert into public.transactions (user_id, linked_account_id, bank_code, type, am
   ('11111111-1111-1111-1111-111111111111', 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', 'bhd', 'card_reversal', 434.22, 'DOP', null, '2026-10-19T21:31:00-04:00', 'email', '<h>#0', null, true, 'unmatched_reversal'),
   -- septiembre
   ('11111111-1111-1111-1111-111111111111', 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', 'bhd', 'card_purchase', 700.00, 'DOP', 'RESTAURANTE', '2026-09-20T12:00:00-04:00', 'email', '<i>#0', (select id from public.categories where user_id is null and name = 'Comida'), false, null),
+  -- 30 sep local 23:30: en UTC ya es 1 oct, pero pertenece a septiembre
+  ('11111111-1111-1111-1111-111111111111', 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', 'bhd', 'card_purchase', 400.00, 'DOP', 'CIERRE SEPT', '2026-09-30T23:30:00-04:00', 'email', '<k>#0', (select id from public.categories where user_id is null and name = 'Supermercado'), false, null),
   -- sin categoría, el más grande
   ('11111111-1111-1111-1111-111111111111', 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', 'bhd', 'card_purchase', 900.00, 'DOP', 'FERRETERIA', '2026-10-20T12:00:00-04:00', 'email', '<j>#0', null, false, null),
   ('22222222-2222-2222-2222-222222222222', 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb', 'bhd', 'card_purchase', 5000.00, 'DOP', 'COLMADO', '2026-10-08T12:00:00-04:00', 'email', '<z>#0', (select id from public.categories where user_id is null and name = 'Supermercado'), false, null);
@@ -61,6 +63,21 @@ select results_eq(
   $$select distinct month_count from public.get_month_report('2026-10-01')$$,
   $$select sum(tx_count)::integer from public.get_category_spending('2026-10-01', '2026-11-01')$$,
   'month_count on every row equals the number of expenses'
+);
+select results_eq(
+  $$select distinct month_total from public.get_month_report('2026-10-01')$$,
+  $$select total_dop from public.get_spending_summary('month', '2026-10-01')$$,
+  'month_total equals what "Este mes" shows (get_spending_summary)'
+);
+select is(
+  (select count(*)::integer from public.get_month_report('2026-10-01') where merchant = 'CIERRE SEPT'),
+  0,
+  'the 30 sep 23:30 local expense does not appear in october'
+);
+select is(
+  (select local_date from public.get_month_report('2026-09-01') where merchant = 'CIERRE SEPT'),
+  '2026-09-30'::date,
+  'the 30 sep 23:30 local expense appears in september with its local date'
 );
 select is(
   (select local_date from public.get_month_report('2026-10-01') where merchant = 'COLMADO B'),
