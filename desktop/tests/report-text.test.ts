@@ -33,6 +33,7 @@ describe('report titles', () => {
       'De enero a octubre · impreso el 4 de noviembre de 2026',
     );
     expect(yearRangeLine(localDate(2025, 12, 1), today).startsWith('De enero a diciembre · ')).toBe(true);
+    expect(yearRangeLine(localDate(2027, 1, 1), localDate(2027, 1, 10))).toBe('Enero · impreso el 10 de enero de 2027');
   });
 });
 

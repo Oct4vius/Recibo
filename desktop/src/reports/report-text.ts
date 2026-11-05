@@ -35,7 +35,8 @@ export function yearSheetTitle(year: number): string {
 
 /** `De enero a octubre · impreso el 4 de noviembre de 2026`. */
 export function yearRangeLine(lastMonth: LocalDate, today: LocalDate): string {
-  return `De enero a ${monthName(lastMonth.month)} · ${printedOn(today)}`;
+  const span = lastMonth.month === 1 ? 'Enero' : `De enero a ${monthName(lastMonth.month)}`;
+  return `${span} · ${printedOn(today)}`;
 }
 
 /** `Subtotal Supermercado`. */

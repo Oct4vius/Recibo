@@ -46,10 +46,15 @@ export function ReportsScreen() {
   const following = nextYear(year, today.year);
   const canGoNext = kind === 'month' ? nextMonthStart !== null : following !== null;
   const fileName = pdfFileName(kind, kind === 'month' ? start : lastMonth);
-  const ready = active.isSuccess && !active.isFetching;
+  const ready = active.data !== undefined && !saving;
 
-  const goPrevious = () => (kind === 'month' ? setMonthSel(previousMonth(start)) : setYearSel(year - 1));
+  const goPrevious = () => {
+    setSaveFailed(false);
+    if (kind === 'month') setMonthSel(previousMonth(start));
+    else setYearSel(year - 1);
+  };
   const goNext = () => {
+    setSaveFailed(false);
     if (kind === 'month' && nextMonthStart) setMonthSel(nextMonthStart);
     else if (kind === 'year' && following !== null) setYearSel(following);
   };
@@ -71,7 +76,10 @@ export function ReportsScreen() {
       <h1>Reportes</h1>
       <div className="reports-kinds">
         {KINDS.map(({ id, label }) => (
-          <Button key={id} variant="secondary" aria-pressed={id === kind} onClick={() => setKind(id)}>
+          <Button key={id} variant="secondary" aria-pressed={id === kind} onClick={() => {
+              setSaveFailed(false);
+              setKind(id);
+            }}>
             {label}
           </Button>
         ))}
@@ -89,7 +97,7 @@ export function ReportsScreen() {
         <Button disabled={!ready} onClick={() => printReport(fileName.replace(/\.pdf$/, ''))}>
           Imprimir
         </Button>
-        <Button variant="secondary" disabled={!ready || saving} onClick={() => void save()}>
+        <Button variant="secondary" disabled={!ready} onClick={() => void save()}>
           {saving ? 'Guardando…' : 'Guardar en PDF'}
         </Button>
       </div>
@@ -98,12 +106,12 @@ export function ReportsScreen() {
           {SAVE_ERROR}
         </p>
       )}
-      {active.isError ? (
-        <ErrorLine onRetry={() => void active.refetch()} retrying={active.isFetching} />
-      ) : kind === 'month' && monthReport.data ? (
+      {kind === 'month' && monthReport.data ? (
         <MonthSheet report={monthReport.data} start={start} today={today} />
       ) : kind === 'year' && yearReport.data ? (
         <YearSheet report={yearReport.data} year={year} lastMonth={lastMonth} today={today} />
+      ) : active.isError ? (
+        <ErrorLine onRetry={() => void active.refetch()} retrying={active.isFetching} />
       ) : (
         <SheetPlaceholder />
       )}

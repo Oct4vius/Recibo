@@ -48,12 +48,16 @@ export function YearSheet({
                     <span className="sheet-amount">{formatMoney(cat.totalDop, 'DOP')}</span>
                   </div>
                   {cat.categoryId === null
-                    ? report.largestUncategorized.map((item, index) => (
-                        <p key={item.id} className="sheet-note">
-                          {index === 0 ? 'Los más grandes: ' : ''}
-                          {shortDay(item.date)} · {itemLabel(item.merchant)} · {itemAmountLines(item).main}
-                        </p>
-                      ))
+                    ? report.largestUncategorized.map((item, index) => {
+                        const { main, approx } = itemAmountLines(item);
+                        return (
+                          <p key={item.id} className="sheet-note">
+                            {index === 0 ? 'Los más grandes: ' : ''}
+                            {shortDay(item.date)} · {itemLabel(item.merchant)} · {main}
+                            {approx ? ` (${approx})` : ''}
+                          </p>
+                        );
+                      })
                     : null}
                 </div>
               ))}
