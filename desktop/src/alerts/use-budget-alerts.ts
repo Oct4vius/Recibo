@@ -3,6 +3,7 @@ import { listen } from '@tauri-apps/api/event';
 import { useEffect, useRef } from 'react';
 import { checkBudgetAlerts } from '@/features/notifications/flows';
 import { historyKeys } from '@/features/history/keys';
+import { reportKeys } from '@/features/reports/keys';
 import { summaryKeys } from '@/features/summary/keys';
 import { transactionKeys } from '@/features/transactions/keys';
 import { desktopPort } from './desktop-port';
@@ -25,6 +26,7 @@ export function useBudgetAlerts(): void {
       void Promise.all([
         queryClient.invalidateQueries({ queryKey: summaryKeys.all }),
         queryClient.invalidateQueries({ queryKey: historyKeys.all }),
+        queryClient.invalidateQueries({ queryKey: reportKeys.all }),
         queryClient.invalidateQueries({ queryKey: transactionKeys.all }),
       ]);
       checkBudgetAlerts(desktopPort).catch(() => undefined);

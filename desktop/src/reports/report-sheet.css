@@ -1,0 +1,96 @@
+/* La hoja: vista previa en pantalla y salida de Imprimir / Guardar en PDF (carta, márgenes de 0.5 in). */
+@page { size: letter portrait; margin: 0.5in; }
+
+.report-sheet {
+  background: var(--paper);
+  color: var(--text);
+  max-width: 680px;
+  margin: 0 auto 14px;
+  padding: 36px 40px;
+  box-shadow: 0 2px 8px var(--shadow);
+  font-family: var(--font);
+  font-size: 13px;
+  line-height: 1.45;
+}
+.sheet-title {
+  font: 700 18px var(--font-receipt);
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+}
+.sheet-sub { margin: 2px 0 12px; color: var(--text); }
+.sheet-big { font: 700 28px var(--font-receipt); margin: 4px 0 2px; }
+.sheet-empty { padding: 16px 0; }
+.sheet-placeholder-rows { display: flex; flex-direction: column; gap: 10px; margin-top: 18px; }
+
+.sheet-cat { margin-top: 12px; }
+.sheet-cat-name {
+  font: 700 13px var(--font-receipt);
+  text-transform: uppercase;
+  margin: 12px 0 4px;
+}
+.sheet-cat > .sheet-keep > .sheet-cat-name { margin-top: 0; }
+
+.sheet-row {
+  display: flex;
+  gap: 12px;
+  align-items: baseline;
+  padding: 3px 0;
+  border-bottom: 1.5px dotted var(--ink);
+}
+.sheet-date { flex: 0 0 52px; }
+.sheet-what { flex: 1 1 auto; min-width: 0; overflow-wrap: anywhere; }
+.sheet-share, .sheet-amount {
+  font-family: var(--font-receipt);
+  text-align: right;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+.sheet-amount { flex: 0 0 auto; }
+.sheet-approx { display: block; font-size: 0.85em; }
+.sheet-row { break-inside: avoid; }
+.sheet-subtotal { border-bottom: 0; font-weight: 700; break-before: avoid; }
+.sheet-total {
+  border-bottom: 0;
+  border-top: 2px solid var(--ink);
+  margin-top: 8px;
+  padding-top: 6px;
+  font-weight: 700;
+  break-before: avoid;
+}
+.sheet-note { margin: 0; padding: 2px 0 2px 16px; font-size: 0.9em; }
+
+.sheet-cols { display: grid; grid-template-columns: 1fr 1fr; gap: 22px; margin-top: 8px; }
+.sheet-year { break-inside: avoid; }
+.sheet-keep { break-inside: avoid; }
+
+@media print {
+  .sidebar, .update-banner, .notice-slot, .stamp,
+  .reports-screen > :not(.report-sheet) { display: none !important; }
+
+  html, body, #root, .app-frame, .app-body, .shell, .content, .reports-screen {
+    height: auto;
+    overflow: visible;
+    display: block;
+    background: var(--paper);
+    padding: 0;
+    margin: 0;
+  }
+  .reports-screen.ticket { background: var(--paper); padding: 0; margin: 0; }
+  .reports-screen.ticket::after { content: none; }
+
+  .report-sheet {
+    max-width: none;
+    margin: 0;
+    padding: 0;
+    box-shadow: none;
+    border: 0;
+    color: var(--ink);
+    font-size: 11pt;
+  }
+  .sheet-title { font-size: 16pt; }
+  .sheet-cat-name, .sheet-approx, .sheet-note { font-size: 11pt; }
+  .sheet-big { font-size: 22pt; }
+  .sheet-sub, .sheet-note { color: var(--ink); }
+  .sheet-keep { break-inside: avoid; }
+  .sheet-cat { break-inside: auto; }
+}

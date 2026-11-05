@@ -7,17 +7,27 @@ interface MonthNavProps {
   canGoNext: boolean;
   onPrevious: () => void;
   onNext: () => void;
+  previousLabel?: string;
+  nextLabel?: string;
 }
 
-/** Flechas de mes y su título. */
-export function MonthNav({ title, heading: Heading, canGoNext, onPrevious, onNext }: MonthNavProps) {
+/** Flechas de mes (o de año, con sus rótulos) y su título. */
+export function MonthNav({
+  title,
+  heading: Heading,
+  canGoNext,
+  onPrevious,
+  onNext,
+  previousLabel = 'Mes anterior',
+  nextLabel = 'Mes siguiente',
+}: MonthNavProps) {
   return (
     <div className="month-nav">
-      <Button variant="icon" aria-label="Mes anterior" onClick={onPrevious}>
+      <Button variant="icon" aria-label={previousLabel} onClick={onPrevious}>
         ‹
       </Button>
       <Heading className="month-nav-title">{title}</Heading>
-      <Button variant="icon" aria-label="Mes siguiente" onClick={onNext} disabled={!canGoNext}>
+      <Button variant="icon" aria-label={nextLabel} onClick={onNext} disabled={!canGoNext}>
         ›
       </Button>
     </div>

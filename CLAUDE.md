@@ -63,7 +63,7 @@ app/                       # Expo Router: solo routing + layout, sin lógica
   (auth)/                  # login (registro cerrado: sin register ni reset)
   (tabs)/                  # home, transactions, history, budget, settings
 src/
-  features/<dominio>/      # auth, accounts, transactions, budgets, history, categories, rules, settings, summary, profile
+  features/<dominio>/      # auth, accounts, transactions, budgets, history, categories, rules, settings, summary, profile, reports
     api.ts                 #   queries/mutations (TanStack Query + supabase)
     components/            #   UI del dominio
     hooks.ts
@@ -98,10 +98,10 @@ supabase/
     fetch-usd-rates/       # invocada por pg_cron; lee la tasa de venta del BCRD y la guarda en usd_rates
                            #   (cada función: handler.ts testeable con dependencias inyectadas + index.ts delgado)
 desktop/                   # app de Windows (Tauri 2 + Vite + React): reutiliza src/ por el alias `@`; solo reemplaza @/lib/supabase y @/lib/env
-                           #   desktop/src/{session,shell,month,movements,history,budget,settings,expense,ui}: una carpeta por sección
-                           #   (sesión, marco, Este mes, Movimientos, Meses anteriores, Presupuesto, Ajustes, gasto manual, UI genérica).
+                           #   desktop/src/{session,shell,month,movements,history,budget,reports,settings,expense,ui}: una carpeta por sección
+                           #   (sesión, marco, Este mes, Movimientos, Meses anteriores, Presupuesto, Reportes (hojas imprimibles y PDF), Ajustes, gasto manual, UI genérica).
                            #   `notifications/hooks.ts` es solo del teléfono; `features/*/hooks.ts` no importan nada nativo (escritorio los usa)
-                           #   desktop/src-tauri: Rust (ventana, bandeja, avisos, actualizaciones, arranque opcional con Windows)
+                           #   desktop/src-tauri: Rust (ventana, bandeja, avisos, actualizaciones, arranque opcional con Windows, PDF de Reportes: `report_pdf.rs` con diálogo "Guardar como" + PrintToPdf de WebView2)
                            #   Las Edge Functions se llaman por `appFetch` (plugin http de Tauri): no tienen CORS, `fetch` del navegador falla
 scripts/                   # herramientas de desarrollo (Bun); scripts/lib/{loopback,google-login,dev-session,anonymize,raw-mail}.ts
 tests/unit/                # Vitest para src/ (espeja la ruta)
@@ -464,6 +464,8 @@ Receta completa con herramientas (descargar sin procesar, anonimizar, desplegar 
   `round(amount * rate, 2)`; `spending_transactions` y la lista de Movimientos/Inicio leen de ella. Las RPC suman
   `amount_dop`. `usd_rates` es una tabla de referencia **sin `user_id`** (excepción a la regla de RLS por `user_id`,
   como las categorías por defecto): `select` para `authenticated`, escribe solo `service_role`.
+- **Reportes (escritorio).** `get_month_report(p_month)` (día 1 del mes local; subtotales por ventana en la misma consulta)
+  y `get_largest_uncategorized(from, to)` (≤ 366 días, máx. 2). `spending_transactions` trae también `id` y `merchant`.
 - `transactions`: las columnas de identidad (`user_id`, `source`, `message_id`,
   `linked_account_id`, `bank_code`, `template_id`) son inmutables; un trigger
   `before update` lanza 42501 (migración `transactions_immutable_columns`). Los
