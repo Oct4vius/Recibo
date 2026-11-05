@@ -65,7 +65,7 @@
   .sidebar, .update-banner, .notice-slot, .stamp,
   .reports-screen > :not(.report-sheet) { display: none !important; }
 
-  html, body, #root, .shell, .content, .reports-screen {
+  html, body, #root, .app-frame, .app-body, .shell, .content, .reports-screen {
     height: auto;
     overflow: visible;
     display: block;
@@ -86,7 +86,7 @@
     font-size: 11pt;
   }
   .sheet-title { font-size: 16pt; }
-  .sheet-cat-name { font-size: 11pt; }
+  .sheet-cat-name, .sheet-approx, .sheet-note { font-size: 11pt; }
   .sheet-big { font-size: 22pt; }
   .sheet-sub, .sheet-note { color: var(--ink); }
   .sheet-keep { break-inside: avoid; }
