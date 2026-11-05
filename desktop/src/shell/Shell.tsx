@@ -9,6 +9,7 @@ import { HistoryScreen } from '../history/HistoryScreen';
 import { viewForCategory } from '../movements/movements-view';
 import { MovementsScreen } from '../movements/MovementsScreen';
 import { MonthScreen } from '../month/MonthScreen';
+import { ReportsScreen } from '../reports/ReportsScreen';
 import { SettingsScreen } from '../settings/SettingsScreen';
 import { openMovements, selectSection, START_ROUTE, type ShellRoute } from './navigation';
 import { Sidebar } from './Sidebar';
@@ -40,6 +41,8 @@ export function Shell() {
           <HistoryScreen onOpenMovements={(view) => setRoute((r) => openMovements(r, view))} />
         ) : route.section === 'budget' ? (
           <BudgetScreen />
+        ) : route.section === 'reports' ? (
+          <ReportsScreen />
         ) : route.section === 'accounts' ? (
           <AccountsScreen />
         ) : (

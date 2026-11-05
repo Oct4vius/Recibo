@@ -1,0 +1,4 @@
+.reports-screen { max-width: 760px; }
+.reports-kinds { display: flex; gap: 10px; margin: 14px 0 18px; }
+.reports-actions { display: flex; gap: 10px; flex-wrap: wrap; margin: 14px 0 18px; }
+.reports-error { margin: 0 0 14px; }

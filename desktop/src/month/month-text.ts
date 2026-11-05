@@ -3,10 +3,14 @@ import { expenseCountLabel } from '@/features/history/labels';
 import { formatMoney } from '@/lib/money';
 import { budgetBalance, progressState } from '@/theme/progress';
 
+/** Primera letra en mayúscula: `octubre` → `Octubre`. */
+export function capitalize(text: string): string {
+  return `${text.charAt(0).toUpperCase()}${text.slice(1)}`;
+}
+
 /** `Octubre 2026`. */
 export function monthTitle(start: LocalDate): string {
-  const name = monthName(start.month);
-  return `${name.charAt(0).toUpperCase()}${name.slice(1)} ${start.year}`;
+  return `${capitalize(monthName(start.month))} ${start.year}`;
 }
 
 /** `Llevas 23 gastos este mes` en el mes actual; `31 gastos en septiembre` en uno pasado. */

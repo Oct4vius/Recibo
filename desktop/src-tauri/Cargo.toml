@@ -1,6 +1,6 @@
 [package]
 name = "recibo-desktop"
-version = "1.0.1"
+version = "1.0.2"
 description = "Recibo para Windows"
 edition = "2021"
 
@@ -24,3 +24,8 @@ tauri-plugin-notification = "2"
 tauri-plugin-updater = "2"
 tauri-plugin-process = "2"
 serde_json = "1"
+tauri-plugin-dialog = "2"
+
+[target."cfg(windows)".dependencies]
+webview2-com = "=0.39.1"
+windows = "=0.62.2"
