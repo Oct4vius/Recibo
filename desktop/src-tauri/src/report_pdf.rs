@@ -76,16 +76,19 @@ mod windows_pdf {
     pub async fn save(window: tauri::WebviewWindow, file_name: String) -> Result<bool, String> {
         // 1. Diálogo, sin bloquear el hilo principal.
         let (tx, rx) = oneshot::channel();
-        window
+        let mut dialog = window
             .dialog()
             .file()
             .set_parent(&window)
             .set_file_name(safe_file_name(&file_name))
-            .add_filter("PDF", &["pdf"])
-            .set_directory(window.path().document_dir().map_err(|e| e.to_string())?)
-            .save_file(move |path| {
-                let _ = tx.send(path);
-            });
+            .add_filter("PDF", &["pdf"]);
+        // Documentos es solo la carpeta sugerida: si Windows no la encuentra, el diálogo abre igual.
+        if let Ok(dir) = window.path().document_dir() {
+            dialog = dialog.set_directory(dir);
+        }
+        dialog.save_file(move |path| {
+            let _ = tx.send(path);
+        });
         let Some(path) = rx.await.map_err(|e| e.to_string())? else {
             return Ok(false);
         };
